@@ -84,7 +84,7 @@ Every text pair below passes WCAG AA (4.5:1), measured with the WCAG 2.x formula
 ## 5. Space, shape and layout
 
 - **Spacing.** Tailwind's 4px steps. Use 8 or 12 inside a component, 16 or 24 between components, and 40 between page sections.
-- **Radius.** `--radius` is 16px for cards. Buttons and inputs use `rounded-md` (10px). Chips, badges and nav pills use `rounded-full`.
+- **Radius.** `--radius` is 16px for cards. Buttons, inputs, chips, badges and nav pills use `rounded-full`. One shape for everything you can press or type in. (Similarity)
 - **Page.** Centered column, `max-w-6xl`, 16px gutters on mobile and 24px from `sm`. The risk map is the one full-bleed page.
 - **Header.** 64px tall, `bg-card` with a bottom hairline, sticky. Lockup on the left, nav next, account menu on the right. (Jakob's Law)
 - **Grouping.** Related items share a card. Unrelated items get space, not a divider. (Proximity, Common Region)
@@ -114,7 +114,7 @@ Interaction rules:
 
 ## 7. Writing
 
-From `unslop`: plain and specific, under 25 words a sentence, no em dashes, no hype words. Name things the way a Meralco engineer or a household would. Error messages say what happened and what to do next.
+From `unslop`: plain and specific, under 25 words a sentence, no em dashes, no hype words. Name things the way a grid engineer or a household would. Error messages say what happened and what to do next.
 
 ## 8. Before you call a screen done
 

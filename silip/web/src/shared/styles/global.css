@@ -1,14 +1,14 @@
 @import "tailwindcss";
 @import "./tokens.css";
 
-/* Dark mode: system preference (unless data-theme="light"), or data-theme="dark". */
+/* Dark mode: system preference (unless data-theme="light"), data-theme="dark", or inside the landing stage. */
 @custom-variant dark {
   @media (prefers-color-scheme: dark) {
     &:where(:root:not([data-theme="light"]) *) {
       @slot;
     }
   }
-  &:where([data-theme="dark"], [data-theme="dark"] *) {
+  &:where([data-theme="dark"], [data-theme="dark"] *, [data-stage], [data-stage] *) {
     @slot;
   }
 }
@@ -43,6 +43,10 @@
   --color-watch-soft: var(--watch-soft);
   --color-ok-soft: var(--ok-soft);
   --color-overlay: var(--overlay);
+  --color-stage: var(--stage);
+  --color-stage-foreground: var(--stage-foreground);
+  --color-stage-grid: var(--stage-grid);
+  --color-wordmark: var(--wordmark);
 
   --radius-sm: calc(var(--radius) - 8px);
   --radius-md: calc(var(--radius) - 6px);
@@ -115,6 +119,56 @@
     width: 44px;
     height: 44px;
   }
+}
+
+/* Landing motion (docs/design-system.md, Landing motion). CSS runs before any script, so the map
+   drifts and the Critical ring pulses at once; landingMotion.ts adds the scroll beats. */
+@keyframes hero-drift {
+  from {
+    transform: scale(1.03);
+  }
+  to {
+    transform: scale(1.07) translate3d(-0.6%, -0.5%, 0);
+  }
+}
+@keyframes hud-ring {
+  from {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(3.2);
+    opacity: 0;
+  }
+}
+.hero-drift {
+  animation: hero-drift 40s ease-in-out infinite alternate;
+}
+.hud-ring {
+  animation: hud-ring 1.8s ease-out infinite;
+}
+/* With motion, the HUD waits for the scroll beat that draws it; with reduced motion it simply shows. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-hud-pulse],
+  [data-hud-tag],
+  [data-hud-label] {
+    opacity: 0;
+  }
+  [data-hud-line] {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+  }
+  [data-hud-dot] {
+    opacity: 0;
+  }
+}
+/* Lenis on top of native scroll. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-stopped {
+  overflow: clip;
 }
 
 @media (prefers-reduced-motion: reduce) {

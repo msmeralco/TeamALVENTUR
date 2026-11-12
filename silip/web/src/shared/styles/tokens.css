@@ -44,6 +44,13 @@
   /* QR codes stay dark on light in both themes: some phone cameras cannot read inverted codes. */
   --qr-foreground: #262626;
   --qr-background: #ffffff;
+
+  /* Landing only: the dark stage under the hero and How it works, in both themes (docs/design-system.md, Landing motion). */
+  --stage: #1b1c1b;
+  --stage-foreground: #f2efe3;
+  --stage-grid: #3d3e3b;
+  /* The giant wordmark at the foot of the landing page: sage, quiet on the footer card. */
+  --wordmark: #c3d2c5;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -77,10 +84,21 @@
     --ok-soft: #24322a;
     --map-building: #2c2d2b;
     --overlay: rgb(0 0 0 / 0.6);
+    --stage: #121312;
+    --stage-grid: #2f302e;
+    --wordmark: #33433a;
   }
 }
 
 :root[data-theme="dark"] {
+  --stage: #121312;
+  --stage-grid: #2f302e;
+  --wordmark: #33433a;
+}
+
+/* Dark tokens: the dark theme, and the landing page's stage ([data-stage]) in either theme. */
+:root[data-theme="dark"],
+[data-stage] {
   --background: #1b1c1b;
   --foreground: #f2efe3;
   --card: #262626;

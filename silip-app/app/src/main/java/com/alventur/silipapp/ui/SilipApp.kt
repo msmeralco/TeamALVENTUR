@@ -87,6 +87,7 @@ private enum class Destination(
     Learn("Learn", Icons.AutoMirrored.Outlined.MenuBook),
     Rewards("Grid events", Icons.Outlined.CardGiftcard),
     Settings("Settings", Icons.Outlined.Settings),
+    Solar("Solar", Icons.Outlined.Lightbulb),
     DailyChallenge("Daily challenge", Icons.Outlined.Lightbulb)
 }
 
@@ -155,12 +156,14 @@ fun SilipApp(
     val selected = Destination.valueOf(selectedName)
     val topLevel = when (selected) {
         Destination.DailyChallenge -> Destination.Learn
+        Destination.Solar -> Destination.Home
         else -> selected
     }
 
-    BackHandler(enabled = selected == Destination.DailyChallenge || selected == Destination.Settings) {
+    BackHandler(enabled = selected == Destination.DailyChallenge || selected == Destination.Settings || selected == Destination.Solar) {
         selectedName = when (selected) {
             Destination.Settings -> beforeSettings
+            Destination.Solar -> Destination.Home.name
             else -> Destination.Learn.name
         }
     }
@@ -233,6 +236,7 @@ fun SilipApp(
                     userName = userName,
                     nextLesson = LessonCatalog.starterLessons[completedLessons.coerceAtMost(LessonCatalog.starterLessons.lastIndex)],
                     onOpenUsage = { selectedName = Destination.Usage.name },
+                    onOpenSolar = { selectedName = Destination.Solar.name },
                     onRefreshHousehold = { refreshCount += 1 },
                     onOpenChallenge = {
                         val nextIndex = completedLessons.coerceAtMost(LessonCatalog.starterLessons.lastIndex)
@@ -255,6 +259,7 @@ fun SilipApp(
                         selectedName = Destination.DailyChallenge.name
                     }
                 )
+                Destination.Solar -> SolarScreen(contentPadding, householdState, onBack = { selectedName = Destination.Home.name })
                 Destination.Rewards -> RewardsScreen(contentPadding)
                 Destination.Settings -> SettingsScreen(
                     contentPadding = contentPadding,
@@ -323,14 +328,26 @@ private fun HomeScreen(
     userName: String,
     nextLesson: Lesson,
     onOpenUsage: () -> Unit,
+    onOpenSolar: () -> Unit,
     onRefreshHousehold: () -> Unit,
     onOpenChallenge: () -> Unit
 ) {
     AdaptivePage(contentPadding) {
         item { HomeCompanionSummary(householdState, userName, onOpenUsage, onRefreshHousehold) }
+        item { SolarEntryCard(onOpenSolar) }
         item { AwayAlertsCard() }
         item { SectionHeading("A small lesson for today") }
         item { NextLessonCard(nextLesson, onOpenChallenge) }
+    }
+}
+
+@Composable
+private fun SolarScreen(contentPadding: PaddingValues, householdState: HouseholdDashboardState, onBack: () -> Unit) {
+    AdaptivePage(contentPadding) {
+        item { SolarIntroduction(onBack) }
+        item { SolarDaytimeCard(householdState) }
+        item { SolarHowItWorks() }
+        item { SolarPreparationCard() }
     }
 }
 

@@ -71,7 +71,10 @@ resource "aws_cognito_user_pool_client" "web" {
   }
 }
 
+# Managed login (version 2): the newer Cognito sign-in pages. Cognito creates a default style for the
+# web client when the domain switches to version 2; it is managed outside Terraform for now.
 resource "aws_cognito_user_pool_domain" "this" {
-  domain       = var.domain_prefix
-  user_pool_id = aws_cognito_user_pool.this.id
+  domain                = var.domain_prefix
+  user_pool_id          = aws_cognito_user_pool.this.id
+  managed_login_version = 2
 }

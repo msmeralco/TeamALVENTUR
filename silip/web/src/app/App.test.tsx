@@ -107,6 +107,27 @@ describe("public outage view", () => {
   });
 });
 
+describe("landing page", () => {
+  it("opens on the outage check, then How it works and the labeled engineer example", async () => {
+    mockApi({ "/api/v1/outages": [OUTAGE] });
+    renderAt("/");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/^SILIP estimates/);
+    expect(screen.getByRole("button", { name: "Near me" })).toBeTruthy();
+    expect(await screen.findByText("overload")).toBeTruthy();
+    expect(document.getElementById("how-it-works")?.querySelector("h2")?.textContent).toBe("How it works");
+    expect(screen.getByText("Example from simulated data")).toBeTruthy();
+    expect(document.title).toBe("SILIP");
+  });
+
+  it("sends old outage links with a query on / to /outages, keeping the query", async () => {
+    mockApi({ "/api/v1/outages": [OUTAGE] });
+    renderAt("/?area=pasig");
+    expect(await screen.findByRole("heading", { level: 1, name: "Power outages" })).toBeTruthy();
+    expect(window.location.pathname).toBe("/outages");
+    expect(window.location.search).toBe("?area=pasig");
+  });
+});
+
 describe("engineer risk map", () => {
   it("groups Critical as Needs action first, then Watch, with OK folded", async () => {
     mockApi({ "/api/v1/transformers": LIST });

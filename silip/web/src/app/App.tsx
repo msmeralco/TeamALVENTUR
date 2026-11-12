@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Cpu, Gauge, House, Info, Map as MapIcon, ZapOff, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BrowserRouter, Link, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { DemoPage } from "../features/demo/DemoPage";
 import { DevicesPage } from "../features/devices/DevicesPage";
 import { UsagePage } from "../features/household/UsagePage";
@@ -17,6 +17,7 @@ import { TooltipProvider } from "../shared/ui/components/tooltip";
 import { OfflineBanner, RouteErrorBoundary, useDocumentTitle } from "../shared/ui/feedback";
 import { AccountMenu } from "./AccountMenu";
 import { Footer } from "./Footer";
+import { LandingPage } from "./LandingPage";
 import { SourcesPage } from "./SourcesPage";
 
 // Cognito normally answers in a second or two; past this, assume the redirect broke. [VERIFY] on slow networks.
@@ -77,7 +78,7 @@ function AuthCallbackPage() {
         Try again
       </Button>
       <Button asChild variant="outline" className="min-h-11 rounded-full">
-        <Link to="/">Back to outages</Link>
+        <Link to="/outages">Back to outages</Link>
       </Button>
     </StateCard>
   );
@@ -89,7 +90,7 @@ function NotFoundPage() {
     <StateCard title="Page not found">
       <p className="text-sm text-muted-foreground">This link may be old or mistyped.</p>
       <Button asChild variant="outline" className="mt-2 min-h-11 rounded-full">
-        <Link to="/">See outages</Link>
+        <Link to="/outages">See outages</Link>
       </Button>
     </StateCard>
   );
@@ -170,6 +171,12 @@ function MainNav() {
   );
 }
 
+/** Old outage links put their query on "/"; the outage list now lives at /outages, so send them there. */
+function HomeRoute() {
+  const { search, hash } = useLocation();
+  return search === "" ? <LandingPage /> : <Navigate to={`/outages${search}${hash}`} replace />;
+}
+
 function Shell() {
   const location = useLocation();
   const { hasGroup } = useAuth();
@@ -213,7 +220,7 @@ function Shell() {
       >
         <RouteErrorBoundary key={location.pathname}>
           <Routes>
-            <Route path="/" element={<OutagesPage />} />
+            <Route path="/" element={<HomeRoute />} />
             <Route path="/outages" element={<OutagesPage />} />
             <Route
               path="/engineer"

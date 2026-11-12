@@ -1421,6 +1421,18 @@
           "is_simulated": {
             "type": "boolean",
             "title": "Is Simulated"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note",
+            "description": "Set when a live forecast sits beside simulated load data"
           }
         },
         "type": "object",
@@ -3145,6 +3157,18 @@
             },
             "type": "array",
             "title": "Weather"
+          },
+          "weather_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weather Note",
+            "description": "Set when a live forecast sits beside simulated load data"
           },
           "ev": {
             "$ref": "#/components/schemas/TransformerEv"

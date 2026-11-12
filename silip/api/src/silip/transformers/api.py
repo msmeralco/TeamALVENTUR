@@ -86,12 +86,20 @@ def get_transformer(
     forecast: Forecast,
     weather_now: Now,
     ev: Ev,
+    settings: Settings,
 ) -> TransformerCard:
     """One transformer: risk, drivers, last 48 h of load and the 24 h forecast, the next 48 h of
     weather, EV exposure and clamp health."""
     try:
         return service.transformer_card(
-            snapshot, source, transformer_id, forecast, weather_now, ev.stations(), ev.adoption()
+            snapshot,
+            source,
+            transformer_id,
+            forecast,
+            weather_now,
+            ev.stations(),
+            ev.adoption(),
+            live_weather=settings.weather_source == "open_meteo",
         )
     except TransformerDataUnavailableError as error:
         raise HTTPException(409, "Not enough readings to forecast this transformer yet") from error

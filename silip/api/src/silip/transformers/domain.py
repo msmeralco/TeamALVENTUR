@@ -66,5 +66,8 @@ class TransformerCard(TransformerRisk):
     load: list[LoadPoint]
     drivers: list[Driver] = Field(default_factory=list)
     weather: list[WeatherHour] = Field(default_factory=list)
+    weather_note: str | None = Field(
+        default=None, description="Set when a live forecast sits beside simulated load data"
+    )
     ev: TransformerEv
     clamps_to_target: int | None = None

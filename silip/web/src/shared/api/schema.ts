@@ -506,6 +506,11 @@ export interface components {
             cells: components["schemas"]["CellPeak"][];
             /** Is Simulated */
             is_simulated: boolean;
+            /**
+             * Note
+             * @description Set when a live forecast sits beside simulated load data
+             */
+            note?: string | null;
         };
         /** BenchFingerprint */
         BenchFingerprint: {
@@ -1148,6 +1153,11 @@ export interface components {
             drivers?: components["schemas"]["silip__shared__scores__domain__Driver"][];
             /** Weather */
             weather?: components["schemas"]["WeatherHour"][];
+            /**
+             * Weather Note
+             * @description Set when a live forecast sits beside simulated load data
+             */
+            weather_note?: string | null;
             ev: components["schemas"]["TransformerEv"];
             /** Clamps To Target */
             clamps_to_target?: number | null;

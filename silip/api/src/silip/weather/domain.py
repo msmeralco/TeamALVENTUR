@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Protocol
 
 import pandas as pd
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from silip.shared.scores.domain import WeatherStatus
 
@@ -20,6 +20,8 @@ OUTLOOK_HOURS = 48  # what the dashboard shows ahead
 # The provider label shown beside every weather number.
 SOURCE_LABELS = {"simulated": "Simulated", "open_meteo": "Open-Meteo"}
 LOCAL_TZ = "Asia/Manila"
+# Open-Meteo is read on the wall clock, so with simulated load the two cover different days.
+LIVE_ON_SIMULATED_NOTE = "Live forecast; load data is simulated"
 
 WEATHER_COLUMNS = [
     "cell_id",
@@ -123,3 +125,6 @@ class AreaOutlook(BaseModel):
     hours: list[AreaHour]
     cells: list[CellPeak]
     is_simulated: bool
+    note: str | None = Field(
+        default=None, description="Set when a live forecast sits beside simulated load data"
+    )

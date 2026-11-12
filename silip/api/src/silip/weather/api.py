@@ -15,7 +15,13 @@ from silip.shared.db import connect
 from silip.shared.deps import Source
 from silip.shared.geo import BoundingBox, parse_bbox, within
 from silip.weather.adapters import NeonWeatherStore, SimulatedWeather
-from silip.weather.domain import SOURCE_LABELS, AreaOutlook, WeatherOutlook, WeatherReader
+from silip.weather.domain import (
+    LIVE_ON_SIMULATED_NOTE,
+    SOURCE_LABELS,
+    AreaOutlook,
+    WeatherOutlook,
+    WeatherReader,
+)
 from silip.weather.service import area_hours, cell_peaks, cells_for, outlook
 
 router = APIRouter(prefix="/api/v1/weather", tags=["weather"])
@@ -37,7 +43,8 @@ Reader = Annotated[WeatherReader, Depends(get_weather_reader)]
 
 
 def weather_now(settings: Settings, source: Source) -> datetime:
-    """The time the forecast is judged at: the data's own clock for simulated weather."""
+    """The time the forecast is judged at: the data's own clock for simulated weather, the wall
+    clock for Open-Meteo (the live next 48 h, even beside simulated load)."""
     if settings.weather_source == "simulated":
         latest = source.latest_load_ts()
         if latest is not None:
@@ -63,6 +70,9 @@ def weather_outlook(
     """The next 48 h of heat index and rain over the transformers in view, hour by hour."""
     transformers = within(source.transformers(), box)
     cells = cells_for(transformers) if not transformers.empty else []
+    live_on_simulated = settings.weather_source == "open_meteo" and bool(
+        source.transformers()["is_simulated"].any()
+    )
     return AreaOutlook(
         issued_at=forecast.issued_at,
         status=forecast.status,
@@ -70,4 +80,5 @@ def weather_outlook(
         hours=area_hours(forecast, cells, now),
         cells=cell_peaks(forecast, cells, now),
         is_simulated=forecast.is_simulated or settings.weather_source == "simulated",
+        note=LIVE_ON_SIMULATED_NOTE if live_on_simulated else None,
     )

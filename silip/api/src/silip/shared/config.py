@@ -52,12 +52,16 @@ class ApiSettings(MlSettings):
     ev_source: EvSourceName | None = None
 
     @property
+    def has_database(self) -> bool:
+        """A database is configured (DATABASE_URL or DATABASE_SECRET_ARN)."""
+        return self.database_url is not None or bool(self.database_secret_arn)
+
+    @property
     def ev_store(self) -> EvSourceName:
         """EV_SOURCE, or neon when a database is configured, else csv."""
         if self.ev_source is not None:
             return self.ev_source
-        configured = self.database_url is not None or bool(self.database_secret_arn)
-        return "neon" if configured else "csv"
+        return "neon" if self.has_database else "csv"
 
     @model_validator(mode="after")
     def _refuse_disabled_auth_in_lambda(self) -> ApiSettings:

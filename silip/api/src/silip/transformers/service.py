@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Hashable, Mapping
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 import pandas as pd
@@ -23,7 +23,7 @@ from silip.transformers.domain import (
     TransformerNotFoundError,
     TransformerRisk,
 )
-from silip.weather.domain import WeatherOutlook, WeatherReader
+from silip.weather.domain import LIVE_ON_SIMULATED_NOTE, WeatherOutlook, WeatherReader
 from silip.weather.service import cell_hours, no_forecast, outlook
 from silip_ml.readings.domain import load_pct
 from silip_ml.risk.domain import RiskOutput
@@ -171,9 +171,13 @@ def transformer_card(
     weather_now: datetime | None = None,
     stations: pd.DataFrame | None = None,
     adoption: pd.DataFrame | None = None,
+    live_weather: bool = False,
 ) -> TransformerCard:
     """Risk plus the 48 h of load up to the run's interval and the forecast after it, the
-    drivers, the next 48 h of weather in its cell, EV exposure and the clamp target."""
+    drivers, the next 48 h of weather in its cell, EV exposure and the clamp target.
+
+    `live_weather` (Open-Meteo): `weather` and `heat_index_max_c` come from the live forecast
+    after `weather_now`, not from the scoring run, and simulated load gets a note saying so."""
     match = snapshot.transformers[snapshot.transformers["transformer_id"] == transformer_id]
     if match.empty:
         raise TransformerNotFoundError(transformer_id)
@@ -215,8 +219,20 @@ def transformer_card(
         )
     )
     health = base.clamp_health
+    fields = base.model_dump()
+    note = None
+    if live_weather:
+        start = weather_now if weather_now is not None else snapshot.as_of.to_pydatetime()
+        heat = [
+            hour.heat_index_c
+            for hour in hours
+            if hour.heat_index_c is not None and hour.ts <= start + timedelta(hours=24)
+        ]
+        fields["heat_index_max_c"] = round(max(heat), 1) if heat else None
+        note = LIVE_ON_SIMULATED_NOTE if base.is_simulated else None
     return TransformerCard(
-        **base.model_dump(),
+        **fields,
+        weather_note=note,
         as_of=snapshot.as_of,
         load=points,
         drivers=[] if detail is None else detail.drivers,

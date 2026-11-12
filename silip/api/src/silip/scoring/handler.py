@@ -12,6 +12,7 @@ import pandas as pd
 from silip.ev.adapters import NeonEvStore
 from silip.scoring.domain import LiveWeather, RunWeather, SimulatedWeatherInput
 from silip.scoring.service import run_once
+from silip.scoring.service import run_weather as weather_for_run
 from silip.shared.config import ApiSettings, get_settings
 from silip.shared.db import connect
 from silip.shared.deps import get_data_source, get_score_store
@@ -43,11 +44,29 @@ def ev_exposure(settings: ApiSettings) -> pd.DataFrame | None:
         return None
 
 
+def refresh_live_weather(settings: ApiSettings) -> None:
+    """Fill the Neon weather cache even when nothing is scored (DATA_SOURCE=simulated).
+
+    Cells come from the configured DataSource's transformers (data/sim in simulated mode).
+    Throttled to one fetch per REFRESH_EVERY; never raises.
+    """
+    if settings.weather_source != "open_meteo" or not settings.has_database:
+        return
+    try:
+        now = utc_now()
+        forecast = weather_for_run(run_weather(settings), get_data_source(settings), now, now)
+        logger.info("weather %s, issued %s", forecast.status, forecast.issued_at)
+    except Exception as error:  # noqa: BLE001 - a weather failure never fails the run
+        logger.warning("weather refresh failed (%s)", type(error).__name__)
+
+
 def handle(event: dict[str, Any], context: object) -> dict[str, Any]:
     """Score the latest interval. Returns {"status", "run_id", "transformers"}."""
     settings = get_settings()
     store = get_score_store(settings)
     if store is None:
+        # Scored runs refresh weather inside run_once; here nothing else would fetch it.
+        refresh_live_weather(settings)
         logger.warning("DATA_SOURCE=simulated has no score store; the API scores on request")
         return {"status": "skipped"}
     source = get_data_source(settings)

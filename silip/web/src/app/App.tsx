@@ -19,6 +19,7 @@ import { AccountMenu } from "./AccountMenu";
 import { Footer } from "./Footer";
 import { LandingPage } from "./LandingPage";
 import { SourcesPage } from "./SourcesPage";
+import { useHeaderOverStage, useMediaQuery } from "./useHeaderOverStage";
 
 // Cognito normally answers in a second or two; past this, assume the redirect broke. [VERIFY] on slow networks.
 const CALLBACK_TIMEOUT_MS = 15_000;
@@ -164,14 +165,17 @@ function isCurrent(to: string, pathname: string, hash: string): boolean {
 }
 
 /** Pill links in the header on wide screens; a bottom tab bar with icons on phones. */
-function MainNav() {
+function MainNav({ onStage }: { onStage: boolean }) {
   const { user, hasGroup } = useAuth();
   const { pathname, hash } = useLocation();
+  // On phones the nav is the bottom tab bar, far from the stage, so it keeps the page colors.
+  const inHeader = useMediaQuery("(min-width: 40rem)");
   const items =
     user === null ? PUBLIC_NAV : MEMBER_NAV.filter((item) => item.group === undefined || hasGroup(item.group));
   return (
     <nav
       aria-label="Main"
+      data-stage={onStage && inHeader ? "" : undefined}
       className={cn(
         "flex gap-1",
         "max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-20 max-sm:box-content max-sm:h-16 max-sm:gap-0 max-sm:border-t max-sm:bg-card max-sm:px-1 max-sm:pb-[env(safe-area-inset-bottom)]",
@@ -219,6 +223,10 @@ function Shell() {
   const { hasGroup } = useAuth();
   // The risk map and the landing page are full width; every other page sits in the centered column.
   const fullBleed = (location.pathname === "/engineer" && hasGroup("engineers")) || location.pathname === "/";
+  const header = useRef<HTMLElement>(null);
+  const onStage = useHeaderOverStage(header, location.pathname === "/");
+  // Over the landing page's dark stage the header takes the stage color and its dark tokens.
+  const stage = onStage ? "" : undefined;
   return (
     // A full-height column, so the footer sits at the bottom of short pages such as the 404.
     <div className="flex min-h-dvh flex-col">
@@ -228,11 +236,19 @@ function Shell() {
       >
         Skip to content
       </a>
-      <header className="sticky top-0 z-20 border-b bg-card">
+      <header
+        ref={header}
+        data-over-stage={stage}
+        className={cn(
+          "sticky top-0 z-20 border-b transition-colors duration-150",
+          onStage ? "border-transparent bg-stage" : "bg-card",
+        )}
+      >
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6 lg:gap-6">
           <Link
             to="/"
             aria-label="SILIP home"
+            data-stage={stage}
             className="flex shrink-0 items-center gap-2 font-display text-xl font-bold text-foreground no-underline"
           >
             {/* The logo's navy lid vanishes on dark surfaces, so dark mode puts the mark on a cream tile. */}
@@ -241,8 +257,8 @@ function Shell() {
             </span>
             silip
           </Link>
-          <MainNav />
-          <div className="ml-auto flex min-w-0 items-center gap-2">
+          <MainNav onStage={onStage} />
+          <div data-stage={stage} className="ml-auto flex min-w-0 items-center gap-2 text-foreground">
             <AccountMenu />
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
@@ -181,6 +181,42 @@ describe("landing page", () => {
     expect(window.location.pathname).toBe("/outages");
     expect(window.location.search).toBe("?area=pasig");
     expect(window.location.hash).toBe("#x");
+  });
+
+  it("gives the header the stage color only while a stage section is under it, and only on /", async () => {
+    const observers: { callback: IntersectionObserverCallback; targets: Element[] }[] = [];
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        targets: Element[] = [];
+        constructor(callback: IntersectionObserverCallback) {
+          observers.push({ callback, targets: this.targets });
+        }
+        observe(el: Element) {
+          this.targets.push(el);
+        }
+        disconnect() {}
+      },
+    );
+    mockApi({ "/api/v1/outages": [OUTAGE], "/api/v1/transformers": LIST });
+    renderAt("/");
+    const header = screen.getAllByRole("banner")[0];
+    const cross = (isIntersecting: boolean) =>
+      act(() => {
+        const { callback, targets } = observers[observers.length - 1];
+        callback(targets.map((target) => ({ target, isIntersecting }) as IntersectionObserverEntry), {} as IntersectionObserver);
+      });
+    await waitFor(() => expect(observers.length).toBeGreaterThan(0));
+    expect(observers[observers.length - 1].targets.every((t) => t.hasAttribute("data-stage"))).toBe(true);
+    cross(true);
+    expect(header.hasAttribute("data-over-stage")).toBe(true);
+    expect(within(header).getByRole("link", { name: "SILIP home" }).hasAttribute("data-stage")).toBe(true);
+    cross(false);
+    expect(header.hasAttribute("data-over-stage")).toBe(false);
+    cross(true);
+    await userEvent.click(within(header).getAllByRole("link", { name: "Risk map" })[0]);
+    await waitFor(() => expect(window.location.pathname).toBe("/engineer"));
+    expect(header.hasAttribute("data-over-stage")).toBe(false);
   });
 
   it("scrolls to How it works when the link carries its anchor", async () => {

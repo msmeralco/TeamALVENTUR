@@ -564,7 +564,7 @@ private fun LearnScreen(
                         }
                     }
                     OutlinedButton(onClick = onOpenLeaderboard, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                        Text("Neighborhood leaderboard", Modifier.weight(1f))
+                        Text("Leaderboard and badges", Modifier.weight(1f))
                         Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = null)
                     }
                 }

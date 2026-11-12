@@ -1,23 +1,32 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useSyncExternalStore } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../shared/auth";
 import { ThemeToggle } from "../shared/ui/ThemeToggle";
 
 const HEADING = "text-sm font-semibold text-foreground";
-const LINK = "text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline";
+// Touch screens of any width get 44px rows; mouse sizes stay as they were.
+const LINK =
+  "text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:items-center";
 
 function flagged(data: unknown): boolean {
   return typeof data === "object" && data !== null && "is_simulated" in data && data.is_simulated === true;
 }
 
-/** True once any loaded API answer is marked is_simulated, the only global signal the API gives. */
+/**
+ * True when the current page shows simulated data: a query in use on screen is marked is_simulated,
+ * or the page is the landing page, whose engineer example is always simulated.
+ */
 function useShowsSimulated(): boolean {
+  const { pathname } = useLocation();
   const cache = useQueryClient().getQueryCache();
   const subscribe = useCallback((onChange: () => void) => cache.subscribe(onChange), [cache]);
-  return useSyncExternalStore(subscribe, () =>
-    cache.getAll().some(({ state: { data } }) => (Array.isArray(data) ? data.some(flagged) : flagged(data))),
+  const fromQueries = useSyncExternalStore(subscribe, () =>
+    cache
+      .findAll({ type: "active" })
+      .some(({ state: { data } }) => (Array.isArray(data) ? data.some(flagged) : flagged(data))),
   );
+  return fromQueries || pathname === "/";
 }
 
 export function Footer() {
@@ -47,7 +56,7 @@ export function Footer() {
             <h2 className={HEADING}>About</h2>
             <p className="text-sm text-muted-foreground">Built by Alventur Solutions for the Meralco Idol Hackathon 2026.</p>
             {simulated && (
-              <p className="text-sm text-muted-foreground">Readings shown are simulated unless marked otherwise.</p>
+              <p className="text-sm text-muted-foreground">Items marked Simulated data use simulated readings.</p>
             )}
             <Link to="/sources" className={LINK}>
               Data sources

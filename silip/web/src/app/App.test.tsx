@@ -95,7 +95,7 @@ describe("public outage view", () => {
   it("says calmly when nothing is out and keeps the advice to report to Meralco", async () => {
     mockApi({ "/api/v1/outages": [] });
     renderAt("/outages");
-    expect(await screen.findByText("No open outages in this area.")).toBeTruthy();
+    expect(await screen.findByText("No open outages right now.")).toBeTruthy();
     expect(screen.getByText("If your power is out, report it to Meralco.")).toBeTruthy();
   });
 
@@ -123,10 +123,20 @@ describe("landing page", () => {
 
   it("sends old outage links with a query on / to /outages, keeping the query", async () => {
     mockApi({ "/api/v1/outages": [OUTAGE] });
-    renderAt("/?area=pasig");
+    renderAt("/?area=pasig#x");
     expect(await screen.findByRole("heading", { level: 1, name: "Power outages" })).toBeTruthy();
     expect(window.location.pathname).toBe("/outages");
     expect(window.location.search).toBe("?area=pasig");
+    expect(window.location.hash).toBe("#x");
+  });
+
+  it("scrolls to How it works when the link carries its anchor", async () => {
+    mockApi({ "/api/v1/outages": [OUTAGE] });
+    const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
+    renderAt("/#how-it-works");
+    await waitFor(() => expect(scroll).toHaveBeenCalled());
+    expect(scroll.mock.contexts[0]).toBe(document.getElementById("how-it-works"));
+    scroll.mockRestore();
   });
 });
 
@@ -402,17 +412,26 @@ describe("footer", () => {
     const footer = screen.getByRole("contentinfo");
     expect(within(footer).getByText("Built by Alventur Solutions for the Meralco Idol Hackathon 2026.")).toBeTruthy();
     expect(within(footer).getByRole("link", { name: "Data sources" }).getAttribute("href")).toBe("/sources");
-    expect(await within(footer).findByText("Readings shown are simulated unless marked otherwise.")).toBeTruthy();
+    expect(await within(footer).findByText("Items marked Simulated data use simulated readings.")).toBeTruthy();
     expect(await within(footer).findByRole("button", { name: "Sign in" })).toBeTruthy();
     expect(within(footer).getByRole("button", { name: /^Theme: / })).toBeTruthy();
   });
 
-  it("hides the simulated note and Sign in when nothing simulated loaded and the viewer is signed in", async () => {
-    mockApi({});
-    renderAt("/sources");
+  it("hides the simulated note and Sign in when the data on screen is real and the viewer is signed in", async () => {
+    mockApi({ "/api/v1/outages": [{ ...OUTAGE, is_simulated: false }] });
+    renderAt("/outages");
+    await screen.findByText("overload");
     const footer = screen.getByRole("contentinfo");
     await waitFor(() => expect(within(footer).queryByRole("button", { name: "Sign in" })).toBeNull());
     expect(within(footer).queryByText(/simulated/)).toBeNull();
+  });
+
+  it("shows the simulated note for a signed-in viewer when the data on screen is simulated", async () => {
+    mockApi({ "/api/v1/outages": [OUTAGE] });
+    renderAt("/outages");
+    await screen.findByText("overload");
+    const footer = screen.getByRole("contentinfo");
+    expect(await within(footer).findByText("Items marked Simulated data use simulated readings.")).toBeTruthy();
   });
 });
 
@@ -468,7 +487,7 @@ describe("data sources page", () => {
     mockApi({});
     renderAt("/sources");
     expect(screen.getByRole("heading", { level: 1, name: "Data sources" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "powerphilippines.com/?p=23852" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "powerphilippines.com/?p=23852 (opens in a new tab)" })).toBeTruthy();
     expect(screen.getByText("Daily Tribune, 23 Sep 2026")).toBeTruthy();
     expect(document.title).toBe("Data sources · SILIP");
   });

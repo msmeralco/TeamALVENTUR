@@ -8,13 +8,13 @@ SILIP helps household users understand energy costs, build safer electricity hab
 
 ## Current redesign
 
-The four primary destinations are Home, Usage, Learn, and Rewards. Home and Usage show seven-day whole-home usage from the separate mobile PoC Lambda. Enter a device ID on Home; the selected ID is saved on this phone. Learn contains short lessons with five-question quizzes; Rewards explains a possible opt-in grid-response program. Bill projections, appliance insights, safety detection, and payouts remain previews because those services are not connected.
+The four primary destinations are Home, Usage, Learn, and Grid events. Home opens with Ali and a compact seven-day estimated cost, away reminders, and the next lesson. Usage opens with an interactive chart: choose seven days or 24 hours, switch kWh/pesos, and inspect exact dated values. Both read the separate mobile PoC Lambda and show data provenance and sensor freshness. Settings is reached from the top bar and stores the name, device ID, and theme on this phone. Learn retains its original illustrated learning map, five-question practice, and local progress. Grid events offers an expandable, explicitly illustrative example. Technical reading details and unit explanations are on Usage. Home and Usage estimate energy cost using a dated Meralco residential benchmark or the rate from your own bill. Usage adds a validated-against-baseline daily demand forecast and saving scenarios. Home offers manual away mode, opt-in geofenced reminders, and a separate solar journey with daytime-use analysis, a what-if slider, a preparation checklist and Meralco guidance. Events and payouts remain concepts.
 
 See [the UI foundation](docs/ui-foundation.md) for the palette, screen jobs, product-language limits, and accessibility decisions. See [the Ali mascot guide](docs/mascot-guide.md) for pose usage. The [roadmap](docs/roadmap.md) and local Markdown tickets in `docs/tickets/` track the next steps.
 
 ## Current scaffold
 
-- Compose app shell with Home, Usage, Learn, and Rewards destinations.
+- Compose app shell with Home, Usage, Learn, and Grid events destinations.
 - SILIP palette in light and dark Material 3 themes.
 - Local five-question lessons with answer feedback.
 - Read-only calls to `/mobile-api/v1/devices/{clamp_id}/usage` through CloudFront, served by a separate Lambda querying Neon.
@@ -24,6 +24,8 @@ See [the UI foundation](docs/ui-foundation.md) for the palette, screen jobs, pro
 The dev mobile PoC endpoint permits only the allowlisted `silip-esp32-test` ID; prod's allowlist is empty. It has no household sign-in; do not enable more IDs or use it for real households until user authorization is added. The response excludes exact location and household identifiers.
 
 The IoT device continues to POST to `/api/v1/devices/{clamp_id}/readings` with its device key. The Android app uses the separate mobile Lambda's read-only endpoint; it never receives the IoT device key or database credentials.
+
+See [household energy features](docs/household-energy-features.md) for the rate source, model, opt-in alert setup, timing limits and focused tests.
 
 The current clamp measures whole-home current. Appliance-level NILM, heat/micro-arc safety alerts, live bill forecasts, transformer demand-response events, and GCash payments need validated data/services before they can be presented as live capabilities.
 

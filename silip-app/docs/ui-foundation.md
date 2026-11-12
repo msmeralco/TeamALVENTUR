@@ -66,3 +66,19 @@ Ali appears at the left of page headers, lesson guidance, safety and insight car
 - Lesson quizzes run locally; the preview stores completion, streak, and XP on-device. Leaderboards and reward redemption are not implemented.
 
 Use the [roadmap](roadmap.md) and local Markdown [tickets](tickets/) to sequence implementation work.
+
+## Visual clarity pass — 13 November 2026
+
+Home leads with seven-day household energy and daily bars, then one action from Ali and the next lesson. Short labels accompany every meaningful icon. Detailed device identifiers, interval counts, and measurement limits are behind Usage's reading-details disclosure. Simulated usage and sensor freshness stay visible beside the headline data. Daily bars use the API's quarter-hour averages; boundary days may be partial, and the window is anchored to stored data rather than today's date.
+
+The four bottom destinations are Home, Usage, Learn, and Grid events. Settings moves to the top bar; system Back returns to the previous destination. Learn retains its previous winding map, energy-token nodes, reward artwork, labels, and palette. Grid events has an expandable example and an explicit demo label.
+
+This applies chunking and progressive disclosure to reduce reading, familiar navigation to make actions discoverable, and visible progress to clarify the next lesson. Icons support short text labels because unfamiliar symbols alone would increase the effort to understand the app. Ali's existing poses and the green Material theme provide continuity. Android's disabled-animation preference suppresses Ali's decorative motion.
+
+This pass changes presentation and navigation. Ownership verification, tariff-based cost estimates, stable lesson-ID progress, date-based streaks, new solar/EV content, and real event verification remain the work packages described in the product realignment plan.
+
+## Home versus Usage — distinct entry views
+
+Home is Ali's companion dashboard: greeting, compact seven-day estimated cost, sensor freshness, a route to the usage breakdown, away reminders, and the next lesson. It contains no historical chart or rate-editing form. Usage starts with the data explorer: seven days or the latest 24 stored hours, energy/cost selection, calendar-date or four-hour group bars, and exact selected values. Earlier/Later buttons provide an alternative to tapping narrow chart bars. Forecasts, saving insights, rate calculation and technical details follow the explorer.
+
+This prioritizes one next action on Home and analysis on Usage, applying selective attention and progressive disclosure. The first viewport must look different when switching tabs: Ali and a green summary on Home; a white analytical chart and period controls on Usage. The previous Learn layout and palette remain intact. Both destinations keep simulated-data and stale-sensor labels visible, and chart windows use the data's own clock.

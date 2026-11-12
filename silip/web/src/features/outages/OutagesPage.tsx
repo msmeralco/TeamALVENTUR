@@ -120,12 +120,16 @@ function OutagesSkeleton() {
   );
 }
 
-function NoOutages({ fetchedAt, nearYou }: { fetchedAt: number; nearYou: boolean }) {
+function NoOutages({ fetchedAt, where }: { fetchedAt: number; where: "near" | "area" | "all" }) {
   return (
     <Card className="items-start gap-2 px-6 py-8 shadow-none">
       <p className="flex items-center gap-2 font-display text-xl font-bold">
         <CircleCheck aria-hidden="true" className="size-5 shrink-0 text-brand" />
-        {nearYou ? "No open outages near you." : "No open outages in this area."}
+        {where === "near"
+          ? "No open outages near you."
+          : where === "area"
+            ? "No open outages in this area."
+            : "No open outages right now."}
       </p>
       <Freshness fetchedAt={fetchedAt} />
       <p className="text-sm text-muted-foreground">If your power is out, report it to Meralco.</p>
@@ -212,7 +216,10 @@ export function OutageCheck() {
             }))
             .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
           if (shown.length === 0) {
-            return <NoOutages fetchedAt={query.dataUpdatedAt} nearYou={nearMe.here !== null && wanted === ""} />;
+            return <NoOutages
+                fetchedAt={query.dataUpdatedAt}
+                where={wanted !== "" ? "area" : nearMe.here !== null ? "near" : "all"}
+              />;
           }
           return (
             <ul className="grid gap-4">

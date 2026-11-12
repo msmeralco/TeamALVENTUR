@@ -24,6 +24,19 @@ export function byUrgency(a: TransformerItem, b: TransformerItem): number {
   return TIER_RANK[a.risk.tier] - TIER_RANK[b.risk.tier] || b.risk.peak_load_pct - a.risk.peak_load_pct;
 }
 
+export type Action = NonNullable<TransformerItem["action"]>;
+
+/** The action queue's order: what a crew should do first comes first. Runs scored before actions sit last. */
+export const ACTIONS: Action[] = ["Inspect before peak", "Add clamps", "Fix clamps", "Plan upgrade", "Monitor"];
+
+const actionRank = (action: TransformerItem["action"]) =>
+  action === null || action === undefined ? ACTIONS.length : ACTIONS.indexOf(action);
+
+/** Queue order: by action, then tier and peak within an action. */
+export function byQueue(a: TransformerItem, b: TransformerItem): number {
+  return actionRank(a.action) - actionRank(b.action) || byUrgency(a, b);
+}
+
 /** "T-106", "t106", "t 106" and "106" all become "106"; other text is kept, upper-cased. */
 export function normalizeId(text: string): string {
   return text
@@ -61,11 +74,11 @@ export function filterSearch(filter: ListFilter): string {
   return text === "" ? "" : `?${text}`;
 }
 
-/** The list in urgency order, narrowed by tier and ID search. */
+/** The list in queue order, narrowed by tier and ID search. */
 export function visibleItems(items: TransformerItem[], filter: ListFilter): TransformerItem[] {
   return items
     .filter((i) => (filter.tier === null || i.risk.tier === filter.tier) && matchesId(i.transformer_id, filter.query))
-    .sort(byUrgency);
+    .sort(byQueue);
 }
 
 export type ClampPoint = Schemas["ClampPoint"];

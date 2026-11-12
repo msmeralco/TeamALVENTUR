@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { ApiError } from "../api/client";
+import type { Action } from "../risk";
 import { Badge } from "./components/badge";
 import { Button } from "./components/button";
 import { Card } from "./components/card";
@@ -22,6 +23,23 @@ export function TierBadge({ tier }: { tier: Tier }) {
     <Badge className={cn("gap-1.5 px-2.5 font-semibold", TIER_CLASS[tier])}>
       <span aria-hidden="true" className="size-2 rounded-full bg-current" />
       {tier}
+    </Badge>
+  );
+}
+
+/**
+ * The recommended action as a word. Only "Inspect before peak" asks a crew to act now, so only it
+ * takes the action color; the rest stay neutral.
+ */
+export function ActionBadge({ action }: { action: Action }) {
+  const urgent = action === "Inspect before peak";
+  return (
+    <Badge
+      variant={urgent ? undefined : "outline"}
+      className={cn("gap-1.5 px-2.5 font-semibold", urgent ? "bg-critical-soft text-critical" : "text-foreground")}
+    >
+      {urgent && <span aria-hidden="true" className="size-2 rounded-full bg-current" />}
+      {action}
     </Badge>
   );
 }

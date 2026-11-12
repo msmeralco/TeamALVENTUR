@@ -727,6 +727,8 @@ export interface components {
             risk: components["schemas"]["RiskOutput"];
             /** Is Simulated */
             is_simulated: boolean;
+            /** Scored At */
+            scored_at?: string | null;
             /**
              * As Of
              * Format: date-time
@@ -788,6 +790,8 @@ export interface components {
             risk: components["schemas"]["RiskOutput"];
             /** Is Simulated */
             is_simulated: boolean;
+            /** Scored At */
+            scored_at?: string | null;
         };
         /** TransformerTelemetry */
         TransformerTelemetry: {
@@ -943,6 +947,13 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
+            /** @description No completed scoring run yet */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     get_transformer_api_v1_transformers__transformer_id__get: {
@@ -989,6 +1000,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+            /** @description No completed scoring run yet */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

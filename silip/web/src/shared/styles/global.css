@@ -1,0 +1,64 @@
+@import "./tokens.css";
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--size-md);
+  line-height: 1.5;
+}
+
+h1,
+h2 {
+  font-family: var(--font-display);
+  margin: 0 0 calc(var(--space) / 2);
+}
+
+h1 {
+  font-size: var(--size-xl);
+}
+
+h2 {
+  font-size: var(--size-lg);
+}
+
+a {
+  color: inherit;
+}
+
+main {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: var(--space);
+}
+
+.muted {
+  color: var(--muted);
+  font-size: var(--size-sm);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.list > li {
+  padding: calc(var(--space) * 0.75) 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+button {
+  font: inherit;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}

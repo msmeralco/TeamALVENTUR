@@ -1,0 +1,809 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SILIP API",
+    "description": "Transformer risk, outages and household usage. Decision support only.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Api Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Me",
+        "description": "Who is signed in.",
+        "operationId": "me_api_v1_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Signed in, but not in the required group"
+          }
+        },
+        "security": [
+          {
+            "CognitoAccessToken": []
+          }
+        ]
+      }
+    },
+    "/api/v1/transformers": {
+      "get": {
+        "tags": [
+          "transformers"
+        ],
+        "summary": "List Transformers",
+        "description": "Risk tier, reasons and confidence per transformer, Critical first.",
+        "operationId": "list_transformers_api_v1_transformers_get",
+        "security": [
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bbox",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "min_lon,min_lat,max_lon,max_lat",
+              "title": "Bbox"
+            },
+            "description": "min_lon,min_lat,max_lon,max_lat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransformerRisk"
+                  },
+                  "title": "Response List Transformers Api V1 Transformers Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Signed in, but not in the required group"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/transformers/{transformer_id}": {
+      "get": {
+        "tags": [
+          "transformers"
+        ],
+        "summary": "Get Transformer",
+        "description": "One transformer: risk, last 48 h of load and the 24 h forecast.",
+        "operationId": "get_transformer_api_v1_transformers__transformer_id__get",
+        "security": [
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transformer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transformer Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransformerCard"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Signed in, but not in the required group"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/outages": {
+      "get": {
+        "tags": [
+          "outages"
+        ],
+        "summary": "List Outages",
+        "description": "Public: outages by area with a restoration range. No household or exact pin data.",
+        "operationId": "list_outages_api_v1_outages_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "open",
+                    "restored"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "open",
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutageSummary"
+                  },
+                  "title": "Response List Outages Api V1 Outages Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/outages/{outage_id}": {
+      "get": {
+        "tags": [
+          "outages"
+        ],
+        "summary": "Get Outage",
+        "description": "Engineer: exact pin, transformer, last-gasp and report counts.",
+        "operationId": "get_outage_api_v1_outages__outage_id__get",
+        "security": [
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "outage_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Outage Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutageDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Signed in, but not in the required group"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/usage": {
+      "get": {
+        "tags": [
+          "household"
+        ],
+        "summary": "My Usage",
+        "description": "The signed-in household's own last 7 days of usage.",
+        "operationId": "my_usage_api_v1_me_usage_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdUsage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Signed in, but not in the required group"
+          }
+        },
+        "security": [
+          {
+            "CognitoAccessToken": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HouseholdUsage": {
+        "properties": {
+          "total_kwh": {
+            "type": "number",
+            "title": "Total Kwh"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/UsagePoint"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_kwh",
+          "points",
+          "is_simulated"
+        ],
+        "title": "HouseholdUsage",
+        "description": "The last 7 days of the household's own load, in 15-minute intervals."
+      },
+      "LoadPoint": {
+        "properties": {
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          },
+          "kw": {
+            "type": "number",
+            "title": "Kw"
+          },
+          "load_pct": {
+            "type": "number",
+            "title": "Load Pct"
+          },
+          "is_forecast": {
+            "type": "boolean",
+            "title": "Is Forecast"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ts",
+          "kw",
+          "load_pct",
+          "is_forecast"
+        ],
+        "title": "LoadPoint",
+        "description": "Transformer load at one 15-minute interval; `is_forecast` marks the predicted part."
+      },
+      "MeOut": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "groups": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Groups"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "email",
+          "groups"
+        ],
+        "title": "MeOut",
+        "description": "The signed-in user."
+      },
+      "OutageDetail": {
+        "properties": {
+          "outage_id": {
+            "type": "string",
+            "title": "Outage Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "restored"
+            ],
+            "title": "Status"
+          },
+          "cause": {
+            "type": "string",
+            "title": "Cause"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "area_lat": {
+            "type": "number",
+            "title": "Area Lat"
+          },
+          "area_lon": {
+            "type": "number",
+            "title": "Area Lon"
+          },
+          "eta_p10_min": {
+            "type": "number",
+            "title": "Eta P10 Min"
+          },
+          "eta_p50_min": {
+            "type": "number",
+            "title": "Eta P50 Min"
+          },
+          "eta_p90_min": {
+            "type": "number",
+            "title": "Eta P90 Min"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          },
+          "transformer_id": {
+            "type": "string",
+            "title": "Transformer Id"
+          },
+          "pin_lat": {
+            "type": "number",
+            "title": "Pin Lat"
+          },
+          "pin_lon": {
+            "type": "number",
+            "title": "Pin Lon"
+          },
+          "last_gasp_count": {
+            "type": "integer",
+            "title": "Last Gasp Count"
+          },
+          "report_count": {
+            "type": "integer",
+            "title": "Report Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "outage_id",
+          "status",
+          "cause",
+          "started_at",
+          "area_lat",
+          "area_lon",
+          "eta_p10_min",
+          "eta_p50_min",
+          "eta_p90_min",
+          "is_simulated",
+          "transformer_id",
+          "pin_lat",
+          "pin_lon",
+          "last_gasp_count",
+          "report_count"
+        ],
+        "title": "OutageDetail",
+        "description": "Engineer view: the exact pin, the transformer, and the evidence behind the pin."
+      },
+      "OutageSummary": {
+        "properties": {
+          "outage_id": {
+            "type": "string",
+            "title": "Outage Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "restored"
+            ],
+            "title": "Status"
+          },
+          "cause": {
+            "type": "string",
+            "title": "Cause"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "area_lat": {
+            "type": "number",
+            "title": "Area Lat"
+          },
+          "area_lon": {
+            "type": "number",
+            "title": "Area Lon"
+          },
+          "eta_p10_min": {
+            "type": "number",
+            "title": "Eta P10 Min"
+          },
+          "eta_p50_min": {
+            "type": "number",
+            "title": "Eta P50 Min"
+          },
+          "eta_p90_min": {
+            "type": "number",
+            "title": "Eta P90 Min"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "outage_id",
+          "status",
+          "cause",
+          "started_at",
+          "area_lat",
+          "area_lon",
+          "eta_p10_min",
+          "eta_p50_min",
+          "eta_p90_min",
+          "is_simulated"
+        ],
+        "title": "OutageSummary",
+        "description": "Public outage card: area, cause and a restoration range."
+      },
+      "RiskOutput": {
+        "properties": {
+          "transformer_id": {
+            "type": "string",
+            "title": "Transformer Id"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "OK",
+              "Watch",
+              "Critical"
+            ],
+            "title": "Tier"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Reasons"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "description": "Tied to metering coverage"
+          },
+          "peak_load_pct": {
+            "type": "number",
+            "title": "Peak Load Pct"
+          },
+          "coverage_pct": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Coverage Pct"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transformer_id",
+          "tier",
+          "reasons",
+          "confidence",
+          "peak_load_pct",
+          "coverage_pct",
+          "is_simulated"
+        ],
+        "title": "RiskOutput",
+        "description": "Risk for one transformer over the forecast window."
+      },
+      "TransformerCard": {
+        "properties": {
+          "transformer_id": {
+            "type": "string",
+            "title": "Transformer Id"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "rated_kva": {
+            "type": "number",
+            "title": "Rated Kva"
+          },
+          "risk": {
+            "$ref": "#/components/schemas/RiskOutput"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "load": {
+            "items": {
+              "$ref": "#/components/schemas/LoadPoint"
+            },
+            "type": "array",
+            "title": "Load"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transformer_id",
+          "lat",
+          "lon",
+          "rated_kva",
+          "risk",
+          "is_simulated",
+          "as_of",
+          "load"
+        ],
+        "title": "TransformerCard",
+        "description": "The transformer card: risk plus the last 48 h and the next 24 h of load."
+      },
+      "TransformerRisk": {
+        "properties": {
+          "transformer_id": {
+            "type": "string",
+            "title": "Transformer Id"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "rated_kva": {
+            "type": "number",
+            "title": "Rated Kva"
+          },
+          "risk": {
+            "$ref": "#/components/schemas/RiskOutput"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transformer_id",
+          "lat",
+          "lon",
+          "rated_kva",
+          "risk",
+          "is_simulated"
+        ],
+        "title": "TransformerRisk",
+        "description": "One pin on the engineer risk map."
+      },
+      "UsagePoint": {
+        "properties": {
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          },
+          "kw": {
+            "type": "number",
+            "title": "Kw"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ts",
+          "kw"
+        ],
+        "title": "UsagePoint"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "CognitoAccessToken": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

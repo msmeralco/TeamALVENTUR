@@ -293,6 +293,10 @@ export function RiskMapPage() {
   const leftInsetPx = wide && panelOpen ? PANEL_INSET_PX : 0;
 
   const setFilter = (next: Partial<ListFilter>, replace = false) => {
+    if ("query" in next) {
+      setHoverId(null);
+      setSelectedId(null);
+    }
     setParams(new URLSearchParams(filterSearch({ ...filter, ...next })), { replace });
   };
   const hrefFor = (id: string) => `/engineer/transformers/${encodeURIComponent(id)}${filterSearch(filter)}`;
@@ -315,9 +319,16 @@ export function RiskMapPage() {
   const visible = visibleItems(items, filter);
   const filtered = filter.tier !== null || filter.query.trim() !== "";
   const shownIds = new Set(visible.map((i) => i.transformer_id));
+  const searchFocusId = filter.query.trim() !== "" && visible.length === 1 ? visible[0].transformer_id : null;
   const critical = items.filter((i) => i.risk.tier === "Critical").length;
   const clamps = clampQuery.data?.clamps ?? [];
   const counts = clampCounts(clamps);
+
+  // Once search narrows to one transformer, bring it into view and keep the map visible on phones.
+  useEffect(() => {
+    setFocusId(searchFocusId);
+    if (searchFocusId !== null && !wide) setPhoneView("map");
+  }, [searchFocusId, wide]);
 
   return (
     <section className="relative h-[calc(100dvh-4rem)] overflow-hidden max-sm:h-[calc(100dvh-8rem-env(safe-area-inset-bottom))]">
@@ -342,7 +353,7 @@ export function RiskMapPage() {
                 clampsAsOf={clampQuery.data?.as_of ?? null}
                 clampsFailed={clampQuery.isError && clampQuery.data === undefined}
                 onRetryClamps={() => void clampQuery.refetch()}
-                activeId={selectedId ?? hoverId}
+                activeId={selectedId ?? hoverId ?? focusId}
                 selectedId={selectedId}
                 focusId={focusId}
                 leftInsetPx={leftInsetPx}

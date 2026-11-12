@@ -17,6 +17,7 @@ from tests.api.helpers import CLIENT_ID, FakeDecoder
 def client(sim_dir) -> Iterator[TestClient]:
     settings = ApiSettings(
         data_dir=sim_dir,
+        data_source="simulated",
         cognito_user_pool_id="pool",
         cognito_client_id=CLIENT_ID,
         auth_disabled=False,

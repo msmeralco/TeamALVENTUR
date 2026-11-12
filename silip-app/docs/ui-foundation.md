@@ -2,7 +2,7 @@
 
 SILIP is a household electricity companion for people who want to understand costs, make safer choices, and learn practical energy habits. The primary screen job is to answer: “What is happening in my home, what might it cost, and what should I do next?”
 
-The current app is a front-end preview. Household readings, appliance-level inference, safety alerts, and rewards must not be presented as live until their data services and hardware support are connected.
+PoC readings are loaded from a separate mobile Lambda. Appliance-level inference, safety alerts, and rewards remain previews until their data services and hardware support are connected.
 
 ## Visual direction
 
@@ -34,7 +34,7 @@ The quick challenge is a sub-flow of Learn, not a separate bottom-navigation des
 
 ## Signature component: energy receipt
 
-The Home screen leads with a deep-green card showing an illustrative hourly peso estimate, a sample kW load, and a compact load trend. This connects an abstract current reading to the consumer’s bill. Values carry a sample-data label and explanatory copy; they are not fetched from the household API yet.
+Home and Usage show the selected device's seven-day energy total, recent kW trend, transformer assignment, last-seen time, and simulated-data status from the mobile API. Peso estimates and bill forecasts remain illustrative because a tariff-aware calculation is not available yet.
 
 ## Truthful product language
 
@@ -58,8 +58,10 @@ Ali appears at the left of page headers, lesson guidance, safety and insight car
 
 ## Current implementation boundary
 
-- The UI uses a demo household and illustrative energy values.
-- Cognito sign-in, HTTP transport, and connection of the Compose screens to `HouseholdApi` are not implemented.
+- The Android PoC accepts a device ID and calls the separate `/mobile-api/v1/devices/{clamp_id}/usage` Lambda route through CloudFront.
+- The dev mobile route is allowlisted to `silip-esp32-test`; prod's allowlist is empty. It returns aggregate usage and transformer ID, but no exact location or household identifier. Add user authorization before exposing real households or additional device IDs.
+- The existing `/api/v1/devices/{clamp_id}/readings` POST route remains the IoT ingestion path and still requires `X-Device-Key`.
+- Bill calculations and appliance-level insights still use preview content; only whole-home usage and device metadata are live.
 - Household readings, bill calculations, persisted learning progress, notifications, geofences, NILM, micro-arc detection, and demand-response payouts are not live.
 - Lesson quizzes run locally; the preview stores completion, streak, and XP on-device. Leaderboards and reward redemption are not implemented.
 

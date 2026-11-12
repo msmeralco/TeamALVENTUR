@@ -37,6 +37,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -56,10 +57,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.alventur.silipapp.R
+import com.alventur.silipapp.data.remote.HouseholdApi
+import com.alventur.silipapp.data.remote.HouseholdApiException
+import com.alventur.silipapp.data.remote.HouseholdDashboardState
 import com.alventur.silipapp.education.ChallengeAnswer
 import com.alventur.silipapp.education.Lesson
 import com.alventur.silipapp.education.LessonCatalog
 import com.alventur.silipapp.education.LessonQuizCatalog
+import java.io.IOException
+import kotlinx.coroutines.CancellationException
 
 private enum class Destination(
     val label: String,
@@ -73,10 +79,42 @@ private enum class Destination(
 }
 
 @Composable
-fun SilipApp() {
+fun SilipApp(
+    householdApi: HouseholdApi
+) {
     val context = LocalContext.current
+    val devicePreferences = remember(context) {
+        context.getSharedPreferences("silip_demo_device", Context.MODE_PRIVATE)
+    }
+    var deviceId by rememberSaveable {
+        mutableStateOf(devicePreferences.getString("clamp_id", "silip-esp32-test") ?: "silip-esp32-test")
+    }
+    var connectedDeviceId by rememberSaveable { mutableStateOf(deviceId) }
+    var householdState by remember {
+        mutableStateOf<HouseholdDashboardState>(HouseholdDashboardState.Loading)
+    }
+    var refreshCount by rememberSaveable { mutableIntStateOf(0) }
     val learningPrefs = remember(context) {
         context.getSharedPreferences("silip_learning_preview", Context.MODE_PRIVATE)
+    }
+
+    LaunchedEffect(connectedDeviceId, refreshCount) {
+        householdState = HouseholdDashboardState.Loading
+        householdState = try {
+            HouseholdDashboardState.Loaded(householdApi.getDeviceUsage(connectedDeviceId))
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: HouseholdApiException) {
+            if (error.statusCode == 404) {
+                HouseholdDashboardState.NotFound(connectedDeviceId)
+            } else {
+                HouseholdDashboardState.Error("SILIP could not load this device's readings.")
+            }
+        } catch (_: IOException) {
+            HouseholdDashboardState.Error("Could not reach SILIP. Check your internet and try again.")
+        } catch (_: Exception) {
+            HouseholdDashboardState.Error("SILIP could not load this device's readings.")
+        }
     }
     var selectedName by rememberSaveable { mutableStateOf(Destination.Home.name) }
     var learningXp by rememberSaveable {
@@ -135,13 +173,31 @@ fun SilipApp() {
         when (selected) {
             Destination.Home -> HomeScreen(
                 contentPadding = contentPadding,
+                householdState = householdState,
+                deviceId = deviceId,
+                onDeviceIdChange = { deviceId = it },
+                onConnectDevice = {
+                    val normalizedId = deviceId.trim()
+                    if (normalizedId.isNotEmpty()) {
+                        deviceId = normalizedId
+                        connectedDeviceId = normalizedId
+                        devicePreferences.edit().putString("clamp_id", normalizedId).apply()
+                        refreshCount += 1
+                    }
+                },
+                onRefreshHousehold = { refreshCount += 1 },
                 onOpenChallenge = {
                     val nextIndex = completedLessons.coerceAtMost(LessonCatalog.starterLessons.lastIndex)
                     selectedLessonId = LessonCatalog.starterLessons[nextIndex].id
                     selectedName = Destination.DailyChallenge.name
                 }
             )
-            Destination.Usage -> UsageScreen(contentPadding)
+            Destination.Usage -> UsageScreen(
+                contentPadding = contentPadding,
+                householdState = householdState,
+                deviceId = connectedDeviceId,
+                onRefreshHousehold = { refreshCount += 1 }
+            )
             Destination.Learn -> LearnScreen(
                 contentPadding = contentPadding,
                 streakDays = streakDays,
@@ -182,19 +238,32 @@ fun SilipApp() {
 @Composable
 private fun HomeScreen(
     contentPadding: PaddingValues,
+    householdState: HouseholdDashboardState,
+    deviceId: String,
+    onDeviceIdChange: (String) -> Unit,
+    onConnectDevice: () -> Unit,
+    onRefreshHousehold: () -> Unit,
     onOpenChallenge: () -> Unit
 ) {
     AdaptivePage(contentPadding) {
         item {
             PageHeader(
                 eyebrow = "HOME",
-                title = "Hello, Rosa!",
-                subtitle = "Let’s save energy.",
+                title = "Welcome home.",
+                subtitle = "Your household, at a glance.",
                 pose = AliPose.Welcome
             )
         }
-        item { EnergyReceiptCard() }
-        item { BudgetProgressCard() }
+        item {
+            HouseholdDataCard(
+                state = householdState,
+                deviceId = deviceId,
+                onDeviceIdChange = onDeviceIdChange,
+                showDeviceInput = true,
+                onConnect = onConnectDevice,
+                onRefresh = onRefreshHousehold,
+            )
+        }
         item {
             SectionHeading(
                 title = "Home safety",
@@ -203,34 +272,37 @@ private fun HomeScreen(
         }
         item { SafetyPreviewCard() }
         item { QuickLessonCard(onClick = onOpenChallenge) }
-        item {
-            Text(
-                text = "Sample data · connect a device for live readings",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 4.dp)
-            )
-        }
     }
 }
 
 @Composable
-private fun UsageScreen(contentPadding: PaddingValues) {
+private fun UsageScreen(
+    contentPadding: PaddingValues,
+    householdState: HouseholdDashboardState,
+    deviceId: String,
+    onRefreshHousehold: () -> Unit
+) {
     AdaptivePage(contentPadding) {
         item {
             PageHeader(
                 eyebrow = "USAGE",
                 title = "See what you use.",
-                subtitle = "Know the cost as it grows.",
+                subtitle = "Whole-home readings from your registered device.",
                 pose = AliPose.HouseholdCheck
             )
         }
-        item { BillForecastCard() }
         item {
-            TrendBarsCard(
-                title = "Example household load · kW",
-                description = "Sample peak · around 6 pm"
+            HouseholdDataCard(
+                state = householdState,
+                deviceId = deviceId,
+                onDeviceIdChange = {},
+                showDeviceInput = false,
+                onConnect = onRefreshHousehold,
+                onRefresh = onRefreshHousehold,
             )
+        }
+        if (householdState is HouseholdDashboardState.Loaded) {
+            item { HouseholdUsageTrendCard(points = householdState.device.points) }
         }
         item {
             SectionHeading(

@@ -1,32 +1,25 @@
 package com.alventur.silipapp.data.remote
 
-data class HouseholdUsage(
+data class DeviceUsage(
+    val clampId: String,
+    val transformerId: String,
+    val lastSeenAt: String?,
     val totalKwh: Double,
-    val points: List<UsagePoint>,
-    val isSimulated: Boolean
+    val isSimulated: Boolean,
+    val points: List<UsagePoint>
 )
 
 data class UsagePoint(
     val timestamp: String,
-    val powerKw: Double,
-    val isSimulated: Boolean
+    val powerKw: Double
 )
 
-data class HouseholdDevice(
-    val clampId: String,
-    val transformerId: String,
-    val lastSeenAt: String?,
-    val isSimulated: Boolean
-)
-
-/** Authenticated household endpoints served by the SILIP API behind CloudFront. */
+/** Public PoC read endpoint for the allowlisted demo device. */
 interface HouseholdApi {
-    suspend fun getUsage(accessToken: String): HouseholdUsage
-
-    suspend fun getDevice(accessToken: String): HouseholdDevice
+    suspend fun getDeviceUsage(clampId: String): DeviceUsage
 }
 
 object HouseholdApiRoutes {
-    const val USAGE = "/api/v1/me/usage"
-    const val DEVICE = "/api/v1/me/device"
+    fun demoDeviceUsage(clampId: String): String =
+        "/mobile-api/v1/devices/$clampId/usage"
 }

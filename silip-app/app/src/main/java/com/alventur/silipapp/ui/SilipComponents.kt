@@ -33,9 +33,13 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.TipsAndUpdates
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,8 +68,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.fillMaxSize
+import com.alventur.silipapp.data.remote.HouseholdDashboardState
+import com.alventur.silipapp.data.remote.UsagePoint
 import com.alventur.silipapp.education.Lesson
 import com.alventur.silipapp.R
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 internal enum class AliPose(val drawableRes: Int) {
     Welcome(R.drawable.ali_welcome),
@@ -319,6 +329,148 @@ internal fun EnergyReceiptCard() {
 }
 
 @Composable
+internal fun HouseholdDataCard(
+    state: HouseholdDashboardState,
+    deviceId: String,
+    onDeviceIdChange: (String) -> Unit,
+    showDeviceInput: Boolean,
+    onConnect: () -> Unit,
+    onRefresh: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Device readings",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            if (showDeviceInput) {
+                OutlinedTextField(
+                    value = deviceId,
+                    onValueChange = onDeviceIdChange,
+                    label = { Text("Device ID") },
+                    supportingText = { Text("PoC demo device: silip-esp32-test") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Button(
+                    onClick = onConnect,
+                    enabled = deviceId.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Connect device")
+                }
+            }
+            when (state) {
+                HouseholdDashboardState.Loading -> {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 3.dp)
+                        Text("Loading device readings…", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                is HouseholdDashboardState.NotFound -> {
+                    Text(
+                        text = "No readings found for ${state.clampId}. Check the ID and try again.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (!showDeviceInput) {
+                        OutlinedButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
+                            Text("Try again")
+                        }
+                    }
+                }
+                is HouseholdDashboardState.Error -> {
+                    Text(
+                        text = state.message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
+                        Text("Refresh")
+                    }
+                }
+                is HouseholdDashboardState.Loaded -> {
+                    val device = state.device
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "LAST 7 DAYS",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        PreviewBadge(
+                            label = when {
+                                device.isSimulated -> "Simulated"
+                                device.points.isEmpty() -> "Waiting"
+                                else -> "Live"
+                            }
+                        )
+                    }
+                    Text(
+                        text = "${device.totalKwh.energyFormat()} kWh",
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                    Text(
+                        text = if (device.points.isEmpty()) {
+                            "No readings received yet."
+                        } else {
+                            "${device.points.size} intervals · whole-home energy use"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(
+                            text = "${device.clampId} · Transformer ${device.transformerId}",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = device.lastSeenAt?.let(::formatLastSeen)
+                                ?.let { "Last reading · $it" }
+                                ?: "Waiting for the first device reading",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    OutlinedButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
+                        Text("Refresh readings")
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun Double.energyFormat(): String = String.format(Locale.getDefault(), "%.2f", this)
+
+private fun formatLastSeen(timestamp: String): String = runCatching {
+    OffsetDateTime.parse(timestamp)
+        .atZoneSameInstant(ZoneId.systemDefault())
+        .format(DateTimeFormatter.ofPattern("MMM d · h:mm a", Locale.getDefault()))
+}.getOrDefault(timestamp)
+
+@Composable
 internal fun BudgetProgressCard(
     title: String = "Monthly budget",
     modifier: Modifier = Modifier
@@ -512,6 +664,67 @@ internal fun TrendBarsCard(
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary
             )
+        }
+    }
+}
+
+@Composable
+internal fun HouseholdUsageTrendCard(points: List<UsagePoint>) {
+    val recentPoints = points.sortedBy(UsagePoint::timestamp).takeLast(48)
+    val peakKw = recentPoints.maxOfOrNull(UsagePoint::powerKw) ?: 0.0
+    val normalized = recentPoints.map { point ->
+        if (peakKw > 0.0) (point.powerKw / peakKw).toFloat() else 0f
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = CardDefaults.outlinedCardBorder()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Recent home load",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Relative demand · latest ${recentPoints.size} readings",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (recentPoints.isEmpty()) {
+                Text(
+                    text = "A trend will appear after the device sends readings.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                TrendLine(
+                    values = normalized,
+                    lineColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    description = "Relative whole-home power demand over the latest ${recentPoints.size} readings."
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Earlier", style = MaterialTheme.typography.labelSmall)
+                    Text("Now", style = MaterialTheme.typography.labelSmall)
+                }
+                Text(
+                    text = "Peak in this chart · ${peakKw.energyFormat()} kW",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }

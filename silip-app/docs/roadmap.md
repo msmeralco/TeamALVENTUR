@@ -9,9 +9,9 @@ Individual work items live under [`tickets/`](tickets/). They are local Markdown
 ### 1. Household access and live data
 
 1. [Define household onboarding and device-linking](tickets/01-household-onboarding.md)
-2. [Connect Cognito and the household API](tickets/02-cognito-household-api.md) — after ticket 01
+2. [Connect Cognito and the household API](tickets/02-cognito-household-api.md) — deferred until after the single-device mobile PoC
 
-The API resolves the household server-side from the Cognito subject. Keep household identifiers such as `sin_hash` out of the app. Wire live usage and device state before replacing the demo labels or sample values.
+The current Android PoC reads only the allowlisted `silip-esp32-test` through its own Lambda. Do not add real household IDs to the public allowlist. The later Cognito flow should resolve household identity server-side and keep `sin_hash` out of the app.
 
 ### 2. Learning experience
 
@@ -41,6 +41,7 @@ The current clamp measures whole-home current. Do not claim heat, micro-arcing, 
 
 ## Current limits
 
-- The Home/Usage screens show a demo household with sample peso and kW values.
-- Cognito sign-in, HTTP transport, and Compose integration with `HouseholdApi` are not wired.
+- The mobile Lambda and CloudFront route must be deployed before the Android app can fetch usage.
+- Mobile PoC access is intentionally public and restricted in code to the one demo device; add user authorization before real household rollout.
+- Bill estimates, appliance-level detection, safety alerts, and rewards are not live.
 - Lesson completion, XP, streaks, leaderboard, geofences, notifications, NILM, safety detection, and payouts are not live.

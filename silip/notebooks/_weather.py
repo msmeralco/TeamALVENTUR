@@ -66,3 +66,25 @@ def cell_id(lat: float, lon: float) -> str:
         return (index + 0.5) * WEATHER_CELL_DEG
 
     return f"{centre(lat):.2f}_{centre(lon):.2f}"
+
+
+def fit_temperature(heat_c, rh_pct) -> tuple[np.ndarray, np.ndarray]:
+    """Temperature (°C) and humidity (%) whose NOAA heat index matches `heat_c` within 0.05 °C.
+
+    NOAA's formula jumps near 27 °C (simple to Rothfusz), so humidity drops 2 points where no
+    temperature fits, until one does.
+    """
+    heat_c, rh = np.asarray(heat_c, dtype=float), np.array(rh_pct, dtype=float)
+    temp = temperature_for(heat_c, rh).round(2)
+    for _ in range(20):
+        off = np.abs(heat_index_c(temp, rh) - heat_c) > 0.05
+        if not off.any():
+            break
+        rh[off] -= 2.0
+        temp[off] = temperature_for(heat_c[off], rh[off]).round(2)
+    return temp, rh
+
+
+def issue_rng(seed: int, issued_at) -> np.random.Generator:
+    """Random stream for one forecast issue, keyed by its time (hours since the epoch)."""
+    return np.random.default_rng([seed, 9_003, int(issued_at.timestamp()) // 3600])

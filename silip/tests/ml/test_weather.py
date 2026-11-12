@@ -127,7 +127,9 @@ def test_simulated_forecast_skill_matches_measured(sim_dir: Path) -> None:
     truth = weather[weather["kind"] == "archive"].set_index("ts")["heat_index_c"]
     fcst = weather[
         (weather["kind"] == "forecast")
+        & (weather["issued_at"].dt.hour == 0)  # the 00:00 issue of each day, as features read it
         & (weather["ts"] - weather["issued_at"] < pd.Timedelta(days=1))
+        & weather["ts"].isin(truth.index)
     ]
     fcst = fcst.assign(true=fcst["ts"].map(truth))
     daily_max = fcst.groupby("issued_at")[["heat_index_c", "true"]].max()

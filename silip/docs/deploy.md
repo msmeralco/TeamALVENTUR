@@ -30,3 +30,13 @@
 - Neon: the owner ran the `feature/iot` columns (`household.location_label`, `reading.motion`, `clamp.device_key_hash`) and grants.
 - Checked: browser sign-in as `alventur-solutions`; `/api/v1/transformers` and `/api/v1/clamps` 200; `/api/health` 200.
 - Build tip: build the image from a context with only `pyproject.toml`, `uv.lock`, `ml/`, `api/` and `data/sim` (there is no `.dockerignore`, so a checkout with `.venv` and `node_modules` stalls the upload).
+
+## dev, 2026-11-12 (device management deploy)
+
+- Commits: `b66b109` (API merge repair), `22ab43d` (web routes), `54859e9` (simulated API test fixture).
+- API and scoring Lambda image: `silip-dev:0.3.1`; `DATA_SOURCE=simulated`.
+- Terraform apply: 0 added, 3 changed, 0 destroyed. Updated both Lambda image URIs and normalized the SPA CloudFront function's line endings.
+- Web: https://d3kla6q1vf4py1.cloudfront.net; uploaded with explicit MIME types and immutable caching for hashed assets; invalidation `IBA6L7XNVWMZEAGPC3AV7HT6KZ` completed.
+- Smoke checks: `/api/health` 200, `/engineer/devices` 200, new JS bundle served as `application/javascript`; live `/api/*` allows POST.
+- Device POST check with the ESP32's `x-amz-content-sha256` header returned 401 `Device key required` because the smoke request intentionally omitted `X-Device-Key`; no reading was stored. The first manual curl omitted the hash header and was rejected by Lambda URL SigV4 validation. The ESP32 HTTP transport already computes and sends this header.
+- No database migration was run during this deployment.

@@ -3,6 +3,8 @@
 Same definitions as `silip_ml/weather.py` (NOAA heat index:
 https://www.wpc.ncep.noaa.gov/html/heatindex_equation.shtml); `tests/ml/test_weather.py` checks
 that the two agree. The simulator draws heat index first, so `temperature_for` inverts it.
+Dew point uses the Magnus formula with Alduchov and Eskridge (1996) constants (a = 17.625,
+b = 243.04 °C); the day-ahead forecast holds the true dew point when it perturbs temperature.
 """
 
 from __future__ import annotations
@@ -12,6 +14,20 @@ import math
 import numpy as np
 
 WEATHER_CELL_DEG = 0.1  # [VERIFY] against the resolution of the Open-Meteo model we query
+MAGNUS_A, MAGNUS_B = 17.625, 243.04  # Alduchov and Eskridge (1996), b in °C
+
+
+def dew_point_c(temp_c, rh_pct) -> np.ndarray:
+    """Dew point (°C) from air temperature (°C) and relative humidity (%), Magnus formula."""
+    t = np.asarray(temp_c, dtype=float)
+    gamma = np.log(np.asarray(rh_pct, dtype=float) / 100.0) + MAGNUS_A * t / (MAGNUS_B + t)
+    return MAGNUS_B * gamma / (MAGNUS_A - gamma)
+
+
+def relative_humidity_pct(temp_c, dew_point) -> np.ndarray:
+    """Relative humidity (%) of air at `temp_c` with dew point `dew_point` (°C), Magnus formula."""
+    t, td = np.asarray(temp_c, dtype=float), np.asarray(dew_point, dtype=float)
+    return 100.0 * np.exp(MAGNUS_A * td / (MAGNUS_B + td) - MAGNUS_A * t / (MAGNUS_B + t))
 
 
 def heat_index_c(temp_c, rh_pct) -> np.ndarray:

@@ -9,8 +9,10 @@ the chart, so each check allows 1 °F after rounding.
 
 import importlib.util
 from pathlib import Path
+from types import ModuleType
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from silip_ml.weather import WEATHER_CELL_DEG, cell_id, heat_index_c
@@ -94,3 +96,40 @@ def test_matches_noaa_published_example() -> None:
     # weather.gov/safety/heat-index: "air temperature of 96 F and relative humidity of 65%
     # ... heat index ... 121 F". Coefficients and rules: wpc.ncep.noaa.gov/html/heatindex_equation.shtml
     assert heat_index_c(_f_to_c(96), 65) == pytest.approx(_f_to_c(121), abs=0.3)
+
+
+def _notebook_weather() -> ModuleType:
+    path = Path(__file__).parents[2] / "notebooks" / "_weather.py"
+    spec = importlib.util.spec_from_file_location("notebook_weather", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_magnus_dew_point() -> None:
+    # Magnus with Alduchov and Eskridge (1996) constants: 30 °C at 70% has a dew point of 23.9 °C;
+    # saturated air has its dew point at the air temperature.
+    nb = _notebook_weather()
+    assert nb.dew_point_c(30.0, 70.0) == pytest.approx(23.93, abs=0.01)
+    assert nb.dew_point_c(25.0, 100.0) == pytest.approx(25.0)
+    temps, rh = np.meshgrid(np.linspace(20, 40, 21), np.linspace(30, 100, 15))
+    np.testing.assert_allclose(nb.relative_humidity_pct(temps, nb.dew_point_c(temps, rh)), rh)
+    # Same dew point, warmer air: drier.
+    assert nb.relative_humidity_pct(31.0, nb.dew_point_c(30.0, 70.0)) < 70.0
+
+
+def test_simulated_forecast_skill_matches_measured(sim_dir: Path) -> None:
+    """Daily-max heat index error of the simulated day-ahead forecast (lead day 0) stays in the band
+    measured for Open-Meteo vs ERA5 in Metro Manila (0.69 to 0.79 °C, notebooks/weather_skill.py)."""
+    weather = pd.read_csv(sim_dir / "weather_forecast_hourly.csv", parse_dates=["issued_at", "ts"])
+    weather = weather[weather["cell_id"] == weather["cell_id"].min()]
+    truth = weather[weather["kind"] == "archive"].set_index("ts")["heat_index_c"]
+    fcst = weather[
+        (weather["kind"] == "forecast")
+        & (weather["ts"] - weather["issued_at"] < pd.Timedelta(days=1))
+    ]
+    fcst = fcst.assign(true=fcst["ts"].map(truth))
+    daily_max = fcst.groupby("issued_at")[["heat_index_c", "true"]].max()
+    mae = (daily_max["heat_index_c"] - daily_max["true"]).abs().mean()
+    assert 0.6 <= mae <= 1.0

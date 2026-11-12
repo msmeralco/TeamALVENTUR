@@ -71,27 +71,37 @@ function renderAt(path: string, backend: AuthBackend = createDevBackend()) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("public outage view", () => {
-  it("shows one restoration window, the cause and the Simulated data label", async () => {
+  it("leads with the expected time back, shows the window once, the cause and the Simulated data label", async () => {
     mockApi({ "/api/v1/outages": [OUTAGE] });
-    renderAt("/");
+    renderAt("/outages");
     expect(await screen.findByText("overload")).toBeTruthy();
-    expect(screen.getByText("Power expected back")).toBeTruthy();
+    expect(screen.getByText(/^Expected back around /)).toBeTruthy();
+    expect(screen.getAllByText(/^Window /)).toHaveLength(1);
+    expect(screen.getByText("Power out")).toBeTruthy();
     expect(screen.queryByText(/1 h 30 min/)).toBeNull();
     expect(screen.getByText("Simulated data")).toBeTruthy();
+    expect(screen.getAllByText(/^Updated /).length).toBeGreaterThan(0);
     expect(document.title).toBe("Outages · SILIP");
   });
 
   it("hides the area search until the API sends area names", async () => {
     mockApi({ "/api/v1/outages": [OUTAGE] });
-    renderAt("/");
+    renderAt("/outages");
     await screen.findByText("overload");
     expect(screen.queryByRole("searchbox", { name: "Search by area" })).toBeNull();
     expect(screen.getByRole("button", { name: "Near me" })).toBeTruthy();
   });
 
+  it("says calmly when nothing is out and keeps the advice to report to Meralco", async () => {
+    mockApi({ "/api/v1/outages": [] });
+    renderAt("/outages");
+    expect(await screen.findByText("No open outages in this area.")).toBeTruthy();
+    expect(screen.getByText("If your power is out, report it to Meralco.")).toBeTruthy();
+  });
+
   it("shows an error with a retry when the API fails", async () => {
     mockApi({ "/api/v1/outages": { detail: "boom" } }, 500);
-    renderAt("/");
+    renderAt("/outages");
     const alert = await screen.findByRole("alert", {}, { timeout: 3000 });
     expect(within(alert).getByRole("button", { name: "Try again" })).toBeTruthy();
   });

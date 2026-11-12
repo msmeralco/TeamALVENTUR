@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Loader2, LocateFixed, Search } from "lucide-react";
+import { CircleCheck, ExternalLink, Loader2, LocateFixed, Search } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { REFRESH_INTERVAL_MS, api, unwrap, type Schemas } from "../../shared/api/client";
 import { PageHead, QueryView, SimulatedLabel, formatClock } from "../../shared/ui";
 import { Button } from "../../shared/ui/components/button";
+import { Badge } from "../../shared/ui/components/badge";
 import { Card } from "../../shared/ui/components/card";
 import { Skeleton } from "../../shared/ui/components/skeleton";
 import { Freshness, useDocumentTitle } from "../../shared/ui/feedback";
@@ -38,25 +39,30 @@ function Detail({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function OutageCard({ outage, distance }: { outage: Outage; distance: number | null }) {
+const STATUS_WORD: Record<Outage["status"], string> = { open: "Power out", restored: "Restored" };
+
+/** One outage: expected time back first, the window once, then cause, start, area and freshness. */
+function OutageCard({ outage, distance, fetchedAt }: { outage: Outage; distance: number | null; fetchedAt: number }) {
   const started = new Date(outage.started_at);
   const at = (minutes: number) => formatClock(new Date(started.getTime() + minutes * MS_PER_MIN));
   const name = areaName(outage);
   return (
     <li>
       <Card className="gap-2 px-6 shadow-none">
-        <p className="text-sm font-semibold text-muted-foreground">Power expected back</p>
-        <p className="font-display text-3xl font-bold">
-          {at(outage.eta_p10_min)} to {at(outage.eta_p90_min)}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-semibold">{name ?? "Open outage"}</p>
+          <Badge variant="secondary" className="px-2.5 font-semibold">
+            {STATUS_WORD[outage.status]}
+          </Badge>
+        </div>
+        <p className="font-display text-xl font-bold">Expected back around {at(outage.eta_p50_min)}</p>
+        <p className="text-sm text-muted-foreground">
+          Window {at(outage.eta_p10_min)} to {at(outage.eta_p90_min)}. This is an estimate.
         </p>
-        <p>
-          Most likely around <strong>{at(outage.eta_p50_min)}</strong>. This is an estimate.
-        </p>
-        <dl className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-4 border-t pt-4">
+        <dl className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-4 border-t pt-4">
           <Detail label="Cause">{outage.cause}</Detail>
           <Detail label="Started">{formatClock(started)}</Detail>
           <Detail label="Area">
-            {name !== null && <span className="block">{name}</span>}
             <a
               className="inline-flex min-h-11 items-center underline underline-offset-4 sm:min-h-0"
               href={`https://www.openstreetmap.org/?mlat=${outage.area_lat}&mlon=${outage.area_lon}#map=16/${outage.area_lat}/${outage.area_lon}`}
@@ -74,6 +80,7 @@ function OutageCard({ outage, distance }: { outage: Outage; distance: number | n
             )}
           </Detail>
         </dl>
+        <Freshness fetchedAt={fetchedAt} />
       </Card>
     </li>
   );
@@ -103,19 +110,34 @@ function useNearMe() {
 
 function OutagesSkeleton() {
   return (
-    <ul className="grid max-w-2xl gap-4">
+    <ul className="grid gap-4">
       {[0, 1].map((i) => (
         <li key={i}>
-          <Skeleton className="h-60 rounded-xl" />
+          <Skeleton className="h-64 rounded-xl" />
         </li>
       ))}
     </ul>
   );
 }
 
-/** Public outage view: restoration range first, then cause and area. No household data. */
-export function OutagesPage() {
-  useDocumentTitle("Outages");
+function NoOutages({ fetchedAt, nearYou }: { fetchedAt: number; nearYou: boolean }) {
+  return (
+    <Card className="items-start gap-2 px-6 py-8 shadow-none">
+      <p className="flex items-center gap-2 font-display text-xl font-bold">
+        <CircleCheck aria-hidden="true" className="size-5 shrink-0 text-brand" />
+        {nearYou ? "No open outages near you." : "No open outages in this area."}
+      </p>
+      <Freshness fetchedAt={fetchedAt} />
+      <p className="text-sm text-muted-foreground">If your power is out, report it to Meralco.</p>
+    </Card>
+  );
+}
+
+/**
+ * The outage check: "Near me", area search (once the API sends area names) and the results.
+ * /outages and the landing page hero both use it, so they answer the same way.
+ */
+export function OutageCheck() {
   const nearMe = useNearMe();
   const [areaQuery, setAreaQuery] = useState("");
   const query = useQuery({
@@ -123,105 +145,100 @@ export function OutagesPage() {
     queryFn: async () => unwrap(await api.GET("/api/v1/outages", { params: { query: { status: "open" } } })),
     refetchInterval: REFRESH_INTERVAL_MS,
   });
+  const outages = query.data ?? [];
+  const searchable = outages.some((o) => areaName(o) !== null);
   return (
-    <section>
-      <PageHead title="Power outages" lede="Open outages and when power is expected back.">
-        {query.data !== undefined && (
-          <div className="flex flex-wrap items-center gap-2">
-            <SimulatedLabel show={query.data.some((o) => o.is_simulated)} />
-            <Freshness fetchedAt={query.dataUpdatedAt} />
-          </div>
+    <div className="grid gap-4">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        {searchable && (
+          <label className="relative min-w-0 grow sm:max-w-72">
+            <span className="sr-only">Search by area</span>
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <input
+              type="search"
+              placeholder="Search your area"
+              value={areaQuery}
+              onChange={(e) => setAreaQuery(e.target.value)}
+              className="h-11 w-full rounded-full border bg-card pr-4 pl-9 text-base placeholder:text-muted-foreground"
+            />
+          </label>
         )}
-      </PageHead>
+        {nearMe.here === null ? (
+          <Button className="min-h-11 rounded-full px-5" disabled={nearMe.state === "locating"} onClick={nearMe.locate}>
+            {nearMe.state === "locating" ? (
+              <Loader2 aria-hidden="true" className="animate-spin" />
+            ) : (
+              <LocateFixed aria-hidden="true" />
+            )}
+            {nearMe.state === "locating" ? "Finding you…" : "Near me"}
+          </Button>
+        ) : (
+          <Button variant="outline" className="min-h-11 rounded-full px-5" onClick={nearMe.clear}>
+            Newest first
+          </Button>
+        )}
+        {query.data !== undefined && (
+          <span className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            {outages.length} open {outages.length === 1 ? "outage" : "outages"}
+            {nearMe.here !== null && outages.length > 1 && ", nearest first"}
+            <SimulatedLabel show={outages.some((o) => o.is_simulated)} />
+          </span>
+        )}
+      </div>
+      <p role="status" className="text-sm text-muted-foreground">
+        {nearMe.state === "failed"
+          ? "Could not get your location. Check the browser's location setting."
+          : nearMe.here !== null
+            ? "Your location stays on this device."
+            : "Near me asks for your location only when you tap it. It stays on this device."}
+      </p>
       <QueryView
         {...query}
-        isEmpty={(outages) => outages.length === 0}
-        emptyMessage="No open outages right now. If your power is out, report it to Meralco."
+        isEmpty={() => false}
+        emptyMessage={null}
         onRetry={query.refetch}
         skeleton={<OutagesSkeleton />}
       >
-        {(outages) => {
-          const searchable = outages.some((o) => areaName(o) !== null);
+        {(data) => {
           const wanted = areaQuery.trim().toLowerCase();
-          const shown = outages
+          const shown = data
             .filter((o) => wanted === "" || (areaName(o) ?? "").toLowerCase().includes(wanted))
             .map((o) => ({
               outage: o,
               distance: nearMe.here === null ? null : distanceKm(nearMe.here, { lat: o.area_lat, lon: o.area_lon }),
             }))
             .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
+          if (shown.length === 0) {
+            return <NoOutages fetchedAt={query.dataUpdatedAt} nearYou={nearMe.here !== null && wanted === ""} />;
+          }
           return (
-            <div className="grid max-w-2xl gap-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="mr-auto text-sm text-muted-foreground">
-                  {outages.length} open {outages.length === 1 ? "outage" : "outages"}
-                  {nearMe.here !== null && ", nearest first"}
-                </span>
-                {searchable && (
-                  <label className="relative min-w-0 grow sm:max-w-64">
-                    <span className="sr-only">Search by area</span>
-                    <Search
-                      aria-hidden="true"
-                      className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-                    />
-                    <input
-                      type="search"
-                      placeholder="Search your area"
-                      value={areaQuery}
-                      onChange={(e) => setAreaQuery(e.target.value)}
-                      className="h-11 w-full rounded-full border bg-card pr-4 pl-9 text-base placeholder:text-muted-foreground sm:h-9 sm:text-sm"
-                    />
-                  </label>
-                )}
-                {nearMe.here === null ? (
-                  <Button
-                    variant="outline"
-                    className="min-h-11 rounded-full sm:min-h-9"
-                    disabled={nearMe.state === "locating"}
-                    onClick={nearMe.locate}
-                  >
-                    {nearMe.state === "locating" ? (
-                      <Loader2 aria-hidden="true" className="animate-spin" />
-                    ) : (
-                      <LocateFixed aria-hidden="true" />
-                    )}
-                    {nearMe.state === "locating" ? "Finding you…" : "Near me"}
-                  </Button>
-                ) : (
-                  <Button variant="outline" className="min-h-11 rounded-full sm:min-h-9" onClick={nearMe.clear}>
-                    Newest first
-                  </Button>
-                )}
-              </div>
-              <p role="status" className="text-sm text-muted-foreground empty:hidden">
-                {nearMe.state === "failed"
-                  ? "Could not get your location. Check the browser's location setting."
-                  : nearMe.here !== null
-                    ? "Your location stays on this device."
-                    : ""}
-              </p>
-              {shown.length === 0 ? (
-                <Card className="items-start gap-3 px-6 py-8">
-                  <p>No open outages match that area.</p>
-                  <Button
-                    variant="outline"
-                    className="min-h-11 rounded-full sm:min-h-9"
-                    onClick={() => setAreaQuery("")}
-                  >
-                    Clear search
-                  </Button>
-                </Card>
-              ) : (
-                <ul className="grid gap-4">
-                  {shown.map(({ outage, distance }) => (
-                    <OutageCard key={outage.outage_id} outage={outage} distance={distance} />
-                  ))}
-                </ul>
-              )}
-            </div>
+            <ul className="grid gap-4">
+              {shown.map(({ outage, distance }) => (
+                <OutageCard
+                  key={outage.outage_id}
+                  outage={outage}
+                  distance={distance}
+                  fetchedAt={query.dataUpdatedAt}
+                />
+              ))}
+            </ul>
           );
         }}
       </QueryView>
+    </div>
+  );
+}
+
+/** Public outage view: expected time back first, then cause and area. No household data. */
+export function OutagesPage() {
+  useDocumentTitle("Outages");
+  return (
+    <section className="max-w-2xl">
+      <PageHead title="Power outages" lede="Open outages and when power is expected back." />
+      <OutageCheck />
     </section>
   );
 }

@@ -85,15 +85,16 @@ forbidden_modules = ["silip_ml.readings", "silip_ml.load", "silip_ml.risk", "sil
 name = "API feature layers: api > adapters > service > domain"
 type = "layers"
 layers = ["(api)", "(adapters)", "service", "domain"]  # () = optional; ingest has handler.py instead of api.py
-containers = ["silip.transformers", "silip.outages", "silip.household", "silip.ingest", "silip.clamps", "silip.scoring", "silip.bench", "silip.shared.auth", "silip.shared.scores"]
+containers = ["silip.transformers", "silip.outages", "silip.household", "silip.ingest", "silip.clamps", "silip.scoring", "silip.bench", "silip.shared.auth", "silip.shared.scores", "silip.ev", "silip.weather"]
 
 [[tool.importlinter.contracts]]
 name = "Shared imports no feature"
 type = "forbidden"
 source_modules = ["silip.shared"]
-forbidden_modules = ["silip.transformers", "silip.outages", "silip.household", "silip.ingest", "silip.clamps", "silip.scoring", "silip.bench", "silip.app"]
+forbidden_modules = ["silip.transformers", "silip.outages", "silip.household", "silip.ingest", "silip.clamps", "silip.scoring", "silip.bench", "silip.ev", "silip.weather", "silip.app"]
 
 [[tool.importlinter.contracts]]
 name = "Features are independent"
 type = "independence"
+# ev and weather are inputs that scoring and the dashboard routes read, so they are not listed here.
 modules = ["silip.transformers", "silip.outages", "silip.household", "silip.ingest", "silip.clamps", "silip.scoring", "silip.bench"]

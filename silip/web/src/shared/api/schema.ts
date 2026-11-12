@@ -612,6 +612,20 @@ export interface components {
             barangay: string | null;
             /** City */
             city: string | null;
+            /** Classification */
+            classification?: string | null;
+            /** N Ac */
+            n_ac?: number | null;
+            /** N Dc */
+            n_dc?: number | null;
+            /** N Plugs */
+            n_plugs?: number | null;
+            /** Max Capacity Kw */
+            max_capacity_kw?: number | null;
+            /** Price Min Php Kwh */
+            price_min_php_kwh?: number | null;
+            /** Price Max Php Kwh */
+            price_max_php_kwh?: number | null;
         };
         /**
          * ChargerMap
@@ -1162,6 +1176,10 @@ export interface components {
         TransformerEv: {
             /** Stations Within */
             stations_within: number;
+            /** Dc Stations Within */
+            dc_stations_within: number | null;
+            /** Max Capacity Kw Within */
+            max_capacity_kw_within: number | null;
             /** Nearest Station M */
             nearest_station_m: number | null;
             /** Radius M */

@@ -25,15 +25,16 @@ router = APIRouter(prefix="/api/v1/ev", tags=["ev"])
 
 @lru_cache(maxsize=4)
 def _memory(data_dir: Path, source: DataSource) -> MemoryEvStore:
-    """DATA_SOURCE=simulated: one loader pass per process over the delivered files."""
+    """EV_SOURCE=csv: one loader pass per process over the delivered files."""
     if not (data_dir / STATIONS_CSV).exists():
         return MemoryEvStore()
     return MemoryEvStore(load_from_files(data_dir, source.transformers(), datetime.now(UTC)))
 
 
 def get_ev_store(settings: Settings, source: Source) -> EvStore:
-    """In memory for DATA_SOURCE=simulated; otherwise what `silip.ev.load` wrote to Neon."""
-    if settings.data_source == "simulated":
+    """What `silip.ev.load` wrote to Neon, whatever DATA_SOURCE is (EV data is real); in memory
+    from the files only when no database is configured (EV_SOURCE=csv)."""
+    if settings.ev_store == "csv":
         return _memory(settings.ev_data_dir, source)
     return NeonEvStore(lambda: connect(settings))
 

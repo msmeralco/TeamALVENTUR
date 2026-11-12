@@ -13,7 +13,8 @@ from silip.shared.deps import get_data_source
 from silip.shared.readings.adapters import SimulatedSource
 from tests.api.helpers import CLIENT_ID, FakeDecoder
 
-# Three made-up stations in the delivered DOE header: two near fixture transformers, one far.
+# Three made-up stations in the delivered DOE header: two near fixture transformers, one far;
+# made-up DOE detail and plugs (with fake contact columns that must never reach a response).
 FIXTURE_EV = Path(__file__).parents[1] / "fixtures" / "ev"
 
 
@@ -23,6 +24,7 @@ def client(sim_dir) -> Iterator[TestClient]:
         data_dir=sim_dir,
         data_source="simulated",
         ev_data_dir=FIXTURE_EV,
+        ev_source="csv",
         cognito_user_pool_id="pool",
         cognito_client_id=CLIENT_ID,
         auth_disabled=False,

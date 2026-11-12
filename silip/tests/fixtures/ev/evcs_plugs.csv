@@ -1,0 +1,6 @@
+station_number,name,latitude,longitude,equipment_serial,mode,chargepoint_status,status_reason,plug_id,protocol,charging_capacity,price_php,pricing_strategy
+TEST-0001,Test Hub Near T-100,14.3650,121.0175,SERIAL-A,Mode 3 (AC),1,,Type 2 - Plug 1,Type 2,7,25.00,Variable/Consumption Fees (Php/kWh)
+TEST-0001,Test Hub Near T-100,14.3650,121.0175,SERIAL-B,Mode 4 (DC),0,Defective charger - call 0917-555-0100,CCS Combo 2 - Plug 1,CCS Combo 2,60,500.00,Service-Based Fees (PHP)
+TEST-0002,Test Hub Near T-103,14.6385,121.0100,SERIAL-C,Mode 3 (AC),1,,Type 2 - Plug 1,Type 2,,,
+TEST-0002,Test Hub Near T-103,14.6385,121.0100,SERIAL-D,Mode 3 (AC),1,,Type 2 - Plug 1,Type 2,,,
+TEST-0009,Ghost,14.0,121.0,SERIAL-E,Mode 3 (AC),1,,Type 2 - Plug 1,Type 2,7,,

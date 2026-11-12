@@ -15,6 +15,7 @@ from silip_ml.core.config import MlSettings
 
 DataSourceName = Literal["simulated", "neon", "clamp", "smart_meter"]
 WeatherSourceName = Literal["simulated", "open_meteo"]
+EvSourceName = Literal["neon", "csv"]
 
 
 class ConfigError(RuntimeError):
@@ -45,6 +46,18 @@ class ApiSettings(MlSettings):
     open_meteo_base_url: str = "https://api.open-meteo.com/v1/forecast"
     # Delivered (not simulated) inputs: data/evcs_locations.csv and data/ev_adoption.csv.
     ev_data_dir: Path = Path("data")
+    # EV data is real, so it does not follow DATA_SOURCE. EV_SOURCE=neon reads what
+    # `silip.ev.load` wrote; csv runs a loader pass over ev_data_dir in memory (local, tests).
+    # Unset: neon whenever a database is configured (DATABASE_URL or DATABASE_SECRET_ARN).
+    ev_source: EvSourceName | None = None
+
+    @property
+    def ev_store(self) -> EvSourceName:
+        """EV_SOURCE, or neon when a database is configured, else csv."""
+        if self.ev_source is not None:
+            return self.ev_source
+        configured = self.database_url is not None or bool(self.database_secret_arn)
+        return "neon" if configured else "csv"
 
     @model_validator(mode="after")
     def _refuse_disabled_auth_in_lambda(self) -> ApiSettings:

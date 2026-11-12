@@ -11,7 +11,11 @@ from typing import Literal, Protocol
 import pandas as pd
 from pydantic import BaseModel
 
+from silip_ml.ev import DETAIL_FIELDS, PLUG_FIELDS
+
 STATION_SOURCE = "DOE EVCS list (data/evcs_locations.csv)"
+# DOE station detail (evcs_stations_detail.csv + evcs_plugs.csv); null where it has not landed.
+STATION_DETAIL_COLUMNS = [c for c in DETAIL_FIELDS if c != "station_id"]
 STATION_COLUMNS = [
     "station_id",
     "name",
@@ -21,11 +25,13 @@ STATION_COLUMNS = [
     "barangay",
     "lat",
     "lon",
+    *STATION_DETAIL_COLUMNS,
     "source",
     "source_sha256",
     "loaded_at",
     "is_simulated",
 ]
+PLUG_COLUMNS = [*PLUG_FIELDS, "source_sha256", "loaded_at", "is_simulated"]
 ADOPTION_KEY = ["period", "geography_level", "geography", "metric", "vehicle_class"]
 ADOPTION_COLUMNS = [
     *ADOPTION_KEY,
@@ -41,6 +47,8 @@ EXPOSURE_COLUMNS = [
     "radius_m",
     "stations_within",
     "nearest_station_m",
+    "dc_stations_within",
+    "max_capacity_kw_within",
     "source_sha256",
     "computed_at",
     "is_simulated",
@@ -52,17 +60,24 @@ ScenarioLabel = Literal["Scenario, not a forecast"]
 
 @dataclass(frozen=True)
 class EvLoad:
-    """One loader pass: cleaned stations, adoption rows (empty if not delivered), exposure."""
+    """One loader pass: cleaned stations (with DOE detail when delivered), their plugs, adoption
+    rows (empty if not delivered), exposure. `source_sha256` is the locations file; the exposure
+    carries `exposure_sha256`, which also covers the detail and plug files."""
 
     stations: pd.DataFrame
+    plugs: pd.DataFrame
     adoption: pd.DataFrame
     exposure: pd.DataFrame
     rows_read: int
     dropped_outside_ph: int
     duplicates: int
     source_sha256: str
+    exposure_sha256: str
     adoption_status: AdoptionStatus
     loaded_at: datetime
+    details_matched: int = 0
+    details_unmatched: int = 0
+    plugs_without_station: int = 0
 
 
 class EvStore(Protocol):
@@ -86,6 +101,13 @@ class Charger(BaseModel):
     lon: float
     barangay: str | None
     city: str | None
+    classification: str | None = None  # DOE: CUCS (charging) or BSS (battery swap)
+    n_ac: int | None = None
+    n_dc: int | None = None
+    n_plugs: int | None = None
+    max_capacity_kw: float | None = None
+    price_min_php_kwh: float | None = None
+    price_max_php_kwh: float | None = None
 
 
 class ChargerMap(BaseModel):
@@ -133,6 +155,8 @@ class TransformerEv(BaseModel):
     """EV exposure of one transformer: DOE stations within the radius."""
 
     stations_within: int
+    dc_stations_within: int | None  # null until the DOE station detail is loaded
+    max_capacity_kw_within: float | None
     nearest_station_m: float | None
     radius_m: int
     stations: list[Charger]

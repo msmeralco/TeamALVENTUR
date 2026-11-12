@@ -1748,6 +1748,83 @@
               }
             ],
             "title": "City"
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification"
+          },
+          "n_ac": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N Ac"
+          },
+          "n_dc": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N Dc"
+          },
+          "n_plugs": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N Plugs"
+          },
+          "max_capacity_kw": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Capacity Kw"
+          },
+          "price_min_php_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Min Php Kwh"
+          },
+          "price_max_php_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Max Php Kwh"
           }
         },
         "type": "object",
@@ -3143,6 +3220,28 @@
             "type": "integer",
             "title": "Stations Within"
           },
+          "dc_stations_within": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dc Stations Within"
+          },
+          "max_capacity_kw_within": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Capacity Kw Within"
+          },
           "nearest_station_m": {
             "anyOf": [
               {
@@ -3179,6 +3278,8 @@
         "type": "object",
         "required": [
           "stations_within",
+          "dc_stations_within",
+          "max_capacity_kw_within",
           "nearest_station_m",
           "radius_m",
           "stations",

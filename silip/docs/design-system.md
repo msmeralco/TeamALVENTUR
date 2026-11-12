@@ -110,7 +110,18 @@ Interaction rules:
 - **Touch targets of at least 44px** on coarse pointers, including map controls. (Fitts's Law)
 - **Feedback within 400ms.** Show a skeleton shaped like the loaded page, so nothing jumps. (Doherty Threshold)
 - **Focus.** Every interactive element shows a 2px `--ring` outline on keyboard focus.
-- **Motion.** 150ms color transitions only. Nothing moves when `prefers-reduced-motion` is set.
+- **Motion.** 150ms color transitions only. Nothing moves when `prefers-reduced-motion` is set. The landing page is the one exception; see Landing motion.
+
+## 6a. Landing motion
+
+The public landing page (`/`) is the one place with scroll motion and a dark section in the light theme. Everything else follows the rules above.
+
+- **Dark stage.** The hero and How it works sit on `--stage` in both themes, with the dark token set applied through `[data-stage]`. A curtain then opens onto the cream sections.
+- **Stage tokens.** `--stage` (`#1B1C1B` light, `#121312` dark), `--stage-foreground` (`#F2EFE3`), `--stage-grid` (dot grid: `#3D3E3B` / `#2F302E`) and `--wordmark` (the giant footer wordmark: `#C3D2C5` / `#33433A`). Text on the stage uses the dark tokens, which pass 4.5:1. Over the map still, text uses `--foreground`, not muted: it stays above 8:1 there, and muted text does not.
+- **Hero still.** A WebP rendered from the real `TransformerMap` (simulated data, centered on T-132), with "Simulated data" and the map credit beside it. Its HUD outlines are the map's own service areas, projected when the still was made. Re-render both together if the data changes.
+- **Beats.** The still drifts slowly (CSS). On scroll it desaturates, its edges dissolve in square blocks and a HUD draws: Critical T-132 pulses, OK areas outline, a label decodes. A bracketed progress bar sits on the right edge. How it works pins while a line drawing builds per step. The example card slides up and its chart draws in; privacy lines reveal one by one; the footer wordmark rises.
+- **Rules.** Lenis smooths native scroll; keyboard, find-in-page and anchors keep working. Pins only from `lg` with a mouse; touch and narrow screens reveal in place. Only transform, opacity, clip-path and stroke offsets animate. GSAP and Lenis load in their own chunk, on `/` only, after the hero is usable.
+- **Reduced motion.** No Lenis, no pin, no scramble, no dissolve: the motion code never loads, and every section renders in its final state.
 
 ## 7. Writing
 

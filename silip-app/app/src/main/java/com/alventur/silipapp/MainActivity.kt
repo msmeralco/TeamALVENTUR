@@ -14,6 +14,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         NotificationChannels.create(this)
+        com.alventur.silipapp.notifications.AwayMonitor.restore(this)
 
         setContent {
             SilipTheme {

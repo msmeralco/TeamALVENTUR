@@ -414,6 +414,53 @@ describe("footer", () => {
   });
 });
 
+describe("not found page", () => {
+  const as = (groups: ("engineers" | "households")[]): AuthBackend => ({
+    ...createDevBackend(),
+    load: async () => ({ ...devUser, groups }),
+  });
+  const linksIn = (main: HTMLElement) =>
+    within(main)
+      .getAllByRole("link")
+      .map((link) => [link.textContent, link.getAttribute("data-variant")]);
+
+  it("offers Home and Outages to visitors, with Home as the one primary button", async () => {
+    mockApi({});
+    renderAt("/no-such-page", { ...createDevBackend(), load: async () => null });
+    const main = screen.getByRole("main");
+    expect(await within(main).findByText("This link may be old or mistyped.")).toBeTruthy();
+    expect(linksIn(main)).toEqual([
+      ["Home", "default"],
+      ["Outages", "outline"],
+    ]);
+    expect(document.title).toBe("Page not found · SILIP");
+  });
+
+  it("leads engineers to the risk map", async () => {
+    mockApi({});
+    renderAt("/no-such-page", as(["engineers"]));
+    const main = screen.getByRole("main");
+    expect(await within(main).findByRole("link", { name: "Risk map" })).toBeTruthy();
+    expect(linksIn(main)).toEqual([
+      ["Risk map", "default"],
+      ["Home", "outline"],
+      ["Outages", "outline"],
+    ]);
+  });
+
+  it("leads households to their usage", async () => {
+    mockApi({});
+    renderAt("/no-such-page", as(["households"]));
+    const main = screen.getByRole("main");
+    expect(await within(main).findByRole("link", { name: "My usage" })).toBeTruthy();
+    expect(linksIn(main)).toEqual([
+      ["My usage", "default"],
+      ["Home", "outline"],
+      ["Outages", "outline"],
+    ]);
+  });
+});
+
 describe("data sources page", () => {
   it("lists the sources from the spec", () => {
     mockApi({});

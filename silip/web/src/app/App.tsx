@@ -72,26 +72,60 @@ function AuthCallbackPage() {
     );
   }
   return (
-    <StateCard title="Sign-in did not finish">
+    <StateCard
+      role="alert"
+      title="Sign-in did not finish"
+      actions={
+        <>
+          <Button className="min-h-11 rounded-full" onClick={() => void signIn(takeReturnPath())}>
+            Try again
+          </Button>
+          <Button asChild variant="outline" className="min-h-11 rounded-full">
+            <Link to="/outages">Back to outages</Link>
+          </Button>
+        </>
+      }
+    >
       <p className="text-sm text-muted-foreground">The sign-in page did not answer in time, or the link expired.</p>
-      <Button className="mt-2 min-h-11 rounded-full" onClick={() => void signIn(takeReturnPath())}>
-        Try again
-      </Button>
-      <Button asChild variant="outline" className="min-h-11 rounded-full">
-        <Link to="/outages">Back to outages</Link>
-      </Button>
     </StateCard>
   );
 }
 
+interface NotFoundLink {
+  to: string;
+  label: string;
+}
+
+/** Home and Outages for everyone, plus the viewer's own view, which then becomes the one primary button. */
 function NotFoundPage() {
   useDocumentTitle("Page not found");
+  const { hasGroup } = useAuth();
+  const own: NotFoundLink | null = hasGroup("engineers")
+    ? { to: "/engineer", label: "Risk map" }
+    : hasGroup("households")
+      ? { to: "/me/usage", label: "My usage" }
+      : null;
+  const links: NotFoundLink[] = [
+    ...(own === null ? [] : [own]),
+    { to: "/", label: "Home" },
+    { to: "/outages", label: "Outages" },
+  ];
   return (
-    <StateCard title="Page not found">
+    <StateCard
+      title="Page not found"
+      actions={links.map((link, i) => (
+        // The key includes the role so a button that changes variant once sign-in loads is replaced, not faded.
+        <Button
+          key={`${link.to}:${i}`}
+          asChild
+          variant={i === 0 ? "default" : "outline"}
+          className="min-h-11 rounded-full"
+        >
+          <Link to={link.to}>{link.label}</Link>
+        </Button>
+      ))}
+    >
       <p className="text-sm text-muted-foreground">This link may be old or mistyped.</p>
-      <Button asChild variant="outline" className="mt-2 min-h-11 rounded-full">
-        <Link to="/outages">See outages</Link>
-      </Button>
     </StateCard>
   );
 }

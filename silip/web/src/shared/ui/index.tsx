@@ -56,12 +56,36 @@ export function PageHead({
   );
 }
 
-/** A centered message card for sign-in, no-access and not-found states. */
-export function StateCard({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * The one pattern for full-page states: not found, sign-in, no access, failed sign-in, offline, failed load.
+ * The mark sits on top, then the title, a short line and the actions. Give it one primary action.
+ */
+export function StateCard({
+  title,
+  children,
+  actions,
+  level = 1,
+  role,
+  className,
+}: {
+  title: string;
+  children?: ReactNode;
+  actions?: ReactNode;
+  /** 2 when the card sits inside a page that already has its own h1. */
+  level?: 1 | 2;
+  role?: "alert" | "status";
+  className?: string;
+}) {
+  const Heading = level === 1 ? "h1" : "h2";
   return (
-    <Card className="mx-auto mt-10 max-w-md items-center gap-3 px-6 py-10 text-center">
-      <h1 className="text-xl">{title}</h1>
+    <Card role={role} className={cn("mx-auto mt-10 w-full max-w-md items-center gap-3 px-6 py-10 text-center", className)}>
+      {/* The logo's navy lid vanishes on dark surfaces, so dark mode puts the mark on a cream tile. */}
+      <span className="mb-1 grid size-20 place-items-center rounded-2xl bg-logo-tile">
+        <img src="/brand/silip-mark-128.png" alt="" width={64} height={64} className="size-16" />
+      </span>
+      <Heading className="text-xl">{title}</Heading>
       {children}
+      {actions !== undefined && <div className="mt-2 flex flex-wrap justify-center gap-2">{actions}</div>}
     </Card>
   );
 }
@@ -98,7 +122,11 @@ export function QueryView<T>({
 }: QueryViewProps<T>) {
   if (isPending && !isFetching && error === null) {
     // Paused (offline before the first load): say so instead of showing a skeleton forever.
-    return <Card className="px-6 py-8">You are offline. This view loads when you reconnect.</Card>;
+    return (
+      <StateCard level={2} role="status" className="mt-0" title="You are offline">
+        <p className="text-sm text-muted-foreground">This view loads when you reconnect.</p>
+      </StateCard>
+    );
   }
   if (isPending && error === null) {
     return (
@@ -116,23 +144,30 @@ export function QueryView<T>({
   }
   // A failed background refresh keeps the last data on screen; the error card is for a first load.
   if (data === undefined) {
+    // Outline, not forest: the page around this card may already have its one primary button.
     return (
-      <Card role="alert" className="max-w-2xl items-start gap-2 px-6 py-8">
-        <h2 className="text-xl">Could not load this view</h2>
+      <StateCard
+        level={2}
+        role="alert"
+        className="mt-0"
+        title="Could not load this view"
+        actions={
+          <Button
+            variant="outline"
+            className="min-h-11 rounded-full"
+            disabled={isFetching}
+            onClick={() => void retry(onRetry)}
+          >
+            {isFetching ? "Trying again…" : "Try again"}
+          </Button>
+        }
+      >
         <p className="text-sm text-muted-foreground">
           {error instanceof ApiError
             ? error.message
             : "Could not reach the server. Check your connection and try again."}
         </p>
-        <Button
-          variant="outline"
-          className="mt-2 rounded-full"
-          disabled={isFetching}
-          onClick={() => void retry(onRetry)}
-        >
-          {isFetching ? "Trying again…" : "Try again"}
-        </Button>
-      </Card>
+      </StateCard>
     );
   }
   if (isEmpty(data)) {

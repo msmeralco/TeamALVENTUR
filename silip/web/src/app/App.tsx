@@ -120,7 +120,7 @@ function MainNav() {
             cn(
               "rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground no-underline transition-colors duration-150 hover:bg-accent hover:text-foreground",
               "max-sm:m-2 max-sm:grid max-sm:flex-1 max-sm:place-items-center",
-              isActive && "bg-accent text-foreground",
+              isActive && "bg-selected text-selected-foreground hover:bg-selected hover:text-selected-foreground",
             )
           }
         >
@@ -146,8 +146,16 @@ function Shell() {
       </a>
       <header className="sticky top-0 z-20 border-b bg-card">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6">
-          <Link to="/" className="font-display text-xl font-bold tracking-wider no-underline">
-            SILIP
+          <Link
+            to="/"
+            aria-label="SILIP home"
+            className="flex shrink-0 items-center gap-2 font-display text-xl font-bold text-foreground no-underline"
+          >
+            {/* The logo's navy lid vanishes on dark surfaces, so dark mode puts the mark on a cream tile. */}
+            <span className="grid size-9 place-items-center rounded-lg bg-logo-tile">
+              <img src="/brand/silip-mark-128.png" alt="" width={32} height={32} className="size-8" />
+            </span>
+            silip
           </Link>
           <MainNav />
           <div className="ml-auto flex min-w-0 items-center gap-2">

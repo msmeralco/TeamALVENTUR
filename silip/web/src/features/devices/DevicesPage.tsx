@@ -195,7 +195,7 @@ constexpr const char* DEVICE_KEY = ${JSON.stringify(setup.key)};
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="flex min-h-0 flex-col self-start p-6 shadow-none">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">Installed devices</h2>
+            <h2 className="text-xl">Installed devices</h2>
             <div className="flex flex-wrap justify-end gap-2">
               <Button
                 variant="outline"
@@ -259,7 +259,7 @@ constexpr const char* DEVICE_KEY = ${JSON.stringify(setup.key)};
           </ul>
         </Card>
         <Card className="p-6 shadow-none">
-          <h2 className="text-lg font-semibold">{selected ? selected.clamp_id : "Register a device"}</h2>
+          <h2 className="text-xl">{selected ? selected.clamp_id : "Register a device"}</h2>
           {current && (
             <dl className="text-sm">
               <dt>Sensor</dt>
@@ -502,7 +502,7 @@ constexpr const char* DEVICE_KEY = ${JSON.stringify(setup.key)};
               <p className="text-sm text-muted-foreground">
                 Wi-Fi details stay in your browser and the downloaded file.
               </p>
-              <Button type="button" disabled={!endpoint || !reachableAddress} onClick={downloadSetup}>
+              <Button type="button" variant="outline" disabled={!endpoint || !reachableAddress} onClick={downloadSetup}>
                 Download device setup
               </Button>
               <p className="text-sm text-muted-foreground">
@@ -514,7 +514,7 @@ constexpr const char* DEVICE_KEY = ${JSON.stringify(setup.key)};
       </div>
       {showAddTransformer ? (
         <Card className="mt-6 p-6 shadow-none">
-          <h2 className="text-lg font-semibold">Add transformer</h2>
+          <h2 className="text-xl">Add transformer</h2>
           <p className="text-sm text-muted-foreground">
             Add its ID, rated capacity, and coordinates. It will be available for device assignments right away. The
             risk map needs at least seven days of readings before it can forecast the new transformer.
@@ -574,7 +574,7 @@ constexpr const char* DEVICE_KEY = ${JSON.stringify(setup.key)};
               <input type="checkbox" name="simulated" /> Simulated transformer
             </label>
             <div className="flex flex-wrap gap-2 sm:col-span-2">
-              <Button disabled={addTransformer.isPending}>
+              <Button variant="outline" disabled={addTransformer.isPending}>
                 {addTransformer.isPending ? "Adding…" : "Add transformer"}
               </Button>
               <Button
@@ -597,7 +597,7 @@ constexpr const char* DEVICE_KEY = ${JSON.stringify(setup.key)};
         </Card>
       ) : null}
       <Card className="mt-6 p-6 shadow-none">
-        <h2 className="text-lg font-semibold">Home device totals</h2>
+        <h2 className="text-xl">Home device totals</h2>
         <p className="text-sm text-muted-foreground">
           This adds up readings from home sensors assigned to the selected transformer. It shows those homes’ combined
           use, not a reading taken from the transformer itself.

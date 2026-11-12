@@ -1,96 +1,113 @@
 /*
- * Design tokens (unslop skill), named the way shadcn/ui expects.
+ * Design tokens, named the way shadcn/ui expects. Full system: docs/design-system.md.
+ * Palette: charcoal #262626, sage #C3D2C5, cream #F2EFE3, fern #58815F, forest #254E21.
  * Light is the default; dark follows the system unless data-theme="light", or is forced by data-theme="dark".
- * #C2501E is the one action color. It is only --critical (and --destructive, which shadcn maps to it).
+ * Green is the brand and means "fine". --critical is the one action color: only the thing that needs action uses it.
+ * Every text pair here passes WCAG AA (4.5:1); --brand and --ring pass 3:1 for non-text.
  */
 :root {
-  --background: #fafaf7;
-  --foreground: #1c1e21;
-  --card: #ffffff;
-  --card-foreground: #1c1e21;
-  --popover: #ffffff;
-  --popover-foreground: #1c1e21;
-  --primary: #1c1e21;
-  --primary-foreground: #ffffff;
-  --secondary: #f2f1ec;
-  --secondary-foreground: #1c1e21;
-  --muted: #f2f1ec;
-  --muted-foreground: #5b5f66;
-  --accent: #f2f1ec; /* shadcn's hover fill, not the action color */
-  --accent-foreground: #1c1e21;
-  --border: #e3e2dc;
-  --input: #e3e2dc;
-  --ring: #1c1e21;
+  --background: #f2efe3;
+  --foreground: #262626;
+  --card: #fbfaf6;
+  --card-foreground: #262626;
+  --popover: #fbfaf6;
+  --popover-foreground: #262626;
+  --primary: #254e21;
+  --primary-foreground: #fbfaf6;
+  --secondary: #e7e3d4;
+  --secondary-foreground: #262626;
+  --muted: #e7e3d4;
+  --muted-foreground: #5e5b51;
+  --accent: #e7e3d4; /* shadcn's hover fill, not the action color */
+  --accent-foreground: #262626;
+  --border: #d6d0bc;
+  --input: #d6d0bc;
+  --ring: #58815f;
   --radius: 1rem;
 
-  --critical: #c2501e;
+  /* Brand: lines, icons, chart series and the selected item. Not for text under 18px (4.3:1 on card). */
+  --brand: #58815f;
+  --selected: #c3d2c5;
+  --selected-foreground: #262626;
+  /* Backing for the logo mark: none in light, cream in dark, where the navy lid would vanish. */
+  --logo-tile: transparent;
+
+  --critical: #b5461a;
   --destructive: var(--critical);
-  --watch: #8a6a00;
-  --ok: #2f6b3f;
-  --critical-soft: #f8e7df;
-  --watch-soft: #f5efdc;
-  --ok-soft: #e8f0ea;
-  --map-building: #e9e7e0;
-  --overlay: rgb(28 30 33 / 0.45);
+  --watch: #7a5c00;
+  --ok: #254e21;
+  --critical-soft: #fbece4;
+  --watch-soft: #f3ebcf;
+  --ok-soft: #dce6dc;
+  --map-building: #e2ddcb;
+  --overlay: rgb(38 38 38 / 0.45);
   /* QR codes stay dark on light in both themes: some phone cameras cannot read inverted codes. */
-  --qr-foreground: #1c1e21;
+  --qr-foreground: #262626;
   --qr-background: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --background: #141517;
-    --foreground: #ececea;
-    --card: #1c1e21;
-    --card-foreground: #ececea;
-    --popover: #1c1e21;
-    --popover-foreground: #ececea;
-    --primary: #ececea;
-    --primary-foreground: #1c1e21;
-    --secondary: #24262a;
-    --secondary-foreground: #ececea;
-    --muted: #24262a;
-    --muted-foreground: #a3a6ab;
-    --accent: #24262a;
-    --accent-foreground: #ececea;
-    --border: #2e3035;
-    --input: #2e3035;
-    --ring: #ececea;
-    --critical: #e0703f;
-    --watch: #d9b44a;
-    --ok: #6fbf84;
-    --critical-soft: #35221a;
-    --watch-soft: #2e2817;
-    --ok-soft: #1f2d23;
-    --map-building: #2a2c30;
+    --background: #1b1c1b;
+    --foreground: #f2efe3;
+    --card: #262626;
+    --card-foreground: #f2efe3;
+    --popover: #262626;
+    --popover-foreground: #f2efe3;
+    --primary: #c3d2c5;
+    --primary-foreground: #1b1c1b;
+    --secondary: #323331;
+    --secondary-foreground: #f2efe3;
+    --muted: #323331;
+    --muted-foreground: #adaa9e;
+    --accent: #323331;
+    --accent-foreground: #f2efe3;
+    --border: #3d3e3b;
+    --input: #3d3e3b;
+    --ring: #8db394;
+    --brand: #8db394;
+    --selected: #33433a;
+    --selected-foreground: #f2efe3;
+    --logo-tile: #f2efe3;
+    --critical: #ee8656;
+    --watch: #ddb955;
+    --ok: #a9c9af;
+    --critical-soft: #3a241a;
+    --watch-soft: #332b17;
+    --ok-soft: #24322a;
+    --map-building: #2c2d2b;
     --overlay: rgb(0 0 0 / 0.6);
   }
 }
 
 :root[data-theme="dark"] {
-  --background: #141517;
-  --foreground: #ececea;
-  --card: #1c1e21;
-  --card-foreground: #ececea;
-  --popover: #1c1e21;
-  --popover-foreground: #ececea;
-  --primary: #ececea;
-  --primary-foreground: #1c1e21;
-  --secondary: #24262a;
-  --secondary-foreground: #ececea;
-  --muted: #24262a;
-  --muted-foreground: #a3a6ab;
-  --accent: #24262a;
-  --accent-foreground: #ececea;
-  --border: #2e3035;
-  --input: #2e3035;
-  --ring: #ececea;
-  --critical: #e0703f;
-  --watch: #d9b44a;
-  --ok: #6fbf84;
-  --critical-soft: #35221a;
-  --watch-soft: #2e2817;
-  --ok-soft: #1f2d23;
-  --map-building: #2a2c30;
+  --background: #1b1c1b;
+  --foreground: #f2efe3;
+  --card: #262626;
+  --card-foreground: #f2efe3;
+  --popover: #262626;
+  --popover-foreground: #f2efe3;
+  --primary: #c3d2c5;
+  --primary-foreground: #1b1c1b;
+  --secondary: #323331;
+  --secondary-foreground: #f2efe3;
+  --muted: #323331;
+  --muted-foreground: #adaa9e;
+  --accent: #323331;
+  --accent-foreground: #f2efe3;
+  --border: #3d3e3b;
+  --input: #3d3e3b;
+  --ring: #8db394;
+  --brand: #8db394;
+  --selected: #33433a;
+  --selected-foreground: #f2efe3;
+  --logo-tile: #f2efe3;
+  --critical: #ee8656;
+  --watch: #ddb955;
+  --ok: #a9c9af;
+  --critical-soft: #3a241a;
+  --watch-soft: #332b17;
+  --ok-soft: #24322a;
+  --map-building: #2c2d2b;
   --overlay: rgb(0 0 0 / 0.6);
 }

@@ -71,7 +71,7 @@ export function UsagePage() {
     <section>
       <PageHead title="Your usage" lede="Last 7 days, from the clamp in your home. Only you can see this." />
       <Card className="mb-6 p-6 shadow-none">
-        <h2 className="text-lg font-semibold">Your household clamp</h2>
+        <h2 className="text-xl">Your household clamp</h2>
         {device.isPending && <p role="status">Loading device…</p>}
         {device.isError && (
           <p>

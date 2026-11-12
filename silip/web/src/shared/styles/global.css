@@ -32,6 +32,10 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-selected: var(--selected);
+  --color-selected-foreground: var(--selected-foreground);
+  --color-logo-tile: var(--logo-tile);
   --color-critical: var(--critical);
   --color-watch: var(--watch);
   --color-ok: var(--ok);

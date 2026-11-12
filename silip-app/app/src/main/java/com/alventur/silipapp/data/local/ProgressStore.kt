@@ -5,9 +5,11 @@ import android.content.SharedPreferences
 import com.alventur.silipapp.data.demo.ManilaZone
 import com.alventur.silipapp.energy.MeralcoRate
 import java.time.Clock
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalAdjusters
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -86,6 +88,17 @@ enum class AlertResolution { CheckedAllGood, CalledSomeone, Snoozed }
 
 data class AlertRecord(val id: String, val resolution: AlertResolution, val atEpochMillis: Long)
 
+/**
+ * A finished grid event (pilot preview). [reductionKw] is the estimated load cut for one hour,
+ * so it is also the estimated kWh saved. [rewardPhp] is pending: no payout service exists.
+ */
+data class GridEventRecord(val eventId: String, val date: LocalDate, val reductionKw: Double, val rewardPhp: Int) {
+    val kwhSaved: Double get() = reductionKw
+}
+
+/** Monday of [date]'s week. Weekly XP resets every Monday, Manila time. */
+fun weekStartOf(date: LocalDate): LocalDate = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+
 /** Immutable snapshot of everything SILIP stores on this phone for progress and setup. */
 data class Progress(
     val onboarded: Boolean = false,
@@ -96,8 +109,22 @@ data class Progress(
     val streak: StreakState = StreakState(),
     val quizDoneDate: LocalDate? = null,
     val badges: Set<String> = emptySet(),
-    val alerts: Map<String, AlertRecord> = emptyMap()
+    val alerts: Map<String, AlertRecord> = emptyMap(),
+    /** XP earned in the week starting [weekStart]. Read it with [weeklyXp]. */
+    val weekXp: Int = 0,
+    val weekStart: LocalDate? = null,
+    /** Finished grid events, newest first. */
+    val gridEvents: List<GridEventRecord> = emptyList()
 ) {
+    /** XP earned since Monday (Manila). 0 when the stored week is an older one. */
+    fun weeklyXp(today: LocalDate = manilaToday()): Int = if (weekStart == weekStartOf(today)) weekXp else 0
+
+    /** Estimated kWh saved in grid events this week. */
+    fun weeklyKwhSaved(today: LocalDate = manilaToday()): Double {
+        val monday = weekStartOf(today)
+        return gridEvents.filter { !it.date.isBefore(monday) && !it.date.isAfter(today) }.sumOf { it.kwhSaved }
+    }
+
     fun quizDoneToday(today: LocalDate = manilaToday()): Boolean = quizDoneDate == today
 
     /** Latest record for an alert, or null if never acted on. */
@@ -194,7 +221,7 @@ class ProgressStore private constructor(context: Context) {
     fun addXp(amount: Int) {
         if (amount == 0) return
         val next = (state.value.xp + amount).coerceAtLeast(0)
-        prefs.edit().putInt(K_XP, next).apply()
+        prefs.edit().putInt(K_XP, next).putWeeklyXp(amount).apply()
         refresh()
     }
 
@@ -208,6 +235,7 @@ class ProgressStore private constructor(context: Context) {
             prefs.edit()
                 .putInt(K_LESSONS, lessonIndex + 1)
                 .putInt(K_XP, current.xp + points)
+                .putWeeklyXp(points)
                 .apply()
         }
         return recordActivity()
@@ -224,6 +252,7 @@ class ProgressStore private constructor(context: Context) {
         prefs.edit()
             .putString(K_QUIZ_DATE, today.toString())
             .putInt(K_XP, state.value.xp + xp)
+            .putWeeklyXp(xp, today)
             .apply()
         return recordActivity(today)
     }
@@ -297,7 +326,27 @@ class ProgressStore private constructor(context: Context) {
         refresh()
     }
 
+    /**
+     * Saves a finished grid event (pilot preview). One record per event per day; a replay on the
+     * same day replaces it. Returns true if this is the first record for that event and day.
+     */
+    fun recordGridEvent(eventId: String, reductionKw: Double, rewardPhp: Int, date: LocalDate = manilaToday()): Boolean {
+        val record = GridEventRecord(eventId, date, reductionKw.coerceAtLeast(0.0), rewardPhp)
+        val others = state.value.gridEvents.filterNot { it.eventId == eventId && it.date == date }
+        val isNew = others.size == state.value.gridEvents.size
+        prefs.edit().putStringSet(K_GRID_EVENTS, HashSet((others + record).map(::encodeGridEvent))).apply()
+        refresh()
+        return isNew
+    }
+
     // endregion
+
+    /** Adds [amount] to this week's XP, starting a new week on Monday (Manila). */
+    private fun SharedPreferences.Editor.putWeeklyXp(amount: Int, today: LocalDate = manilaToday()): SharedPreferences.Editor {
+        val monday = weekStartOf(today)
+        val base = state.value.weeklyXp(today)
+        return putString(K_WEEK_START, monday.toString()).putInt(K_WEEK_XP, (base + amount).coerceAtLeast(0))
+    }
 
     private fun writeAlert(record: AlertRecord) {
         val others = state.value.alerts.filterKeys { it != record.id }.values.map(::encodeAlert)
@@ -337,7 +386,12 @@ class ProgressStore private constructor(context: Context) {
         badges = prefs.getStringSet(K_BADGES, emptySet())?.toSet() ?: emptySet(),
         alerts = (prefs.getStringSet(K_ALERTS, emptySet()) ?: emptySet())
             .mapNotNull(::decodeAlert)
-            .associateBy { it.id }
+            .associateBy { it.id },
+        weekXp = prefs.getInt(K_WEEK_XP, 0).coerceAtLeast(0),
+        weekStart = prefs.getString(K_WEEK_START, null)?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+        gridEvents = (prefs.getStringSet(K_GRID_EVENTS, emptySet()) ?: emptySet())
+            .mapNotNull(::decodeGridEvent)
+            .sortedByDescending { it.date }
     )
 
     /** One-time upgrade from the preview's count-only streak. */
@@ -359,6 +413,17 @@ class ProgressStore private constructor(context: Context) {
         val resolution = runCatching { AlertResolution.valueOf(parts[1]) }.getOrNull() ?: return null
         val at = parts[2].toLongOrNull() ?: return null
         return AlertRecord(parts[0], resolution, at)
+    }
+
+    private fun encodeGridEvent(r: GridEventRecord) = "${r.eventId}|${r.date}|${r.reductionKw}|${r.rewardPhp}"
+
+    private fun decodeGridEvent(raw: String): GridEventRecord? {
+        val parts = raw.split('|')
+        if (parts.size != 4) return null
+        val date = runCatching { LocalDate.parse(parts[1]) }.getOrNull() ?: return null
+        val kw = parts[2].toDoubleOrNull()?.takeIf { it.isFinite() } ?: return null
+        val php = parts[3].toIntOrNull() ?: return null
+        return GridEventRecord(parts[0], date, kw, php)
     }
 
     companion object {
@@ -388,6 +453,9 @@ class ProgressStore private constructor(context: Context) {
         private const val K_QUIZ_DATE = "quiz_done_date"
         private const val K_BADGES = "badges"
         private const val K_ALERTS = "alert_records"
+        private const val K_WEEK_XP = "week_xp"
+        private const val K_WEEK_START = "week_start"
+        private const val K_GRID_EVENTS = "grid_event_records"
 
         @Volatile
         private var instance: ProgressStore? = null

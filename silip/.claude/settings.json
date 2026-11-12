@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "includeCoAuthoredBy": false,
+  "permissions": {
+    "allow": [
+      "Bash(make setup)",
+      "Bash(make sim)",
+      "Bash(make test)",
+      "Bash(make lint)",
+      "Bash(make fmt)",
+      "Bash(make backtest*)",
+      "Bash(make schemas)",
+      "Bash(uv sync*)",
+      "Bash(uv run pytest*)",
+      "Bash(uv run ruff*)",
+      "Bash(uv run pyright*)",
+      "Bash(uv run lint-imports*)",
+      "Bash(uv run python -m silip_ml.*)",
+      "Bash(npm ci*)",
+      "Bash(npm run build*)",
+      "Bash(npm run test*)",
+      "Bash(npm test*)",
+      "Bash(npm run gen:api*)",
+      "Bash(terraform fmt*)",
+      "Bash(terraform validate*)",
+      "Bash(terraform init -backend=false*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)"
+    ],
+    "ask": [
+      "Bash(aws *)",
+      "Bash(terraform plan*)",
+      "Bash(terraform apply*)",
+      "Bash(terraform import*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(pio run -t upload*)"
+    ],
+    "deny": [
+      "Bash(terraform destroy*)",
+      "Bash(git push --force*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./**/.env)",
+      "Read(./**/*.tfstate)",
+      "Read(./**/*.tfstate.*)",
+      "Read(./**/terraform.tfvars)",
+      "Read(./iot/include/secrets.h)",
+      "Read(./data/raw/**)",
+      "Read(./web/node_modules/**)"
+    ]
+  },
+  "env": {
+    "PYTHONDONTWRITEBYTECODE": "1"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/block_risky_bash.py\"", "timeout": 10 }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.py\"", "timeout": 10 }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/format_file.py\"", "timeout": 60 }
+        ]
+      }
+    ]
+  }
+}

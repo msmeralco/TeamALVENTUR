@@ -481,8 +481,8 @@ export function TransformerMap({
   useEffect(() => {
     if (selectedId !== null) setClampId(null);
   }, [selectedId]);
-  const latest = useRef({ items, shownIds, clamps, onHover, onSelect, setClampId, activeId, clampId });
-  latest.current = { items, shownIds, clamps, onHover, onSelect, setClampId, activeId, clampId };
+  const latest = useRef({ items, shownIds, clamps, onHover, onSelect, setClampId, activeId, clampId, leftInsetPx });
+  latest.current = { items, shownIds, clamps, onHover, onSelect, setClampId, activeId, clampId, leftInsetPx };
 
   useEffect(() => {
     const map = mapRef.current;
@@ -530,7 +530,20 @@ export function TransformerMap({
           fitBoundsOptions: geolocateFitOptions(leftInsetPx),
         });
         geolocateRef.current = geolocate;
-        geolocate.on("geolocate", () => setLocationMessage(""));
+        geolocate.on("geolocate", (position: { coords: GeolocationCoordinates }) => {
+          setLocationMessage("");
+          map.flyTo({
+            center: [position.coords.longitude, position.coords.latitude],
+            zoom: FOCUS_ZOOM,
+            duration: reducedMotion() ? 0 : EASE_MS,
+            padding: {
+              top: MAP_PADDING_PX,
+              right: MAP_PADDING_PX,
+              bottom: MAP_PADDING_PX,
+              left: MAP_PADDING_PX + latest.current.leftInsetPx,
+            },
+          });
+        });
         geolocate.on("error", () => {
           setLocationMessage("Location unavailable. Allow browser location access; local network pages need HTTPS.");
         });

@@ -32,6 +32,18 @@ variable "data_source" {
   default     = "clamp"
 }
 
+variable "weather_source" {
+  type        = string
+  description = "Weather strategy for scoring: simulated or open_meteo (ADR 0006)."
+  default     = "open_meteo"
+}
+
+variable "open_meteo_base_url" {
+  type        = string
+  description = "Open-Meteo API base URL, without a trailing slash."
+  default     = "https://api.open-meteo.com/v1"
+}
+
 variable "strategies" {
   type        = map(string)
   description = "Model strategies, e.g. { FORECASTER = \"lightgbm\" }. Empty means baselines."

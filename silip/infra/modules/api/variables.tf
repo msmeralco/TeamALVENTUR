@@ -46,6 +46,26 @@ variable "data_source" {
   }
 }
 
+variable "weather_source" {
+  type        = string
+  description = "Weather strategy for scoring (ADR 0006). open_meteo needs no key, secret or IAM; Lambdas already have egress."
+  default     = "open_meteo"
+  validation {
+    condition     = contains(["simulated", "open_meteo"], var.weather_source)
+    error_message = "weather_source must be simulated or open_meteo."
+  }
+}
+
+variable "open_meteo_base_url" {
+  type        = string
+  description = "Open-Meteo API base URL, without a trailing slash."
+  default     = "https://api.open-meteo.com/v1"
+  validation {
+    condition     = can(regex("^https://[^/]+(/.*[^/])?$", var.open_meteo_base_url))
+    error_message = "open_meteo_base_url must be an https URL without a trailing slash."
+  }
+}
+
 variable "strategies" {
   type        = map(string)
   description = "Model strategy env vars, e.g. { FORECASTER = \"lightgbm\" }."

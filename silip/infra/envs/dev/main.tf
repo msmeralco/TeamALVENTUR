@@ -18,6 +18,8 @@ module "api" {
   name                 = local.name
   image_tag            = var.image_tag
   data_source          = var.data_source
+  weather_source       = var.weather_source
+  open_meteo_base_url  = var.open_meteo_base_url
   strategies           = var.strategies
   cognito_user_pool_id = module.auth.user_pool_id
   cognito_client_id    = module.auth.client_id

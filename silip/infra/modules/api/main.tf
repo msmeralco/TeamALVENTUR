@@ -12,7 +12,8 @@ locals {
     # Writes risk scores to Neon on a schedule. No reserved concurrency: this account's Lambda limit is 10,
     # and AWS refuses any reservation that leaves fewer than 10 unreserved. Runs are idempotent per
     # 15-minute bucket (score_run), so a rare overlap repeats work but never double-writes.
-    # Timeout is the Lambda max; measured 34 s at 2,000 transformers with lightgbm.
+    # Timeout is the Lambda max; measured 34 s at 2,000 transformers with lightgbm, so a 30 s weather
+    # fetch budget (ADR 0006) still fits with wide margin.
     score = { command = "silip.scoring.handler.handle", memory = var.scoring_memory_mb, timeout = 900, reserved = null }
   }
 }
@@ -98,6 +99,8 @@ resource "aws_lambda_function" "function" {
   environment {
     variables = merge(var.strategies, {
       DATA_SOURCE          = var.data_source
+      WEATHER_SOURCE       = var.weather_source
+      OPEN_METEO_BASE_URL  = var.open_meteo_base_url
       DATABASE_SECRET_ARN  = aws_secretsmanager_secret.database_url.arn
       COGNITO_REGION       = data.aws_region.current.region
       COGNITO_USER_POOL_ID = var.cognito_user_pool_id

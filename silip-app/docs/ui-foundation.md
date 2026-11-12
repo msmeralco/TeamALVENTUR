@@ -1,79 +1,66 @@
 # SILIP Android UI foundation
 
-This document records the first SILIP Android UI decisions. The screen layout and interaction patterns draw from the ABaKaDa app, while the colors, copy, and content model are tailored to household energy awareness. ABaKaDa's child-rights content, branding, and mascot assets are not part of SILIP.
+SILIP is a household electricity companion for people who want to understand costs, make safer choices, and learn practical energy habits. The primary screen job is to answer: “What is happening in my home, what might it cost, and what should I do next?”
 
-## Product shape
+The current app is a front-end preview. Household readings, appliance-level inference, safety alerts, and rewards must not be presented as live until their data services and hardware support are connected.
 
-SILIP combines two different jobs:
+## Visual direction
 
-- Help a household user understand current whole-home readings from the SILIP service.
-- Teach safer, more responsible electricity habits through short lessons and practice.
+The design uses the palette supplied for SILIP. The firefly remains **Ali the Alitaptap**; the “Rosa” household and values in the redesign are illustrative examples from the pitch.
 
-Live household information needs an internet connection and an authenticated account linked to a registered SILIP device. Lessons may be available on-device. An outage or disconnected account must never be displayed as zero usage or as a safe reading.
+Use Ali on the left as the learner avatar and guide, following the existing Abakada mascot pattern. Keep headings and helper text brief. Learn uses a game map with a streak/XP row, unit banner, winding lesson route, bonus chest, and trophy. Correct answers unlock the next lesson; completed lessons stay open for retakes. XP is awarded once per lesson. Progress is saved on-device for the preview and is not synced to a user account. The interaction pattern takes inspiration from Duolingo’s short lessons and visible progression, while retaining SILIP’s palette and household-energy content.
 
-## Navigation
-
-The persistent four-destination bar follows ABaKaDa's simple navigation model:
-
-| Destination | SILIP purpose |
-| --- | --- |
-| Home | Household connection summary, today's learning, and shortcuts |
-| Learn | Short lessons organized into a visible learning path |
-| Practice | Scenario questions with progress and answer feedback |
-| My home | Live household readings, sensor explanation, and reminder information |
-
-Keep detail flows within these sections. Add a new top-level destination only when it represents a distinct recurring user goal.
-
-## Screen patterns
-
-- **Home:** welcoming guide panel, truthful household state, one learning-path card, then a two-column grid of icon-led actions.
-- **Learn:** a path summary followed by grouped lesson cards. Show time and reward as supporting metadata, and make completion progress explicit once it is persisted.
-- **Practice:** show progress, selectable answer cards, and feedback only after an answer is submitted. Give the user a clear retry path.
-- **My home:** distinguish current account/device connection state from measured household demand. Explain what the installed current sensor can and cannot identify.
-
-Use scrollable, content-first layouts with 20 dp side gutters, 4/8 dp spacing increments, rounded Material 3 cards, and touch targets of at least 48 dp. Use the system sans-serif typography and let text wrap at larger font sizes.
-
-## Visual tokens
-
-| Role | Light theme | Use |
+| Token | Hex | Use |
 | --- | --- | --- |
-| Forest green | `#146B4A` | Primary action and selected navigation |
-| Soft leaf | `#D3F2DF` | Welcome and learning surfaces |
-| Slate blue | `#416779` | Information and practice surfaces |
-| Soft blue | `#D6EAF2` | Supporting information |
-| Deep amber | `#715300` | Pending or not-connected state |
-| Soft amber | `#FCECC2` | Non-error caution state |
-| Deep coral | `#8F3F3B` | Error or incorrect-answer state |
-| Warm paper | `#F5F8F4` | App background |
-| Ink | `#17211B` | Main text |
+| Charcoal | `#262626` | Main text and dark-mode background |
+| Sage | `#C3D2C5` | Soft cards, progress tracks, and selected states |
+| Paper | `#F2EFE3` | Light-mode background and text on deep green |
+| Moss | `#58815F` | Supporting charts and secondary green |
+| Forest | `#254E21` | Primary actions, selected navigation, and energy receipt |
+| Alert orange | `#9C4A0B` | Caution states only, paired with text or an icon |
 
-Semantic status must also use text or an icon; color alone is not enough. The dark palette keeps the same status meanings with readable contrast.
+Headings and explanations use the Android sans-serif family. Readings such as pesos and kW use monospaced numerals so values align like an instrument display. Body text stays at 16 sp or larger where practical, with 4/8 dp spacing increments and 48 dp minimum touch targets.
 
-## Mascot guide
+## Navigation and screen jobs
 
-Ali the Alitaptap appears in a mascot-and-guidance-bubble header on Home, Learn, Practice, and My home, following the ABaKaDa guide-card pattern. Emerald-bulb poses are used for welcome, learning, household checking, and correct feedback; the orange-bulb pose is reserved for caution feedback. See [the Ali mascot guide](mascot-guide.md) for pose mapping and color use. Keep the mascot decorative to TalkBack; visible text must communicate the same guidance.
+| Destination | Job |
+| --- | --- |
+| Home | Show a cost estimate, budget progress, safety-data limits, and a next learning action |
+| Usage | Explain a month-end estimate and show example load, phantom-load, and appliance-health insights |
+| Learn | Offer short electricity lessons with five-question practice quizzes |
+| Rewards | Explain a possible opt-in grid-response program and its data/reward steps |
 
-## Sensor and alert language
+The quick challenge is a sub-flow of Learn, not a separate bottom-navigation destination. On larger screens, content is centered at a readable maximum width; on phones it uses 20 dp side gutters.
 
-The current split-core sensor provides a whole-home current reading. It does not identify individual appliances. Therefore:
+## Signature component: energy receipt
 
-- Show unavailable, stale, loading, and connected states separately; never invent a reading.
-- Describe an exit notification as an optional checklist prompt unless a future sensor can actually identify a particular appliance.
-- Only describe an alert as appliance-specific when the measured data and service support that claim.
-- Ask for location permission only after the user opts into a home-exit reminder, with an explanation of the trigger.
-- Keep user-controlled notification preferences and make account/data boundaries visible.
+The Home screen leads with a deep-green card showing an illustrative hourly peso estimate, a sample kW load, and a compact load trend. This connects an abstract current reading to the consumer’s bill. Values carry a sample-data label and explanatory copy; they are not fetched from the household API yet.
 
-## Current boundary
+## Truthful product language
 
-The current UI is a visual and interaction foundation. Household cards are not yet connected to Cognito or live API data. Lesson completion, XP, and streaks are not persisted. The practice screen currently contains one starter check. Geofencing and local/remote notifications are not wired in this pass. Follow-up tickets track those integrations.
+- The SCT-013 current clamp reports total current/demand for the circuit. It does not identify a flat iron, measure heat, or independently detect micro-arcing.
+- A peso estimate needs a valid voltage/power calculation, a current tariff, and real household readings. The figures in this UI are sample values.
+- Appliance health and phantom-load insights require validated NILM/signature analysis. The screens call these examples or development previews.
+- Grid-response offers, neighborhood participation, wallets, and GCash payouts are concepts only. No event, consent flow, or payment service is connected.
+- “No alert” must never be described as “safe” when the sensor or account is disconnected.
 
-## ABaKaDa patterns reused
+## Accessibility and interaction
 
-- Persistent four-tab navigation and content grouped inside each section.
-- Scroll-first home and lesson screens with native Compose surfaces.
-- Rounded, category-tinted home tiles with icons beside readable text.
-- Visible step progress, selectable answer cards, and a separate feedback state.
-- A section-specific mascot pose beside a short guidance bubble.
-- System type, accessible tap areas, semantic headings, and non-color status cues.
+Use text and icon labels alongside color, hide decorative Ali artwork from TalkBack, and give icon-only controls meaningful descriptions. Keep headings semantic, preserve scroll space above the bottom navigation, support system font scaling, and use native Material buttons/cards for touch feedback. The paper/sage/forest palette has light and dark mappings; verify actual contrast and layouts on devices before release.
 
-The education path is inspired by short, rewarding lessons; SILIP uses energy-use learning goals and does not copy ABaKaDa's subject matter, UI branding, or mascot.
+## Learning game assets
+
+The map uses original transparent assets: `silip_energy_token.png`, `silip_reward_chest.png`, and `silip_trophy.png`. They accompany tappable/locked lesson nodes and previews of future rewards.
+
+## Mascot
+
+Ali appears at the left of page headers, lesson guidance, safety and insight cards, and answer feedback. Emerald bulb poses support welcoming/learning/correct states; orange is reserved for caution. The image never communicates a device status by itself. See [the Ali mascot guide](mascot-guide.md).
+
+## Current implementation boundary
+
+- The UI uses a demo household and illustrative energy values.
+- Cognito sign-in, HTTP transport, and connection of the Compose screens to `HouseholdApi` are not implemented.
+- Household readings, bill calculations, persisted learning progress, notifications, geofences, NILM, micro-arc detection, and demand-response payouts are not live.
+- Lesson quizzes run locally; the preview stores completion, streak, and XP on-device. Leaderboards and reward redemption are not implemented.
+
+Use the [roadmap](roadmap.md) and local Markdown [tickets](tickets/) to sequence implementation work.

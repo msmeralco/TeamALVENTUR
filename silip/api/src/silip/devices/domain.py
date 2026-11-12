@@ -1,4 +1,4 @@
-"""Device installation contracts. Engineers see installation metadata, never household usage."""
+"""Device installation contracts and the limited mobile PoC usage response."""
 
 from datetime import datetime
 from secrets import token_urlsafe
@@ -90,6 +90,22 @@ class TransformerTelemetry(BaseModel):
     transformer_id: str
     registered_homes: int
     points: list[AggregatePoint]
+
+
+class DemoUsagePoint(BaseModel):
+    ts: datetime
+    kw: float
+
+
+class DemoDeviceUsage(BaseModel):
+    """Sanitized, public usage summary for the single PoC device."""
+
+    clamp_id: str
+    transformer_id: str
+    last_seen_at: datetime | None
+    total_kwh: float
+    is_simulated: bool
+    points: list[DemoUsagePoint]
 
 
 class RegistryError(ValueError):

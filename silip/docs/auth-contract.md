@@ -33,6 +33,9 @@ The outage view is public. The engineer risk map and outage detail need an engin
 | `GET /api/v1/transformers?bbox=`, `GET /api/v1/transformers/{id}` | `engineers` |
 | `GET /api/v1/outages/{id}` | `engineers` |
 | `GET /api/v1/me/usage` | `households` |
+| `GET /api/v1/me/device` | `households` |
+
+The separate Android PoC Lambda also serves `GET /mobile-api/v1/devices/silip-esp32-test/usage` through CloudFront in dev. It is unauthenticated and allowlisted to one demo device only; prod's allowlist is empty. It is not part of the production household-auth contract.
 
 ## Web config (Vite env)
 `VITE_AUTH_MODE` = `cognito` | `dev` · `VITE_COGNITO_AUTHORITY` · `VITE_COGNITO_CLIENT_ID` · `VITE_COGNITO_DOMAIN`. `dev` gives a fake user in both groups; pair it with the API's `AUTH_DISABLED=true`.

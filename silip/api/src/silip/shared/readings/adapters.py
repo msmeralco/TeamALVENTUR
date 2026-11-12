@@ -120,6 +120,8 @@ class _NeonSource:
         return self._frame(
             "SELECT transformer_id, rated_kva::float8 AS rated_kva, homes,"
             " coverage_pct::float8 AS coverage_pct, lat, lon, is_simulated FROM transformer"
+            # The live-demo bench rig (silip.shared.bench) is not part of the city.
+            " WHERE transformer_id NOT LIKE 'BENCH-%%'"
         )
 
     def _latest(self, sql: LiteralString) -> pd.Timestamp | None:
@@ -191,7 +193,11 @@ class _NeonSource:
 class ClampSource(_NeonSource):
     """Opt-in clamp readings (`reading` table)."""
 
-    PER_HOME_KW = "SELECT transformer_id, sin_hash, ts, power_kw AS kw, is_simulated FROM reading"
+    # Bench rig readings (BENCH-*) feed only the /demo page, never city load or scoring.
+    PER_HOME_KW = (
+        "SELECT transformer_id, sin_hash, ts, power_kw AS kw, is_simulated FROM reading"
+        " WHERE transformer_id NOT LIKE 'BENCH-%%'"
+    )
 
 
 class SmartMeterSource(_NeonSource):

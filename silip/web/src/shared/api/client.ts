@@ -36,7 +36,9 @@ export const api = createClient<paths>({
 api.use({
   onRequest({ request }) {
     const token = getAccessToken();
-    if (token !== null) request.headers.set("Authorization", `Bearer ${token}`);
+    // Not Authorization: CloudFront replaces that header with its own SigV4 signature for the API Lambda.
+    // The API reads this one (see CLIENT_AUTH_HEADER in api/src/silip/shared/auth/api.py).
+    if (token !== null) request.headers.set("X-Silip-Authorization", `Bearer ${token}`);
     return request;
   },
   onResponse({ response }) {

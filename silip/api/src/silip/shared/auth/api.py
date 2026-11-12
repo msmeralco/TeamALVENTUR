@@ -12,7 +12,7 @@ from functools import lru_cache
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from silip.shared.auth import service
@@ -32,8 +32,28 @@ SIGN_IN_REQUIRED = "Sign in required"
 ENGINEER_REQUIRED = "Engineer access required"
 HOUSEHOLD_REQUIRED = "Household access required"
 
+CLIENT_AUTH_HEADER = "X-Silip-Authorization"
+
 _bearer = HTTPBearer(auto_error=False, scheme_name="CognitoAccessToken")
+# CloudFront signs /api/* requests to the Lambda function URL with SigV4 (origin access control), and that
+# signature replaces the viewer's Authorization header. The web app therefore sends its Cognito token in
+# X-Silip-Authorization, which CloudFront forwards untouched. Authorization: Bearer still works directly.
+_token_header = APIKeyHeader(
+    name=CLIENT_AUTH_HEADER, auto_error=False, scheme_name="CognitoAccessTokenHeader"
+)
 Credentials = Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)]
+TokenHeader = Annotated[str | None, Depends(_token_header)]
+
+
+def bearer_token(header: TokenHeader, credentials: Credentials) -> str | None:
+    """The Cognito access token from X-Silip-Authorization, else from Authorization: Bearer."""
+    if header is not None:
+        scheme, _, token = header.partition(" ")
+        return token.strip() or None if scheme.lower() == "bearer" else None
+    return None if credentials is None else credentials.credentials
+
+
+BearerToken = Annotated[str | None, Depends(bearer_token)]
 
 
 def cognito_pool(settings: ApiSettings) -> CognitoPool:
@@ -65,16 +85,14 @@ def _sign_in_required() -> HTTPException:
     )
 
 
-def require_user(credentials: Credentials, settings: Settings, decoder: Decoder) -> AuthUser:
+def require_user(token: BearerToken, settings: Settings, decoder: Decoder) -> AuthUser:
     """Any signed-in user, or 401."""
     if decoder is None:  # AUTH_DISABLED=true, local dev only
         return DEV_USER
-    if credentials is None:
+    if token is None:
         raise _sign_in_required()
     try:
-        return service.authenticate(
-            decoder, credentials.credentials, cognito_pool(settings).client_id
-        )
+        return service.authenticate(decoder, token, cognito_pool(settings).client_id)
     except AuthenticationError as error:
         logger.info("rejected bearer token: %s", error)  # the reason, never the token
         raise _sign_in_required() from error

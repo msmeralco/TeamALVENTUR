@@ -161,10 +161,122 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/bench": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Bench
+         * @description Public: the bench rig's mock homes and both transformers, from the last 10 minutes.
+         */
+        get: operations["bench_api_v1_bench_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bench/{transformer_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Bench Transformer
+         * @description Public: one bench transformer. Refuses every transformer that is not on the bench.
+         */
+        get: operations["bench_transformer_api_v1_bench__transformer_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** BenchFingerprint */
+        BenchFingerprint: {
+            /** Home */
+            home: string;
+            /** Record Transformer */
+            record_transformer: string;
+            /** Voltage Transformer */
+            voltage_transformer: string | null;
+            /** Confidence */
+            confidence: number;
+            /** Mismatch */
+            mismatch: boolean;
+            /** Explanation */
+            explanation: string;
+        };
+        /** BenchHomeState */
+        BenchHomeState: {
+            /** Label */
+            label: string;
+            /** Watts */
+            watts: number | null;
+            /** Volts */
+            volts: number | null;
+            /** Powered */
+            powered: boolean;
+            /** Updated At */
+            updated_at: string | null;
+        };
+        /** BenchSnapshot */
+        BenchSnapshot: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Mode */
+            mode: ("live" | "replay") | null;
+            /** Is Simulated */
+            is_simulated: boolean;
+            /** Sample Interval S */
+            sample_interval_s: number;
+            /** Transformers */
+            transformers: components["schemas"]["BenchTransformerState"][];
+            /** Fingerprints */
+            fingerprints: components["schemas"]["BenchFingerprint"][];
+        };
+        /** BenchTransformerState */
+        BenchTransformerState: {
+            /** Transformer Id */
+            transformer_id: string;
+            /** Rated W */
+            rated_w: number;
+            /** Total W */
+            total_w: number;
+            /** Load Pct */
+            load_pct: number;
+            /**
+             * Tier
+             * @enum {string}
+             */
+            tier: "OK" | "Watch" | "Critical";
+            /** Reasons */
+            reasons: string[];
+            /** Homes Reporting */
+            homes_reporting: number;
+            /** Homes On Record */
+            homes_on_record: number;
+            /** Homes */
+            homes: components["schemas"]["BenchHomeState"][];
+            /** Powered */
+            powered: boolean;
+        };
         /**
          * ClampMap
          * @description Every clamp in view, with status judged against `as_of` (the latest report of any clamp).
@@ -371,6 +483,8 @@ export interface components {
             risk: components["schemas"]["RiskOutput"];
             /** Is Simulated */
             is_simulated: boolean;
+            /** Scored At */
+            scored_at?: string | null;
             /**
              * As Of
              * Format: date-time
@@ -395,6 +509,8 @@ export interface components {
             risk: components["schemas"]["RiskOutput"];
             /** Is Simulated */
             is_simulated: boolean;
+            /** Scored At */
+            scored_at?: string | null;
         };
         /** UsagePoint */
         UsagePoint: {
@@ -528,6 +644,13 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
+            /** @description No completed scoring run yet */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     get_transformer_api_v1_transformers__transformer_id__get: {
@@ -572,6 +695,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+            /** @description No completed scoring run yet */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -719,6 +849,57 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bench_api_v1_bench_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BenchSnapshot"];
+                };
+            };
+        };
+    };
+    bench_transformer_api_v1_bench__transformer_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transformer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BenchSnapshot"];
+                };
             };
             /** @description Validation Error */
             422: {

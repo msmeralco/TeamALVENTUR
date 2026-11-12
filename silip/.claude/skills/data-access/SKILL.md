@@ -7,15 +7,19 @@ description: Where SILIP data lives and how to read it - the data/ folders, simu
 | Folder | What | Git |
 |---|---|---|
 | `data/raw/` | Real exports (never committed, never read by agents) | ignored |
-| `data/osm/` | OpenStreetMap transformer sites and nearby building centres (ODbL); the simulator places transformers and homes here | committed |
-| `data/sim/` | Output of `make sim` (`silip_ml.readings.simulate`) | ignored, regenerate |
+| `data/osm/` | OpenStreetMap transformer sites and nearby building centres (ODbL); `notebooks/00` places transformers and homes here | committed |
+| `data/sim/` | Output of `make sim` (`notebooks/00_generate_mock_data.ipynb`, dev scale); `data/sim/large`, `data/sim/xlarge` for timing | ignored, regenerate |
+| `tests/fixtures/sim/` | Same notebook at `SIM_SCALE=test` (8 transformers, 21 days, about 2.5 MB) | committed |
+| `models/` | Exported models, metadata and parity samples from `notebooks/06` | committed |
 | `data/processed/` | Aggregated tables from `silip_ml.readings.aggregate` | ignored, regenerate |
 
-Simulated CSVs (all rows carry `is_simulated=True`):
-- `transformers.csv`: `transformer_id, rated_kva, homes, coverage_pct, lat, lon, osm_node_id` (lat/lon are real OSM sites)
-- `sin_map.csv`: `sin_hash, transformer_id, has_clamp, lat, lon, osm_way_id` (each home on a real OSM building near its transformer; homes share a building as units when there are too few)
+Simulated CSVs (all rows carry `is_simulated=True`; scenario knobs in `data/README.md`):
+- `transformers.csv`: `transformer_id, rated_kva, homes, coverage_pct, lat, lon, osm_node_id` (lat/lon are real OSM sites), plus scenario flags `loading_class, ev_site, ev_homes, solar_homes, has_jumper, has_check_meter, lead_up`
+- `sin_map.csv`: `sin_hash, transformer_id, has_clamp, lat, lon, osm_way_id` (each home on a real OSM building near its transformer; homes share a building as units when there are too few), plus `has_ev, ev_from, solar_kwp`
 - `clamps.csv`: `clamp_id (silip-node-NNNN, the MQTT client ID), sin_hash, ct_model, installed_at, last_seen_at`; one row per `has_clamp` home
-- `transformer_load_15m.csv`: `transformer_id, ts, transformer_kw, load_pct, heat_index_c`
+- `transformer_load_15m.csv`: `transformer_id, ts, transformer_kw, load_pct, heat_index_c`, plus `measured_kw, homes_reporting, late_readings, duplicate_readings, true_kw, check_meter_kw`. `transformer_kw` is what SILIP sees (clamped homes scaled up); `true_kw` includes jumper load (simulator only, used for trip labels); `check_meter_kw` is blank without a check meter. Intervals with no clamp reporting (outages) are absent.
+- `household_load_15m.csv`: per-home kW for a few detail transformers; `readings_raw.csv`: the last 2 days of one transformer as received (`received_at`, late and duplicate arrivals)
+- `weather_15m.csv`: `ts, heat_index_c, rain_mm_h, weather (clear|hot_spell|rain|typhoon), is_holiday`
 - `outages.csv`: `outage_id, transformer_id, start_ts, cause, duration_min, lat, lon`
 - `outage_signals.csv`: `outage_id, kind (last_gasp|report), ts, lat, lon`
 

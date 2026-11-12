@@ -59,6 +59,9 @@
         },
         "security": [
           {
+            "CognitoAccessTokenHeader": []
+          },
+          {
             "CognitoAccessToken": []
           }
         ]
@@ -73,6 +76,9 @@
         "description": "Risk tier, reasons and confidence per transformer, Critical first.",
         "operationId": "list_transformers_api_v1_transformers_get",
         "security": [
+          {
+            "CognitoAccessTokenHeader": []
+          },
           {
             "CognitoAccessToken": []
           }
@@ -143,6 +149,9 @@
         "description": "One transformer: risk, last 48 h of load and the 24 h forecast.",
         "operationId": "get_transformer_api_v1_transformers__transformer_id__get",
         "security": [
+          {
+            "CognitoAccessTokenHeader": []
+          },
           {
             "CognitoAccessToken": []
           }
@@ -260,6 +269,9 @@
         "operationId": "get_outage_api_v1_outages__outage_id__get",
         "security": [
           {
+            "CognitoAccessTokenHeader": []
+          },
+          {
             "CognitoAccessToken": []
           }
         ],
@@ -332,6 +344,9 @@
         },
         "security": [
           {
+            "CognitoAccessTokenHeader": []
+          },
+          {
             "CognitoAccessToken": []
           }
         ]
@@ -346,6 +361,9 @@
         "description": "Each clamp's device details and online/offline status. No household identity or usage.",
         "operationId": "list_clamps_api_v1_clamps_get",
         "security": [
+          {
+            "CognitoAccessTokenHeader": []
+          },
           {
             "CognitoAccessToken": []
           }
@@ -399,10 +417,300 @@
           }
         }
       }
+    },
+    "/api/v1/bench": {
+      "get": {
+        "tags": [
+          "bench"
+        ],
+        "summary": "Bench",
+        "description": "Public: the bench rig's mock homes and both transformers, from the last 10 minutes.",
+        "operationId": "bench_api_v1_bench_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchSnapshot"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bench/{transformer_id}": {
+      "get": {
+        "tags": [
+          "bench"
+        ],
+        "summary": "Bench Transformer",
+        "description": "Public: one bench transformer. Refuses every transformer that is not on the bench.",
+        "operationId": "bench_transformer_api_v1_bench__transformer_id__get",
+        "parameters": [
+          {
+            "name": "transformer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transformer Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchSnapshot"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "BenchFingerprint": {
+        "properties": {
+          "home": {
+            "type": "string",
+            "title": "Home"
+          },
+          "record_transformer": {
+            "type": "string",
+            "title": "Record Transformer"
+          },
+          "voltage_transformer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voltage Transformer"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "mismatch": {
+            "type": "boolean",
+            "title": "Mismatch"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "home",
+          "record_transformer",
+          "voltage_transformer",
+          "confidence",
+          "mismatch",
+          "explanation"
+        ],
+        "title": "BenchFingerprint"
+      },
+      "BenchHomeState": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "watts": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watts"
+          },
+          "volts": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volts"
+          },
+          "powered": {
+            "type": "boolean",
+            "title": "Powered"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "watts",
+          "volts",
+          "powered",
+          "updated_at"
+        ],
+        "title": "BenchHomeState"
+      },
+      "BenchSnapshot": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "live",
+                  "replay"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          },
+          "sample_interval_s": {
+            "type": "number",
+            "title": "Sample Interval S"
+          },
+          "transformers": {
+            "items": {
+              "$ref": "#/components/schemas/BenchTransformerState"
+            },
+            "type": "array",
+            "title": "Transformers"
+          },
+          "fingerprints": {
+            "items": {
+              "$ref": "#/components/schemas/BenchFingerprint"
+            },
+            "type": "array",
+            "title": "Fingerprints"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of",
+          "mode",
+          "is_simulated",
+          "sample_interval_s",
+          "transformers",
+          "fingerprints"
+        ],
+        "title": "BenchSnapshot"
+      },
+      "BenchTransformerState": {
+        "properties": {
+          "transformer_id": {
+            "type": "string",
+            "title": "Transformer Id"
+          },
+          "rated_w": {
+            "type": "number",
+            "title": "Rated W"
+          },
+          "total_w": {
+            "type": "number",
+            "title": "Total W"
+          },
+          "load_pct": {
+            "type": "number",
+            "title": "Load Pct"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "OK",
+              "Watch",
+              "Critical"
+            ],
+            "title": "Tier"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "homes_reporting": {
+            "type": "integer",
+            "title": "Homes Reporting"
+          },
+          "homes_on_record": {
+            "type": "integer",
+            "title": "Homes On Record"
+          },
+          "homes": {
+            "items": {
+              "$ref": "#/components/schemas/BenchHomeState"
+            },
+            "type": "array",
+            "title": "Homes"
+          },
+          "powered": {
+            "type": "boolean",
+            "title": "Powered"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transformer_id",
+          "rated_w",
+          "total_w",
+          "load_pct",
+          "tier",
+          "reasons",
+          "homes_reporting",
+          "homes_on_record",
+          "homes",
+          "powered"
+        ],
+        "title": "BenchTransformerState"
+      },
       "ClampMap": {
         "properties": {
           "as_of": {
@@ -1000,6 +1308,11 @@
       }
     },
     "securitySchemes": {
+      "CognitoAccessTokenHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Silip-Authorization"
+      },
       "CognitoAccessToken": {
         "type": "http",
         "scheme": "bearer"

@@ -13,6 +13,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from mangum import Mangum
 
+from silip.bench.api import router as bench_router
 from silip.clamps.api import router as clamps_router
 from silip.household.api import router as household_router
 from silip.outages.api import router as outages_router
@@ -41,6 +42,7 @@ for router in (
     outages_router,
     household_router,
     clamps_router,
+    bench_router,
 ):
     app.include_router(router)
 

@@ -355,3 +355,52 @@ describe("dailyKwh", () => {
     expect(days.every((d) => !d.complete)).toBe(true);
   });
 });
+
+describe("live demo page", () => {
+  const home = (label: string, watts: number) => ({
+    label,
+    watts,
+    volts: 11.4,
+    powered: true,
+    updated_at: "2026-11-12T13:00:00Z",
+  });
+  const BENCH = {
+    as_of: "2026-11-12T13:00:00Z",
+    mode: "replay",
+    is_simulated: true,
+    sample_interval_s: 2,
+    transformers: [
+      {
+        transformer_id: "BENCH-T1",
+        rated_w: 4.6,
+        total_w: 5.9,
+        load_pct: 1.28,
+        tier: "Critical",
+        reasons: ["Load 128% of rating now", "House 3 added a large new load (likely EV)"],
+        homes_reporting: 4,
+        homes_on_record: 4,
+        homes: [home("House 1", 1.1), home("House 3", 3.0)],
+        powered: true,
+      },
+    ],
+    fingerprints: [
+      {
+        home: "House 4",
+        record_transformer: "BENCH-T1",
+        voltage_transformer: "BENCH-T2",
+        confidence: 0.87,
+        mismatch: true,
+        explanation: "Voltage dips with BENCH-T2, not BENCH-T1.",
+      },
+    ],
+  };
+
+  it("opens with no sign-in and labels simulated rows as Replay (simulated)", async () => {
+    mockApi({ "/api/v1/bench": BENCH });
+    renderAt("/demo", { ...createDevBackend(), load: async () => null });
+    expect(await screen.findByText("Replay (simulated)")).toBeTruthy();
+    expect(screen.getByText("House 3 added a large new load (likely EV)")).toBeTruthy();
+    expect(screen.getByText(/House 4: records say T1, voltage says T2 \(confidence 87%\)/)).toBeTruthy();
+    expect(screen.getByText(/built from 4 of 4 homes by SIN/)).toBeTruthy();
+  });
+});

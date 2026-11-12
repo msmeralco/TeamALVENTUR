@@ -32,6 +32,9 @@
   --ok-soft: #e8f0ea;
   --map-building: #e9e7e0;
   --overlay: rgb(28 30 33 / 0.45);
+  /* QR codes stay dark on light in both themes: some phone cameras cannot read inverted codes. */
+  --qr-foreground: #1c1e21;
+  --qr-background: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {

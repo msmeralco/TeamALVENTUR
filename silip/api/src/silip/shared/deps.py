@@ -10,11 +10,17 @@ from fastapi import Depends
 
 from silip.shared.config import ApiSettings, Settings, get_settings
 from silip.shared.db import connect
-from silip.shared.readings.adapters import ClampSource, SimulatedSource, SmartMeterSource
+from silip.shared.readings.adapters import (
+    ClampSource,
+    NeonSource,
+    SimulatedSource,
+    SmartMeterSource,
+)
 from silip.shared.readings.domain import DataSource
 
 SOURCES: dict[str, Callable[[ApiSettings], DataSource]] = {
     "simulated": lambda settings: SimulatedSource(settings.data_dir),
+    "neon": lambda settings: NeonSource(lambda: connect(settings)),
     "clamp": lambda settings: ClampSource(lambda: connect(settings)),
     "smart_meter": lambda settings: SmartMeterSource(lambda: connect(settings)),
 }

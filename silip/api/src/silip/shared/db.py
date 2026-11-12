@@ -29,12 +29,16 @@ def connect(settings: ApiSettings) -> psycopg.Connection:
     return psycopg.connect(database_url(settings), connect_timeout=CONNECT_TIMEOUT_S)
 
 
+def direct_url(settings: ApiSettings) -> str:
+    """The unpooled endpoint for schema changes and bulk loads; falls back to DATABASE_URL."""
+    direct = settings.database_direct_url
+    return direct.get_secret_value() if direct is not None else database_url(settings)
+
+
 def apply_schema(path: Path, settings: ApiSettings) -> None:
     """Run an additive SQL file (CREATE ... IF NOT EXISTS) over the direct, unpooled endpoint."""
     sql = path.read_text(encoding="utf-8")
-    direct = settings.database_direct_url
-    url = direct.get_secret_value() if direct is not None else database_url(settings)
-    with psycopg.connect(url, connect_timeout=CONNECT_TIMEOUT_S) as connection:
+    with psycopg.connect(direct_url(settings), connect_timeout=CONNECT_TIMEOUT_S) as connection:
         connection.execute(sql)  # type: ignore[arg-type]  # trusted file from the repo
 
 

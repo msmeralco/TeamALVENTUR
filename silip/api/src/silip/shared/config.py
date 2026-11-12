@@ -12,7 +12,7 @@ from pydantic_settings import SettingsConfigDict
 
 from silip_ml.core.config import MlSettings
 
-DataSourceName = Literal["simulated", "clamp", "smart_meter"]
+DataSourceName = Literal["simulated", "neon", "clamp", "smart_meter"]
 
 
 class ConfigError(RuntimeError):

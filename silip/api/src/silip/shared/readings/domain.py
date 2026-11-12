@@ -6,6 +6,8 @@ outages:      outage_id, transformer_id, start_ts, cause, duration_min (null whi
               is_simulated
 signals:      outage_id, kind (last_gasp | report), ts, lat, lon
 usage:        ts, power_kw, is_simulated
+clamps:       clamp_id, transformer_id, lat, lon, ct_model, installed_at, last_seen_at (null if
+              never seen), is_simulated; one row per installed clamp, never a sin_hash
 """
 
 from __future__ import annotations
@@ -27,6 +29,8 @@ class DataSource(Protocol):
     def outage_signals(self) -> pd.DataFrame: ...
 
     def household_usage(self, sin_hash: str) -> pd.DataFrame: ...
+
+    def clamps(self) -> pd.DataFrame: ...
 
     def sin_hash_for_account(self, subject: str) -> str | None:
         """The household linked to a Cognito user (`sub`), or None if none is linked."""

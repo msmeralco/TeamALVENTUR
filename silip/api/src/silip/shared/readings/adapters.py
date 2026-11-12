@@ -1,4 +1,4 @@
-"""DataSource strategies: simulated CSVs, clamp readings in Neon, smart-meter intervals in Neon."""
+"""DataSource strategies: simulated CSVs, and Neon tables (whole-transformer load, clamp, smart meter)."""
 
 from __future__ import annotations
 
@@ -13,6 +13,17 @@ import psycopg
 from silip_ml.readings.dataset import Dataset, load_dataset
 
 USAGE_DAYS = 7
+CLAMP_COLUMNS = [
+    "clamp_id",
+    "transformer_id",
+    "lat",
+    "lon",
+    "ct_model",
+    "installed_at",
+    "last_seen_at",
+    "is_simulated",
+]
+LOCAL_TZ = "Asia/Manila"  # the simulator's zone; services format peak times in local hours
 
 
 class SimulatedSource:
@@ -43,6 +54,25 @@ class SimulatedSource:
         since = mine["ts"].max() - pd.Timedelta(days=USAGE_DAYS)
         return mine.loc[mine["ts"] > since, ["ts", "power_kw", "is_simulated"]]
 
+    @cached_property
+    def _clamps(self) -> pd.DataFrame:
+        # load_dataset (ml/) does not read clamps.csv; sims made before clamps existed lack it.
+        path = self._data_dir / "clamps.csv"
+        if not path.exists():
+            return pd.DataFrame(columns=CLAMP_COLUMNS)
+        clamps = pd.read_csv(path)
+        places = pd.read_csv(self._data_dir / "sin_map.csv").dropna(subset=["lat", "lon"])
+        # The join on sin_hash stays here, so no caller ever sees it.
+        joined = clamps.merge(places, on="sin_hash", suffixes=("", "_household"))
+        # Simulated if either the device row or the household row is.
+        joined["is_simulated"] = joined["is_simulated"] | joined["is_simulated_household"]
+        for column in ("installed_at", "last_seen_at"):
+            joined[column] = pd.to_datetime(joined[column], utc=True).dt.tz_convert(LOCAL_TZ)
+        return joined[CLAMP_COLUMNS]
+
+    def clamps(self) -> pd.DataFrame:
+        return self._clamps
+
     def sin_hash_for_account(self, subject: str) -> str | None:
         households = self._data.households
         return None if households.empty else str(households["sin_hash"].iloc[0])
@@ -60,11 +90,17 @@ class _NeonSource:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(sql, params)
             columns = [column.name for column in cursor.description or []]
-            return pd.DataFrame(cursor.fetchall(), columns=columns)
+            frame = pd.DataFrame(cursor.fetchall(), columns=columns)
+        for column in frame.columns:
+            if isinstance(frame[column].dtype, pd.DatetimeTZDtype):
+                frame[column] = frame[column].dt.tz_convert(LOCAL_TZ)
+        return frame
 
     def transformers(self) -> pd.DataFrame:
+        # numeric -> float8, else psycopg returns Decimal and numpy math fails.
         return self._frame(
-            "SELECT transformer_id, rated_kva, homes, coverage_pct, lat, lon, is_simulated FROM transformer"
+            "SELECT transformer_id, rated_kva::float8 AS rated_kva, homes,"
+            " coverage_pct::float8 AS coverage_pct, lat, lon, is_simulated FROM transformer"
         )
 
     def load(self) -> pd.DataFrame:
@@ -91,10 +127,22 @@ class _NeonSource:
         sql: LiteralString = (
             "WITH per_home AS ("  # noqa: S608  (class constant, no user input)
             + self.PER_HOME_KW
-            + ") SELECT ts, kw AS power_kw, is_simulated FROM per_home"
-            " WHERE sin_hash = %(sin_hash)s AND ts > now() - interval '7 days' ORDER BY ts"
+            + ") SELECT ts, kw::float8 AS power_kw, is_simulated FROM per_home"
+            " WHERE sin_hash = %(sin_hash)s"
+            # Week before the household's latest reading (like SimulatedSource), not now().
+            " AND ts > (SELECT max(ts) FROM per_home WHERE sin_hash = %(sin_hash)s)"
+            " - make_interval(days => %(days)s) ORDER BY ts"
         )
-        return self._frame(sql, {"sin_hash": sin_hash})
+        return self._frame(sql, {"sin_hash": sin_hash, "days": USAGE_DAYS})
+
+    def clamps(self) -> pd.DataFrame:
+        # Joined server-side so sin_hash never leaves the database; the map needs a place.
+        return self._frame(
+            "SELECT c.clamp_id, h.transformer_id, h.lat, h.lon, c.ct_model, c.installed_at,"
+            " c.last_seen_at, (c.is_simulated OR h.is_simulated) AS is_simulated"
+            " FROM clamp c JOIN household h USING (sin_hash)"
+            " WHERE h.lat IS NOT NULL AND h.lon IS NOT NULL ORDER BY c.clamp_id"
+        )
 
     def sin_hash_for_account(self, subject: str) -> str | None:
         found = self._frame(
@@ -114,3 +162,21 @@ class SmartMeterSource(_NeonSource):
     """Smart-meter 15-minute energy (`smart_meter_interval` table), converted to average kW."""
 
     PER_HOME_KW = "SELECT transformer_id, sin_hash, ts, energy_kwh * 4 AS kw, is_simulated FROM smart_meter_interval"
+
+
+class NeonSource(_NeonSource):
+    """What `load_sim` (or the team) puts in Neon: whole-transformer kW plus per-home kW.
+
+    Own tables instead of `reading`, because a transformer total and a bare per-home kW have no
+    voltage/current to fill `reading`'s NOT NULL columns.
+    """
+
+    PER_HOME_KW = (
+        "SELECT transformer_id, sin_hash, ts, power_kw AS kw, is_simulated FROM household_load"
+    )
+
+    def load(self) -> pd.DataFrame:
+        return self._frame(
+            "SELECT transformer_id, ts, transformer_kw::float8 AS transformer_kw, is_simulated"
+            " FROM transformer_load ORDER BY transformer_id, ts"
+        )

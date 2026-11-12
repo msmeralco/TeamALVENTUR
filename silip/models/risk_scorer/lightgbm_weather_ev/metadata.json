@@ -20,9 +20,9 @@
     "watch": 0.03
   },
   "reasons": "top 3 positive pred_contrib values, sentences in silip_ml.risk.domain.REASON_TEMPLATES",
-  "kept": true,
-  "kept_status": "provisional: pending the evaluator's seed-8 check",
-  "kept_reason": "recall at >= 12 h lead at least rules and lightgbm, false alarms no higher than rules",
+  "kept": false,
+  "kept_status": "final: evaluator, seed 7 and seed 8 (2026-11-13)",
+  "kept_reason": "passes on seed 7 (recall at >= 12 h 1.00, 4.87 false alarms vs rules 8.24) but fails on seed 8: recall at >= 12 h 0.571 vs rules 0.643, false alarms 4.79 vs rules 2.10. Seed 8 trains on 42 trips over 6 days; heat_index_max_c (35% of gain) and ev_evening_step_kw push forecast overloads of up to 188% to OK. Verdict differs between seeds, so not kept.",
   "false_alarm_budget_per_tx_month": 6.974789915966387,
   "label": "trip rule on true load: above 110% of usable rating for 3 h in a row (silip-domain)",
   "params": {

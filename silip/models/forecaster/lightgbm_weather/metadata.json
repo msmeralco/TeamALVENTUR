@@ -43,8 +43,8 @@
     "end": "2026-05-19 23:45:00+08:00"
   },
   "kept": false,
-  "kept_status": "provisional: pending the evaluator's seed-8 check",
-  "kept_reason": "not better than both seasonal_naive and lightgbm in: hot-spell days",
+  "kept_status": "final: evaluator, seed 7 and seed 8 (2026-11-13), see notebooks/results/weather_skill.json",
+  "kept_reason": "fails acceptance on both seeds. Seed 7: worse than lightgbm on the held-out hot-spell day (2.37 vs 1.85 kW). Seed 8: worse than lightgbm overall (6.60 vs 5.92 kW) and in every rating group; errors follow the simulated forecast's heat-index misses (+9.2 C on 05-20, -3.1 C on 05-24). The simulated forecast error is about 3x real Open-Meteo day-ahead skill; recalibrate the simulator and re-evaluate.",
   "weather": "simulated day-ahead forecasts (truth plus error), issued 00:00; never the true weather",
   "gain_share": {
     "lag_1d": 0.2885,

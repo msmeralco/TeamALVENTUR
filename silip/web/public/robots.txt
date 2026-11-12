@@ -2,5 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /engineer
 Disallow: /me
-Disallow: /demo
 Disallow: /auth

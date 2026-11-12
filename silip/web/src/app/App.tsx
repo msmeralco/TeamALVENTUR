@@ -55,9 +55,12 @@ function AuthCallbackPage() {
       (error: unknown) => {
         console.warn("Sign-in callback failed", error);
         setFailed(true);
-        // If Cognito answers after the timeout, the user is signed in after all: finish the redirect.
+        // If Cognito answers after the timeout, the user is signed in after all: finish the redirect,
+        // unless they already left this page from the timeout card.
         finishing.then(
-          () => navigate(takeReturnPath(), { replace: true }),
+          () => {
+            if (window.location.pathname === "/auth/callback") navigate(takeReturnPath(), { replace: true });
+          },
           () => {},
         );
       },
@@ -181,10 +184,10 @@ function MainNav() {
           <Link
             key={item.to}
             to={item.to}
-            aria-current={current ? "page" : undefined}
+            aria-current={current ? (item.to.includes("#") ? "location" : "page") : undefined}
             aria-label={item.short === undefined ? undefined : item.label}
             className={cn(
-              "rounded-full px-3 py-2 text-sm font-semibold whitespace-nowrap text-muted-foreground no-underline transition-colors duration-150 hover:bg-accent hover:text-foreground lg:px-4",
+              "rounded-full px-3 py-2 text-sm font-semibold whitespace-nowrap text-muted-foreground no-underline transition-colors duration-150 hover:bg-accent hover:text-foreground pointer-coarse:flex pointer-coarse:min-h-11 pointer-coarse:items-center lg:px-4",
               "max-sm:my-1.5 max-sm:flex max-sm:min-h-11 max-sm:min-w-0 max-sm:flex-1 max-sm:flex-col max-sm:items-center max-sm:justify-center max-sm:gap-0.5 max-sm:rounded-xl max-sm:px-1 max-sm:py-1 max-sm:text-xs",
               current && "bg-selected text-selected-foreground hover:bg-selected hover:text-selected-foreground",
             )}
@@ -217,7 +220,8 @@ function Shell() {
   // The risk map is a full-screen map; every other page sits in the centered column.
   const fullBleed = location.pathname === "/engineer" && hasGroup("engineers");
   return (
-    <>
+    // A full-height column, so the footer sits at the bottom of short pages such as the 404.
+    <div className="flex min-h-dvh flex-col">
       <a
         href="#main"
         className="sr-only rounded-full bg-card px-4 py-2 text-sm font-semibold focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50"
@@ -248,8 +252,8 @@ function Shell() {
         id="main"
         tabIndex={-1}
         className={cn(
-          "outline-none",
-          fullBleed ? "w-full" : "mx-auto max-w-6xl px-4 pt-6 pb-10 sm:px-6 sm:pt-10 sm:pb-16",
+          "w-full flex-1 outline-none",
+          fullBleed ? "" : "mx-auto max-w-6xl px-4 pt-6 pb-10 sm:px-6 sm:pt-10 sm:pb-16",
         )}
       >
         <RouteErrorBoundary key={location.pathname}>
@@ -297,7 +301,7 @@ function Shell() {
       </main>
       <Footer />
       <Toaster position="bottom-center" offset={88} mobileOffset={{ bottom: 88 }} />
-    </>
+    </div>
   );
 }
 

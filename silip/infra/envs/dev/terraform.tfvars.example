@@ -5,5 +5,5 @@ image_tag             = "0.1.0"
 # web_domain          = "dxxxxxxxxxxxx.cloudfront.net"  # after the first apply
 # data_source         = "simulated"
 # weather_source      = "open_meteo"  # or "simulated" (no network)
-# open_meteo_base_url = "https://api.open-meteo.com/v1"
+# open_meteo_base_url = "https://api.open-meteo.com/v1/forecast"
 # strategies          = { FORECASTER = "lightgbm" }

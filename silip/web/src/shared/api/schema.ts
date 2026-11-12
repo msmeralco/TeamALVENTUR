@@ -41,6 +41,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dashboard Summary
+         * @description Tiers and actions in view, weather freshness and the hottest hour ahead, clamps online,
+         *     and which models scored it.
+         */
+        get: operations["dashboard_summary_api_v1_dashboard_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/transformers": {
         parameters: {
             query?: never;
@@ -50,7 +71,8 @@ export interface paths {
         };
         /**
          * List Transformers
-         * @description Risk tier, reasons and confidence per transformer, Critical first.
+         * @description Risk tier, action, peak time, top reason, heat, EV and clamp health per transformer,
+         *     Critical first.
          */
         get: operations["list_transformers_api_v1_transformers_get"];
         put?: never;
@@ -70,9 +92,70 @@ export interface paths {
         };
         /**
          * Get Transformer
-         * @description One transformer: risk, last 48 h of load and the 24 h forecast.
+         * @description One transformer: risk, drivers, last 48 h of load and the 24 h forecast, the next 48 h of
+         *     weather, EV exposure and clamp health.
          */
         get: operations["get_transformer_api_v1_transformers__transformer_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/weather/outlook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Weather Outlook
+         * @description The next 48 h of heat index and rain over the transformers in view, hour by hour.
+         */
+        get: operations["weather_outlook_api_v1_weather_outlook_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ev/chargers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ev Chargers
+         * @description Public DOE charging stations in view (real sites, not homes).
+         */
+        get: operations["ev_chargers_api_v1_ev_chargers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ev/adoption": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ev Adoption
+         * @description EV adoption statistics as delivered; `not_loaded` until the file arrives.
+         */
+        get: operations["ev_adoption_api_v1_ev_adoption_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -90,7 +173,7 @@ export interface paths {
         };
         /**
          * List Outages
-         * @description Public: outages by area with a restoration range. No household or exact pin data.
+         * @description Outages by area with a restoration range. No household or exact pin data.
          */
         get: operations["list_outages_api_v1_outages_get"];
         put?: never;
@@ -121,43 +204,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/me/usage": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * My Usage
-         * @description The signed-in household's own last 7 days of usage.
-         */
-        get: operations["my_usage_api_v1_me_usage_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/me/device": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** My Device */
-        get: operations["my_device_api_v1_me_device_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/clamps": {
         parameters: {
             query?: never;
@@ -170,6 +216,27 @@ export interface paths {
          * @description Each clamp's device details and online/offline status. No household identity or usage.
          */
         get: operations["list_clamps_api_v1_clamps_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clamps/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Clamp Coverage
+         * @description Clamps installed and online, homes reporting, and clamps still needed for the target,
+         *     per transformer, least covered first. Counts only.
+         */
+        get: operations["clamp_coverage_api_v1_clamps_coverage_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -326,6 +393,66 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * Adoption
+         * @description Delivered EV adoption statistics; `not_loaded` until the file arrives.
+         */
+        Adoption: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "loaded" | "not_loaded";
+            /** Series */
+            series: components["schemas"]["AdoptionPoint"][];
+            /** Source Url */
+            source_url: string | null;
+            /** Is Simulated */
+            is_simulated: boolean;
+        };
+        /** AdoptionPoint */
+        AdoptionPoint: {
+            /** Period */
+            period: string;
+            /** Geography Level */
+            geography_level: string;
+            /** Geography */
+            geography: string;
+            /** Metric */
+            metric: string;
+            /** Vehicle Class */
+            vehicle_class: string;
+            /** Value */
+            value: number;
+            /** Unit */
+            unit: string;
+        };
+        /**
+         * AdoptionScenario
+         * @description The latest adoption figure, shown for planning only. Not a model input.
+         */
+        AdoptionScenario: {
+            /**
+             * Label
+             * @default Scenario, not a forecast
+             * @constant
+             */
+            label: "Scenario, not a forecast";
+            /** Period */
+            period: string;
+            /** Geography */
+            geography: string;
+            /** Metric */
+            metric: string;
+            /** Vehicle Class */
+            vehicle_class: string;
+            /** Value */
+            value: number;
+            /** Unit */
+            unit: string;
+            /** Source Url */
+            source_url: string | null;
+        };
         /** AggregatePoint */
         AggregatePoint: {
             /**
@@ -339,6 +466,44 @@ export interface components {
             energy_kwh: number;
             /** Homes Reporting */
             homes_reporting: number;
+            /** Is Simulated */
+            is_simulated: boolean;
+        };
+        /**
+         * AreaHour
+         * @description One forecast hour across the cells in view: the hottest and wettest cell.
+         */
+        AreaHour: {
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /** Heat Index Max C */
+            heat_index_max_c: number | null;
+            /** Temperature Max C */
+            temperature_max_c: number | null;
+            /** Precipitation Max Mm */
+            precipitation_max_mm: number | null;
+        };
+        /**
+         * AreaOutlook
+         * @description The next OUTLOOK_HOURS of forecast for the transformers in view.
+         */
+        AreaOutlook: {
+            /** Issued At */
+            issued_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "fresh" | "stale" | "missing";
+            /** Source */
+            source: string;
+            /** Hours */
+            hours: components["schemas"]["AreaHour"][];
+            /** Cells */
+            cells: components["schemas"]["CellPeak"][];
             /** Is Simulated */
             is_simulated: boolean;
         };
@@ -415,6 +580,73 @@ export interface components {
             powered: boolean;
         };
         /**
+         * CellPeak
+         * @description A weather cell's hottest forecast hour in the outlook window.
+         */
+        CellPeak: {
+            /** Cell Id */
+            cell_id: string;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Heat Index Max C */
+            heat_index_max_c: number | null;
+            /** Max At */
+            max_at: string | null;
+        };
+        /**
+         * Charger
+         * @description One public DOE charging station (a public site, not a home).
+         */
+        Charger: {
+            /** Station Id */
+            station_id: string;
+            /** Name */
+            name: string;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Barangay */
+            barangay: string | null;
+            /** City */
+            city: string | null;
+        };
+        /**
+         * ChargerMap
+         * @description DOE stations in view, and the radius used to link them to transformers.
+         */
+        ChargerMap: {
+            /** Radius M */
+            radius_m: number;
+            /** Source */
+            source: string;
+            /** Stations */
+            stations: components["schemas"]["Charger"][];
+            /** Is Simulated */
+            is_simulated: boolean;
+        };
+        /**
+         * ClampHealth
+         * @description Retrofit clamp counts for one transformer (or an area). Counts only, never a device.
+         */
+        ClampHealth: {
+            /** Homes */
+            homes: number;
+            /** Clamps Installed */
+            clamps_installed: number;
+            /** Clamps Online */
+            clamps_online: number;
+            /** Homes Reporting */
+            homes_reporting: number;
+            /**
+             * Reporting Pct
+             * @description homes_reporting / homes
+             */
+            reporting_pct: number;
+        };
+        /**
          * ClampMap
          * @description Every clamp in view, with status judged against `as_of` (the latest report of any clamp).
          */
@@ -455,6 +687,68 @@ export interface components {
              * @enum {string}
              */
             status: "online" | "offline";
+            /** Is Simulated */
+            is_simulated: boolean;
+        };
+        /** ClampSummary */
+        ClampSummary: {
+            /** Installed */
+            installed: number;
+            /** Online */
+            online: number;
+        };
+        /** ClampTotals */
+        ClampTotals: {
+            /** Installed */
+            installed: number;
+            /** Online */
+            online: number;
+        };
+        /**
+         * CoverageMap
+         * @description Per-transformer clamp coverage in view. Counts only: no clamp, home or household.
+         */
+        CoverageMap: {
+            /** As Of */
+            as_of: string | null;
+            /** Offline After Min */
+            offline_after_min: number;
+            /** Target Coverage */
+            target_coverage: number;
+            /** Min Trust Reporting */
+            min_trust_reporting: number;
+            clamps: components["schemas"]["ClampTotals"];
+            /** Transformers */
+            transformers: components["schemas"]["TransformerCoverage"][];
+            /** Is Simulated */
+            is_simulated: boolean;
+        };
+        /**
+         * DashboardSummary
+         * @description The summary row: as-of time, tiers, actions, weather freshness, clamps and model.
+         */
+        DashboardSummary: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /**
+             * Scored At
+             * Format: date-time
+             */
+            scored_at: string;
+            /** Tiers */
+            tiers: {
+                [key: string]: number;
+            };
+            /** Actions */
+            actions: {
+                [key: string]: number;
+            };
+            weather: components["schemas"]["WeatherSummary"];
+            clamps: components["schemas"]["ClampSummary"];
+            model: components["schemas"]["ModelSummary"];
             /** Is Simulated */
             is_simulated: boolean;
         };
@@ -593,66 +887,10 @@ export interface components {
             /** Device Key */
             device_key: string;
         };
-        /** ElectricalReading */
-        ElectricalReading: {
-            /**
-             * Ts
-             * Format: date-time
-             */
-            ts: string;
-            /** Voltage V */
-            voltage_v: number;
-            /** Current A */
-            current_a: number;
-            /** Power Kw */
-            power_kw: number;
-            /** Power Factor */
-            power_factor: number;
-            /** Energy Kwh Interval */
-            energy_kwh_interval: number;
-            motion: components["schemas"]["Motion"] | null;
-            /** Event */
-            event: string | null;
-            /** Is Simulated */
-            is_simulated: boolean;
-        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
-        };
-        /** HouseholdDevice */
-        HouseholdDevice: {
-            /** Clamp Id */
-            clamp_id: string;
-            /** Transformer Id */
-            transformer_id: string;
-            /** Lat */
-            lat: number | null;
-            /** Lon */
-            lon: number | null;
-            /** Location Label */
-            location_label?: string | null;
-            /** Ct Model */
-            ct_model: string;
-            /** Last Seen At */
-            last_seen_at: string | null;
-            /** Is Simulated */
-            is_simulated: boolean;
-            /** Readings */
-            readings: components["schemas"]["ElectricalReading"][];
-        };
-        /**
-         * HouseholdUsage
-         * @description The last 7 days of the household's own load, in 15-minute intervals.
-         */
-        HouseholdUsage: {
-            /** Total Kwh */
-            total_kwh: number;
-            /** Points */
-            points: components["schemas"]["UsagePoint"][];
-            /** Is Simulated */
-            is_simulated: boolean;
         };
         /** Installation */
         Installation: {
@@ -693,6 +931,18 @@ export interface components {
             email: string | null;
             /** Groups */
             groups: string[];
+        };
+        /**
+         * ModelSummary
+         * @description Strategies used; `kept` is the backtest verdict (null for baselines).
+         */
+        ModelSummary: {
+            /** Forecaster */
+            forecaster: string | null;
+            /** Risk Scorer */
+            risk_scorer: string | null;
+            /** Kept */
+            kept: boolean | null;
         };
         /** Motion */
         Motion: {
@@ -813,7 +1063,7 @@ export interface components {
             reasons: string[];
             /**
              * Confidence
-             * @description Tied to metering coverage
+             * @description Share of homes reporting (clamp health); coverage when unknown
              */
             confidence: number;
             /** Peak Load Pct */
@@ -822,10 +1072,15 @@ export interface components {
             coverage_pct: number;
             /** Is Simulated */
             is_simulated: boolean;
+            /** Peak Ts */
+            peak_ts?: string | null;
+            /** Drivers */
+            drivers?: components["schemas"]["silip_ml__risk__domain__Driver"][];
         };
         /**
          * TransformerCard
-         * @description The transformer card: risk plus the last 48 h and the next 24 h of load.
+         * @description The transformer card: risk plus the last 48 h and the next 24 h of load, why it is
+         *     flagged, the weather ahead, EV exposure and how many more clamps would reach the target.
          */
         TransformerCard: {
             /** Transformer Id */
@@ -841,6 +1096,33 @@ export interface components {
             is_simulated: boolean;
             /** Scored At */
             scored_at?: string | null;
+            /** Action */
+            action?: ("Inspect before peak" | "Add clamps" | "Fix clamps" | "Plan upgrade" | "Monitor") | null;
+            /** Peak Ts */
+            peak_ts?: string | null;
+            /** Top Reason */
+            top_reason?: string | null;
+            /**
+             * Heat Index Max C
+             * @description Highest forecast heat index in the next 24 h, °C
+             */
+            heat_index_max_c?: number | null;
+            /**
+             * Ev Stations Within
+             * @description Public DOE chargers within the EV radius
+             */
+            ev_stations_within?: number | null;
+            /**
+             * Ev Evening Step Kw
+             * @description Evening load step: last 7 days minus days 8 to 28, kW
+             */
+            ev_evening_step_kw?: number | null;
+            clamp_health?: components["schemas"]["ClampHealth"] | null;
+            /**
+             * Open Outage
+             * @default false
+             */
+            open_outage: boolean;
             /**
              * As Of
              * Format: date-time
@@ -848,6 +1130,45 @@ export interface components {
             as_of: string;
             /** Load */
             load: components["schemas"]["LoadPoint"][];
+            /** Drivers */
+            drivers?: components["schemas"]["silip__shared__scores__domain__Driver"][];
+            /** Weather */
+            weather?: components["schemas"]["WeatherHour"][];
+            ev: components["schemas"]["TransformerEv"];
+            /** Clamps To Target */
+            clamps_to_target?: number | null;
+        };
+        /**
+         * TransformerCoverage
+         * @description Clamp counts for one transformer and the clamps still needed for the target.
+         */
+        TransformerCoverage: {
+            /** Transformer Id */
+            transformer_id: string;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            clamp_health: components["schemas"]["ClampHealth"];
+            /** Clamps To Target */
+            clamps_to_target: number;
+            /** Is Simulated */
+            is_simulated: boolean;
+        };
+        /**
+         * TransformerEv
+         * @description EV exposure of one transformer: DOE stations within the radius.
+         */
+        TransformerEv: {
+            /** Stations Within */
+            stations_within: number;
+            /** Nearest Station M */
+            nearest_station_m: number | null;
+            /** Radius M */
+            radius_m: number;
+            /** Stations */
+            stations: components["schemas"]["Charger"][];
+            adoption_scenario: components["schemas"]["AdoptionScenario"] | null;
         };
         /** TransformerOption */
         TransformerOption: {
@@ -888,7 +1209,9 @@ export interface components {
         };
         /**
          * TransformerRisk
-         * @description One pin on the engineer risk map.
+         * @description One pin on the engineer risk map, and one row of the action queue.
+         *
+         *     Dashboard fields are null on runs scored before they existed.
          */
         TransformerRisk: {
             /** Transformer Id */
@@ -904,6 +1227,33 @@ export interface components {
             is_simulated: boolean;
             /** Scored At */
             scored_at?: string | null;
+            /** Action */
+            action?: ("Inspect before peak" | "Add clamps" | "Fix clamps" | "Plan upgrade" | "Monitor") | null;
+            /** Peak Ts */
+            peak_ts?: string | null;
+            /** Top Reason */
+            top_reason?: string | null;
+            /**
+             * Heat Index Max C
+             * @description Highest forecast heat index in the next 24 h, °C
+             */
+            heat_index_max_c?: number | null;
+            /**
+             * Ev Stations Within
+             * @description Public DOE chargers within the EV radius
+             */
+            ev_stations_within?: number | null;
+            /**
+             * Ev Evening Step Kw
+             * @description Evening load step: last 7 days minus days 8 to 28, kW
+             */
+            ev_evening_step_kw?: number | null;
+            clamp_health?: components["schemas"]["ClampHealth"] | null;
+            /**
+             * Open Outage
+             * @default false
+             */
+            open_outage: boolean;
         };
         /** TransformerTelemetry */
         TransformerTelemetry: {
@@ -913,16 +1263,6 @@ export interface components {
             registered_homes: number;
             /** Points */
             points: components["schemas"]["AggregatePoint"][];
-        };
-        /** UsagePoint */
-        UsagePoint: {
-            /**
-             * Ts
-             * Format: date-time
-             */
-            ts: string;
-            /** Kw */
-            kw: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -936,6 +1276,75 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * WeatherHour
+         * @description One forecast hour in one weather cell.
+         */
+        WeatherHour: {
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /** Temperature C */
+            temperature_c: number | null;
+            /** Relative Humidity Pct */
+            relative_humidity_pct: number | null;
+            /** Precipitation Mm */
+            precipitation_mm: number | null;
+            /** Heat Index C */
+            heat_index_c: number | null;
+        };
+        /**
+         * WeatherSummary
+         * @description The forecast behind the view and its hottest hour ahead.
+         */
+        WeatherSummary: {
+            /** Issued At */
+            issued_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "fresh" | "stale" | "missing";
+            /** Source */
+            source: string;
+            /** Heat Index Max C */
+            heat_index_max_c: number | null;
+            /** Max At */
+            max_at: string | null;
+        };
+        /**
+         * Driver
+         * @description One reason behind a score, as a feature and its value. `contribution` is the model's
+         *     per-feature contribution (LightGBM `pred_contrib`); null when the rules scorer gave it.
+         */
+        silip__shared__scores__domain__Driver: {
+            /** Feature */
+            feature: string;
+            /** Label */
+            label: string;
+            /** Value */
+            value?: number | null;
+            /** Unit */
+            unit?: string | null;
+            /** Contribution */
+            contribution?: number | null;
+            /** Source */
+            source: string;
+        };
+        /**
+         * Driver
+         * @description One model input that pushed the score up, with its contribution (log-odds) and sentence.
+         */
+        silip_ml__risk__domain__Driver: {
+            /** Feature */
+            feature: string;
+            /** Contribution */
+            contribution: number;
+            /** Text */
+            text: string;
         };
     };
     responses: never;
@@ -995,6 +1404,59 @@ export interface operations {
             };
             /** @description Signed in, but not in the required group */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    dashboard_summary_api_v1_dashboard_summary_get: {
+        parameters: {
+            query?: {
+                /** @description min_lon,min_lat,max_lon,max_lat */
+                bbox?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardSummary"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Signed in, but not in the required group */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No completed scoring run yet */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1107,6 +1569,132 @@ export interface operations {
             };
         };
     };
+    weather_outlook_api_v1_weather_outlook_get: {
+        parameters: {
+            query?: {
+                /** @description min_lon,min_lat,max_lon,max_lat */
+                bbox?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AreaOutlook"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Signed in, but not in the required group */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ev_chargers_api_v1_ev_chargers_get: {
+        parameters: {
+            query?: {
+                /** @description min_lon,min_lat,max_lon,max_lat */
+                bbox?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChargerMap"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Signed in, but not in the required group */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ev_adoption_api_v1_ev_adoption_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Adoption"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Signed in, but not in the required group */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     list_outages_api_v1_outages_get: {
         parameters: {
             query?: {
@@ -1126,6 +1714,20 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["OutageSummary"][];
                 };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Signed in, but not in the required group */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1183,74 +1785,6 @@ export interface operations {
             };
         };
     };
-    my_usage_api_v1_me_usage_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HouseholdUsage"];
-                };
-            };
-            /** @description Sign in required */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Signed in, but not in the required group */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    my_device_api_v1_me_device_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HouseholdDevice"];
-                };
-            };
-            /** @description Sign in required */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Signed in, but not in the required group */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     list_clamps_api_v1_clamps_get: {
         parameters: {
             query?: {
@@ -1270,6 +1804,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClampMap"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Signed in, but not in the required group */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clamp_coverage_api_v1_clamps_coverage_get: {
+        parameters: {
+            query?: {
+                /** @description min_lon,min_lat,max_lon,max_lat */
+                bbox?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageMap"];
                 };
             };
             /** @description Sign in required */

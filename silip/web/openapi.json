@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SILIP API",
-    "description": "Transformer risk, outages and household usage. Decision support only.",
+    "description": "Transformer risk and the engineer decision dashboard. Decision support only.",
     "version": "0.1.0"
   },
   "paths": {
@@ -67,13 +67,82 @@
         ]
       }
     },
+    "/api/v1/dashboard/summary": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Dashboard Summary",
+        "description": "Tiers and actions in view, weather freshness and the hottest hour ahead, clamps online,\nand which models scored it.",
+        "operationId": "dashboard_summary_api_v1_dashboard_summary_get",
+        "security": [
+          {
+            "CognitoAccessTokenHeader": []
+          },
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bbox",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "min_lon,min_lat,max_lon,max_lat",
+              "title": "Bbox"
+            },
+            "description": "min_lon,min_lat,max_lon,max_lat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Signed in, but not in the required group"
+          },
+          "503": {
+            "description": "No completed scoring run yet"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/transformers": {
       "get": {
         "tags": [
           "transformers"
         ],
         "summary": "List Transformers",
-        "description": "Risk tier, reasons and confidence per transformer, Critical first.",
+        "description": "Risk tier, action, peak time, top reason, heat, EV and clamp health per transformer,\nCritical first.",
         "operationId": "list_transformers_api_v1_transformers_get",
         "security": [
           {
@@ -146,7 +215,7 @@
           "transformers"
         ],
         "summary": "Get Transformer",
-        "description": "One transformer: risk, last 48 h of load and the 24 h forecast.",
+        "description": "One transformer: risk, drivers, last 48 h of load and the 24 h forecast, the next 48 h of\nweather, EV exposure and clamp health.",
         "operationId": "get_transformer_api_v1_transformers__transformer_id__get",
         "security": [
           {
@@ -200,14 +269,190 @@
         }
       }
     },
+    "/api/v1/weather/outlook": {
+      "get": {
+        "tags": [
+          "weather"
+        ],
+        "summary": "Weather Outlook",
+        "description": "The next 48 h of heat index and rain over the transformers in view, hour by hour.",
+        "operationId": "weather_outlook_api_v1_weather_outlook_get",
+        "security": [
+          {
+            "CognitoAccessTokenHeader": []
+          },
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bbox",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "min_lon,min_lat,max_lon,max_lat",
+              "title": "Bbox"
+            },
+            "description": "min_lon,min_lat,max_lon,max_lat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AreaOutlook"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Signed in, but not in the required group"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ev/chargers": {
+      "get": {
+        "tags": [
+          "ev"
+        ],
+        "summary": "Ev Chargers",
+        "description": "Public DOE charging stations in view (real sites, not homes).",
+        "operationId": "ev_chargers_api_v1_ev_chargers_get",
+        "security": [
+          {
+            "CognitoAccessTokenHeader": []
+          },
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bbox",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "min_lon,min_lat,max_lon,max_lat",
+              "title": "Bbox"
+            },
+            "description": "min_lon,min_lat,max_lon,max_lat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChargerMap"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Signed in, but not in the required group"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ev/adoption": {
+      "get": {
+        "tags": [
+          "ev"
+        ],
+        "summary": "Ev Adoption",
+        "description": "EV adoption statistics as delivered; `not_loaded` until the file arrives.",
+        "operationId": "ev_adoption_api_v1_ev_adoption_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Adoption"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Signed in, but not in the required group"
+          }
+        },
+        "security": [
+          {
+            "CognitoAccessTokenHeader": []
+          },
+          {
+            "CognitoAccessToken": []
+          }
+        ]
+      }
+    },
     "/api/v1/outages": {
       "get": {
         "tags": [
           "outages"
         ],
         "summary": "List Outages",
-        "description": "Public: outages by area with a restoration range. No household or exact pin data.",
+        "description": "Outages by area with a restoration range. No household or exact pin data.",
         "operationId": "list_outages_api_v1_outages_get",
+        "security": [
+          {
+            "CognitoAccessTokenHeader": []
+          },
+          {
+            "CognitoAccessToken": []
+          }
+        ],
         "parameters": [
           {
             "name": "status",
@@ -245,6 +490,12 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Signed in, but not in the required group"
           },
           "422": {
             "description": "Validation Error",
@@ -316,77 +567,6 @@
         }
       }
     },
-    "/api/v1/me/usage": {
-      "get": {
-        "tags": [
-          "household"
-        ],
-        "summary": "My Usage",
-        "description": "The signed-in household's own last 7 days of usage.",
-        "operationId": "my_usage_api_v1_me_usage_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HouseholdUsage"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sign in required"
-          },
-          "403": {
-            "description": "Signed in, but not in the required group"
-          }
-        },
-        "security": [
-          {
-            "CognitoAccessTokenHeader": []
-          },
-          {
-            "CognitoAccessToken": []
-          }
-        ]
-      }
-    },
-    "/api/v1/me/device": {
-      "get": {
-        "tags": [
-          "household"
-        ],
-        "summary": "My Device",
-        "operationId": "my_device_api_v1_me_device_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HouseholdDevice"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sign in required"
-          },
-          "403": {
-            "description": "Signed in, but not in the required group"
-          }
-        },
-        "security": [
-          {
-            "CognitoAccessTokenHeader": []
-          },
-          {
-            "CognitoAccessToken": []
-          }
-        ]
-      }
-    },
     "/api/v1/clamps": {
       "get": {
         "tags": [
@@ -430,6 +610,72 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ClampMap"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Signed in, but not in the required group"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clamps/coverage": {
+      "get": {
+        "tags": [
+          "clamps"
+        ],
+        "summary": "Clamp Coverage",
+        "description": "Clamps installed and online, homes reporting, and clamps still needed for the target,\nper transformer, least covered first. Counts only.",
+        "operationId": "clamp_coverage_api_v1_clamps_coverage_get",
+        "security": [
+          {
+            "CognitoAccessTokenHeader": []
+          },
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bbox",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "min_lon,min_lat,max_lon,max_lat",
+              "title": "Bbox"
+            },
+            "description": "min_lon,min_lat,max_lon,max_lat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverageMap"
                 }
               }
             }
@@ -903,6 +1149,149 @@
   },
   "components": {
     "schemas": {
+      "Adoption": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "loaded",
+              "not_loaded"
+            ],
+            "title": "Status"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/AdoptionPoint"
+            },
+            "type": "array",
+            "title": "Series"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "series",
+          "source_url",
+          "is_simulated"
+        ],
+        "title": "Adoption",
+        "description": "Delivered EV adoption statistics; `not_loaded` until the file arrives."
+      },
+      "AdoptionPoint": {
+        "properties": {
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "geography_level": {
+            "type": "string",
+            "title": "Geography Level"
+          },
+          "geography": {
+            "type": "string",
+            "title": "Geography"
+          },
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "vehicle_class": {
+            "type": "string",
+            "title": "Vehicle Class"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "geography_level",
+          "geography",
+          "metric",
+          "vehicle_class",
+          "value",
+          "unit"
+        ],
+        "title": "AdoptionPoint"
+      },
+      "AdoptionScenario": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "const": "Scenario, not a forecast",
+            "title": "Label",
+            "default": "Scenario, not a forecast"
+          },
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "geography": {
+            "type": "string",
+            "title": "Geography"
+          },
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "vehicle_class": {
+            "type": "string",
+            "title": "Vehicle Class"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "period",
+          "geography",
+          "metric",
+          "vehicle_class",
+          "value",
+          "unit",
+          "source_url"
+        ],
+        "title": "AdoptionScenario",
+        "description": "The latest adoption figure, shown for planning only. Not a model input."
+      },
       "AggregatePoint": {
         "properties": {
           "ts": {
@@ -936,6 +1325,115 @@
           "is_simulated"
         ],
         "title": "AggregatePoint"
+      },
+      "AreaHour": {
+        "properties": {
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          },
+          "heat_index_max_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heat Index Max C"
+          },
+          "temperature_max_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature Max C"
+          },
+          "precipitation_max_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precipitation Max Mm"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ts",
+          "heat_index_max_c",
+          "temperature_max_c",
+          "precipitation_max_mm"
+        ],
+        "title": "AreaHour",
+        "description": "One forecast hour across the cells in view: the hottest and wettest cell."
+      },
+      "AreaOutlook": {
+        "properties": {
+          "issued_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "stale",
+              "missing"
+            ],
+            "title": "Status"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "hours": {
+            "items": {
+              "$ref": "#/components/schemas/AreaHour"
+            },
+            "type": "array",
+            "title": "Hours"
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/CellPeak"
+            },
+            "type": "array",
+            "title": "Cells"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "issued_at",
+          "status",
+          "source",
+          "hours",
+          "cells",
+          "is_simulated"
+        ],
+        "title": "AreaOutlook",
+        "description": "The next OUTLOOK_HOURS of forecast for the transformers in view."
       },
       "BenchFingerprint": {
         "properties": {
@@ -1162,6 +1660,177 @@
         ],
         "title": "BenchTransformerState"
       },
+      "CellPeak": {
+        "properties": {
+          "cell_id": {
+            "type": "string",
+            "title": "Cell Id"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "heat_index_max_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heat Index Max C"
+          },
+          "max_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cell_id",
+          "lat",
+          "lon",
+          "heat_index_max_c",
+          "max_at"
+        ],
+        "title": "CellPeak",
+        "description": "A weather cell's hottest forecast hour in the outlook window."
+      },
+      "Charger": {
+        "properties": {
+          "station_id": {
+            "type": "string",
+            "title": "Station Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "barangay": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Barangay"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          }
+        },
+        "type": "object",
+        "required": [
+          "station_id",
+          "name",
+          "lat",
+          "lon",
+          "barangay",
+          "city"
+        ],
+        "title": "Charger",
+        "description": "One public DOE charging station (a public site, not a home)."
+      },
+      "ChargerMap": {
+        "properties": {
+          "radius_m": {
+            "type": "integer",
+            "title": "Radius M"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "stations": {
+            "items": {
+              "$ref": "#/components/schemas/Charger"
+            },
+            "type": "array",
+            "title": "Stations"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "radius_m",
+          "source",
+          "stations",
+          "is_simulated"
+        ],
+        "title": "ChargerMap",
+        "description": "DOE stations in view, and the radius used to link them to transformers."
+      },
+      "ClampHealth": {
+        "properties": {
+          "homes": {
+            "type": "integer",
+            "title": "Homes"
+          },
+          "clamps_installed": {
+            "type": "integer",
+            "title": "Clamps Installed"
+          },
+          "clamps_online": {
+            "type": "integer",
+            "title": "Clamps Online"
+          },
+          "homes_reporting": {
+            "type": "integer",
+            "title": "Homes Reporting"
+          },
+          "reporting_pct": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Reporting Pct",
+            "description": "homes_reporting / homes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "homes",
+          "clamps_installed",
+          "clamps_online",
+          "homes_reporting",
+          "reporting_pct"
+        ],
+        "title": "ClampHealth",
+        "description": "Retrofit clamp counts for one transformer (or an area). Counts only, never a device."
+      },
       "ClampMap": {
         "properties": {
           "as_of": {
@@ -1268,6 +1937,150 @@
         ],
         "title": "ClampPoint",
         "description": "One installed clamp, placed at its household's building. Carries no household identity."
+      },
+      "ClampSummary": {
+        "properties": {
+          "installed": {
+            "type": "integer",
+            "title": "Installed"
+          },
+          "online": {
+            "type": "integer",
+            "title": "Online"
+          }
+        },
+        "type": "object",
+        "required": [
+          "installed",
+          "online"
+        ],
+        "title": "ClampSummary"
+      },
+      "ClampTotals": {
+        "properties": {
+          "installed": {
+            "type": "integer",
+            "title": "Installed"
+          },
+          "online": {
+            "type": "integer",
+            "title": "Online"
+          }
+        },
+        "type": "object",
+        "required": [
+          "installed",
+          "online"
+        ],
+        "title": "ClampTotals"
+      },
+      "CoverageMap": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "offline_after_min": {
+            "type": "integer",
+            "title": "Offline After Min"
+          },
+          "target_coverage": {
+            "type": "number",
+            "title": "Target Coverage"
+          },
+          "min_trust_reporting": {
+            "type": "number",
+            "title": "Min Trust Reporting"
+          },
+          "clamps": {
+            "$ref": "#/components/schemas/ClampTotals"
+          },
+          "transformers": {
+            "items": {
+              "$ref": "#/components/schemas/TransformerCoverage"
+            },
+            "type": "array",
+            "title": "Transformers"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of",
+          "offline_after_min",
+          "target_coverage",
+          "min_trust_reporting",
+          "clamps",
+          "transformers",
+          "is_simulated"
+        ],
+        "title": "CoverageMap",
+        "description": "Per-transformer clamp coverage in view. Counts only: no clamp, home or household."
+      },
+      "DashboardSummary": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "scored_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scored At"
+          },
+          "tiers": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Tiers"
+          },
+          "actions": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Actions"
+          },
+          "weather": {
+            "$ref": "#/components/schemas/WeatherSummary"
+          },
+          "clamps": {
+            "$ref": "#/components/schemas/ClampSummary"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelSummary"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of",
+          "scored_at",
+          "tiers",
+          "actions",
+          "weather",
+          "clamps",
+          "model",
+          "is_simulated"
+        ],
+        "title": "DashboardSummary",
+        "description": "The summary row: as-of time, tiers, actions, weather freshness, clamps and model."
       },
       "Device": {
         "properties": {
@@ -1641,73 +2454,6 @@
         ],
         "title": "DeviceSetup"
       },
-      "ElectricalReading": {
-        "properties": {
-          "ts": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Ts"
-          },
-          "voltage_v": {
-            "type": "number",
-            "title": "Voltage V"
-          },
-          "current_a": {
-            "type": "number",
-            "title": "Current A"
-          },
-          "power_kw": {
-            "type": "number",
-            "title": "Power Kw"
-          },
-          "power_factor": {
-            "type": "number",
-            "title": "Power Factor"
-          },
-          "energy_kwh_interval": {
-            "type": "number",
-            "title": "Energy Kwh Interval"
-          },
-          "motion": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Motion"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "event": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Event"
-          },
-          "is_simulated": {
-            "type": "boolean",
-            "title": "Is Simulated"
-          }
-        },
-        "type": "object",
-        "required": [
-          "ts",
-          "voltage_v",
-          "current_a",
-          "power_kw",
-          "power_factor",
-          "energy_kwh_interval",
-          "motion",
-          "event",
-          "is_simulated"
-        ],
-        "title": "ElectricalReading"
-      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1720,117 +2466,6 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
-      },
-      "HouseholdDevice": {
-        "properties": {
-          "clamp_id": {
-            "type": "string",
-            "title": "Clamp Id"
-          },
-          "transformer_id": {
-            "type": "string",
-            "title": "Transformer Id"
-          },
-          "lat": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lat"
-          },
-          "lon": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lon"
-          },
-          "location_label": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Location Label"
-          },
-          "ct_model": {
-            "type": "string",
-            "title": "Ct Model"
-          },
-          "last_seen_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Seen At"
-          },
-          "is_simulated": {
-            "type": "boolean",
-            "title": "Is Simulated"
-          },
-          "readings": {
-            "items": {
-              "$ref": "#/components/schemas/ElectricalReading"
-            },
-            "type": "array",
-            "title": "Readings"
-          }
-        },
-        "type": "object",
-        "required": [
-          "clamp_id",
-          "transformer_id",
-          "lat",
-          "lon",
-          "ct_model",
-          "last_seen_at",
-          "is_simulated",
-          "readings"
-        ],
-        "title": "HouseholdDevice"
-      },
-      "HouseholdUsage": {
-        "properties": {
-          "total_kwh": {
-            "type": "number",
-            "title": "Total Kwh"
-          },
-          "points": {
-            "items": {
-              "$ref": "#/components/schemas/UsagePoint"
-            },
-            "type": "array",
-            "title": "Points"
-          },
-          "is_simulated": {
-            "type": "boolean",
-            "title": "Is Simulated"
-          }
-        },
-        "type": "object",
-        "required": [
-          "total_kwh",
-          "points",
-          "is_simulated"
-        ],
-        "title": "HouseholdUsage",
-        "description": "The last 7 days of the household's own load, in 15-minute intervals."
       },
       "Installation": {
         "properties": {
@@ -1937,6 +2572,51 @@
         ],
         "title": "MeOut",
         "description": "The signed-in user."
+      },
+      "ModelSummary": {
+        "properties": {
+          "forecaster": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecaster"
+          },
+          "risk_scorer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Scorer"
+          },
+          "kept": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kept"
+          }
+        },
+        "type": "object",
+        "required": [
+          "forecaster",
+          "risk_scorer",
+          "kept"
+        ],
+        "title": "ModelSummary",
+        "description": "Strategies used; `kept` is the backtest verdict (null for baselines)."
       },
       "Motion": {
         "properties": {
@@ -2184,7 +2864,7 @@
             "maximum": 1.0,
             "minimum": 0.0,
             "title": "Confidence",
-            "description": "Tied to metering coverage"
+            "description": "Share of homes reporting (clamp health); coverage when unknown"
           },
           "peak_load_pct": {
             "type": "number",
@@ -2199,6 +2879,26 @@
           "is_simulated": {
             "type": "boolean",
             "title": "Is Simulated"
+          },
+          "peak_ts": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Ts"
+          },
+          "drivers": {
+            "items": {
+              "$ref": "#/components/schemas/silip_ml__risk__domain__Driver"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Drivers"
           }
         },
         "type": "object",
@@ -2251,6 +2951,98 @@
             ],
             "title": "Scored At"
           },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Inspect before peak",
+                  "Add clamps",
+                  "Fix clamps",
+                  "Plan upgrade",
+                  "Monitor"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "peak_ts": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Ts"
+          },
+          "top_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Reason"
+          },
+          "heat_index_max_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heat Index Max C",
+            "description": "Highest forecast heat index in the next 24 h, \u00b0C"
+          },
+          "ev_stations_within": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ev Stations Within",
+            "description": "Public DOE chargers within the EV radius"
+          },
+          "ev_evening_step_kw": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ev Evening Step Kw",
+            "description": "Evening load step: last 7 days minus days 8 to 28, kW"
+          },
+          "clamp_health": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClampHealth"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "open_outage": {
+            "type": "boolean",
+            "title": "Open Outage",
+            "default": false
+          },
           "as_of": {
             "type": "string",
             "format": "date-time",
@@ -2262,6 +3054,34 @@
             },
             "type": "array",
             "title": "Load"
+          },
+          "drivers": {
+            "items": {
+              "$ref": "#/components/schemas/silip__shared__scores__domain__Driver"
+            },
+            "type": "array",
+            "title": "Drivers"
+          },
+          "weather": {
+            "items": {
+              "$ref": "#/components/schemas/WeatherHour"
+            },
+            "type": "array",
+            "title": "Weather"
+          },
+          "ev": {
+            "$ref": "#/components/schemas/TransformerEv"
+          },
+          "clamps_to_target": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clamps To Target"
           }
         },
         "type": "object",
@@ -2273,10 +3093,99 @@
           "risk",
           "is_simulated",
           "as_of",
-          "load"
+          "load",
+          "ev"
         ],
         "title": "TransformerCard",
-        "description": "The transformer card: risk plus the last 48 h and the next 24 h of load."
+        "description": "The transformer card: risk plus the last 48 h and the next 24 h of load, why it is\nflagged, the weather ahead, EV exposure and how many more clamps would reach the target."
+      },
+      "TransformerCoverage": {
+        "properties": {
+          "transformer_id": {
+            "type": "string",
+            "title": "Transformer Id"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "clamp_health": {
+            "$ref": "#/components/schemas/ClampHealth"
+          },
+          "clamps_to_target": {
+            "type": "integer",
+            "title": "Clamps To Target"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transformer_id",
+          "lat",
+          "lon",
+          "clamp_health",
+          "clamps_to_target",
+          "is_simulated"
+        ],
+        "title": "TransformerCoverage",
+        "description": "Clamp counts for one transformer and the clamps still needed for the target."
+      },
+      "TransformerEv": {
+        "properties": {
+          "stations_within": {
+            "type": "integer",
+            "title": "Stations Within"
+          },
+          "nearest_station_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nearest Station M"
+          },
+          "radius_m": {
+            "type": "integer",
+            "title": "Radius M"
+          },
+          "stations": {
+            "items": {
+              "$ref": "#/components/schemas/Charger"
+            },
+            "type": "array",
+            "title": "Stations"
+          },
+          "adoption_scenario": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdoptionScenario"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "stations_within",
+          "nearest_station_m",
+          "radius_m",
+          "stations",
+          "adoption_scenario"
+        ],
+        "title": "TransformerEv",
+        "description": "EV exposure of one transformer: DOE stations within the radius."
       },
       "TransformerOption": {
         "properties": {
@@ -2398,6 +3307,98 @@
               }
             ],
             "title": "Scored At"
+          },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Inspect before peak",
+                  "Add clamps",
+                  "Fix clamps",
+                  "Plan upgrade",
+                  "Monitor"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "peak_ts": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Ts"
+          },
+          "top_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Reason"
+          },
+          "heat_index_max_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heat Index Max C",
+            "description": "Highest forecast heat index in the next 24 h, \u00b0C"
+          },
+          "ev_stations_within": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ev Stations Within",
+            "description": "Public DOE chargers within the EV radius"
+          },
+          "ev_evening_step_kw": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ev Evening Step Kw",
+            "description": "Evening load step: last 7 days minus days 8 to 28, kW"
+          },
+          "clamp_health": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClampHealth"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "open_outage": {
+            "type": "boolean",
+            "title": "Open Outage",
+            "default": false
           }
         },
         "type": "object",
@@ -2410,7 +3411,7 @@
           "is_simulated"
         ],
         "title": "TransformerRisk",
-        "description": "One pin on the engineer risk map."
+        "description": "One pin on the engineer risk map, and one row of the action queue.\n\nDashboard fields are null on runs scored before they existed."
       },
       "TransformerTelemetry": {
         "properties": {
@@ -2437,25 +3438,6 @@
           "points"
         ],
         "title": "TransformerTelemetry"
-      },
-      "UsagePoint": {
-        "properties": {
-          "ts": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Ts"
-          },
-          "kw": {
-            "type": "number",
-            "title": "Kw"
-          }
-        },
-        "type": "object",
-        "required": [
-          "ts",
-          "kw"
-        ],
-        "title": "UsagePoint"
       },
       "ValidationError": {
         "properties": {
@@ -2496,6 +3478,212 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WeatherHour": {
+        "properties": {
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          },
+          "temperature_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature C"
+          },
+          "relative_humidity_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Humidity Pct"
+          },
+          "precipitation_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precipitation Mm"
+          },
+          "heat_index_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heat Index C"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ts",
+          "temperature_c",
+          "relative_humidity_pct",
+          "precipitation_mm",
+          "heat_index_c"
+        ],
+        "title": "WeatherHour",
+        "description": "One forecast hour in one weather cell."
+      },
+      "WeatherSummary": {
+        "properties": {
+          "issued_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "stale",
+              "missing"
+            ],
+            "title": "Status"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "heat_index_max_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heat Index Max C"
+          },
+          "max_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "issued_at",
+          "status",
+          "source",
+          "heat_index_max_c",
+          "max_at"
+        ],
+        "title": "WeatherSummary",
+        "description": "The forecast behind the view and its hottest hour ahead."
+      },
+      "silip__shared__scores__domain__Driver": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "title": "Feature"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "contribution": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contribution"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature",
+          "label",
+          "source"
+        ],
+        "title": "Driver",
+        "description": "One reason behind a score, as a feature and its value. `contribution` is the model's\nper-feature contribution (LightGBM `pred_contrib`); null when the rules scorer gave it."
+      },
+      "silip_ml__risk__domain__Driver": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "title": "Feature"
+          },
+          "contribution": {
+            "type": "number",
+            "title": "Contribution"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature",
+          "contribution",
+          "text"
+        ],
+        "title": "Driver",
+        "description": "One model input that pushed the score up, with its contribution (log-odds) and sentence."
       }
     },
     "securitySchemes": {

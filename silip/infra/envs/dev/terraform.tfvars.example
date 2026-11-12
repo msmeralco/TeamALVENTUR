@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars (git-ignored). No secrets here: AWS credentials come from the shell, and
+# the Neon URL goes into Secrets Manager by hand (see infra/README.md).
+cognito_domain_prefix = "silip-yourteam"
+image_tag             = "0.1.0"
+# web_domain          = "dxxxxxxxxxxxx.cloudfront.net"  # after the first apply
+# data_source         = "simulated"
+# strategies          = { FORECASTER = "lightgbm" }

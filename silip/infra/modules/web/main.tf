@@ -1,0 +1,157 @@
+# Private S3 bucket + CloudFront. /api/* goes to the API Lambda URL, so the web app and API share
+# one origin. Both origins are reached only through CloudFront origin access control (OAC).
+
+locals {
+  api_domain = trimsuffix(trimprefix(var.api_function_url, "https://"), "/")
+}
+
+resource "aws_s3_bucket" "web" {
+  bucket_prefix = "${var.name}-web-"
+  force_destroy = var.force_destroy
+}
+
+resource "aws_s3_bucket_public_access_block" "web" {
+  bucket                  = aws_s3_bucket.web.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "web" {
+  bucket = aws_s3_bucket.web.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_cloudfront_origin_access_control" "s3" {
+  name                              = "${var.name}-s3"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+resource "aws_cloudfront_origin_access_control" "api" {
+  name                              = "${var.name}-api"
+  origin_access_control_origin_type = "lambda"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+# Single-page app: paths without a file extension serve index.html (only on the S3 behavior,
+# so API 404s stay 404s).
+resource "aws_cloudfront_function" "spa" {
+  name    = "${var.name}-spa"
+  runtime = "cloudfront-js-2.0"
+  code    = <<-JS
+    function handler(event) {
+      var request = event.request;
+      if (request.uri.indexOf(".") === -1) request.uri = "/index.html";
+      return request;
+    }
+  JS
+}
+
+data "aws_cloudfront_cache_policy" "optimized" { name = "Managed-CachingOptimized" }
+data "aws_cloudfront_cache_policy" "disabled" { name = "Managed-CachingDisabled" }
+data "aws_cloudfront_origin_request_policy" "all_but_host" { name = "Managed-AllViewerExceptHostHeader" }
+
+resource "aws_cloudfront_distribution" "web" {
+  enabled             = true
+  comment             = "${var.name}: web app and /api"
+  default_root_object = "index.html"
+  price_class         = var.price_class
+
+  origin {
+    origin_id                = "web"
+    domain_name              = aws_s3_bucket.web.bucket_regional_domain_name
+    origin_access_control_id = aws_cloudfront_origin_access_control.s3.id
+  }
+
+  origin {
+    origin_id                = "api"
+    domain_name              = local.api_domain
+    origin_access_control_id = aws_cloudfront_origin_access_control.api.id
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "web"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    cache_policy_id        = data.aws_cloudfront_cache_policy.optimized.id
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.spa.arn
+    }
+  }
+
+  ordered_cache_behavior {
+    path_pattern             = "/api/*"
+    target_origin_id         = "api"
+    viewer_protocol_policy   = "https-only"
+    allowed_methods          = ["GET", "HEAD", "OPTIONS"]
+    cached_methods           = ["GET", "HEAD"]
+    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_but_host.id
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+}
+
+data "aws_iam_policy_document" "bucket" {
+  statement {
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.web.arn}/*"]
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.web.arn]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "web" {
+  bucket = aws_s3_bucket.web.id
+  policy = data.aws_iam_policy_document.bucket.json
+}
+
+# OAC to a function URL needs both permissions, scoped to this distribution.
+resource "aws_lambda_permission" "cloudfront_url" {
+  statement_id           = "AllowCloudFrontInvokeFunctionUrl"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = var.api_function_name
+  principal              = "cloudfront.amazonaws.com"
+  source_arn             = aws_cloudfront_distribution.web.arn
+  function_url_auth_type = "AWS_IAM"
+}
+
+resource "aws_lambda_permission" "cloudfront_invoke" {
+  statement_id  = "AllowCloudFrontInvokeFunction"
+  action        = "lambda:InvokeFunction"
+  function_name = var.api_function_name
+  principal     = "cloudfront.amazonaws.com"
+  source_arn    = aws_cloudfront_distribution.web.arn
+}

@@ -39,7 +39,8 @@ export function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-function prefersDark(): boolean {
+/** The theme the map follows: the theme menu's choice on <html>, else the system setting. */
+export function prefersDark(): boolean {
   const theme = document.documentElement.dataset.theme;
   if (theme === "dark") return true;
   if (theme === "light") return false;

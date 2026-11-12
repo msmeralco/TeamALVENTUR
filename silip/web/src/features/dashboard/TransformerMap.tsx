@@ -15,8 +15,19 @@ import { byQueue, reportAge, type ClampCount } from "../../shared/risk";
 import { ActionBadge, SimulatedLabel, TierBadge, cn, formatPct } from "../../shared/ui";
 import { Badge } from "../../shared/ui/components/badge";
 import { Button } from "../../shared/ui/components/button";
-import { Map, cssVar, fitOptions, isAlive } from "../../shared/ui/components/map";
+import { Map, cssVar, fitOptions, isAlive, prefersDark } from "../../shared/ui/components/map";
 import { AREA_MIN_ZOOM, RING_MIN_ZOOM, coverageBand, type CoverageBands, type Overlay } from "./overlays";
+import {
+  TOKEN_VARS,
+  chargerImageId,
+  isDcCapable,
+  priceRange,
+  pinImageId,
+  registerPinImages,
+  type PinColors,
+  type Theme,
+  type Tier,
+} from "./pinIcons";
 import { serviceAreas } from "./serviceAreas";
 
 type Item = Schemas["TransformerRisk"];
@@ -49,6 +60,8 @@ const LAYER = {
   clusters: "transformer-clusters",
   clusterCount: "transformer-cluster-count",
   pins: "transformer-pins",
+  pinActive: "transformer-pin-active",
+  pinSelected: "transformer-pin-selected",
   pinLabels: "transformer-pin-labels",
   clamps: "clamp-points",
   coverageFill: "coverage-fill",
@@ -76,15 +89,30 @@ const VOLUME_HEIGHT_M = 40; // visual tint over buildings only, not data
 const LABEL_MIN_ZOOM = 14;
 const LABEL_FONT = ["Noto Sans Regular"]; // shipped by both OpenFreeMap styles
 const TIER_RANK = { OK: 0, Watch: 1, Critical: 2 } as const;
-const PIN_RADIUS_PX = { Critical: 7, Watch: 6, OK: 5 } as const;
-const ACTIVE_SCALE = 1.6;
+// Pins are 32 px badges; the hovered or selected one grows so it stands out by size, not only by its ring.
+const ACTIVE_ICON_SCALE = 1.25;
+const LABEL_SIZE_PX = 12;
+// Full-size badges from street zoom; smaller between the clusters and the streets, where pins crowd.
+const PIN_FULL_ZOOM = 15;
+const PIN_SMALL_SCALE = 0.6;
+const pinSize = (scale: number): ExpressionSpecification => [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  CLUSTER_MAX_ZOOM,
+  PIN_SMALL_SCALE * scale,
+  PIN_FULL_ZOOM,
+  scale,
+];
+const LABEL_OFFSET_EM = 1.6; // just below the 32 px badge
 const CLAMP_MIN_ZOOM = 15; // single homes are only readable at street level
 // Opens at street level on the most urgent transformer, so 3D buildings (14+) and clamps (15+) show at once.
 const START_ZOOM = 15.5;
 const CLAMP_RADIUS_PX = 2.5;
 const CLAMP_SELECTED_RADIUS_PX = 5;
-// Pins are small; a tap within this many px of one picks it (about a 32 px target around the pin).
-const TAP_TOLERANCE_PX = 16;
+// A tap within this many px of a pin picks it: the 32 px badge with a mouse, a 44 px target on touch.
+const tapTolerancePx = () =>
+  typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches ? 22 : 16;
 const FOCUS_ZOOM = 15.5; // show the transformer label and nearby clamp points
 const EASE_MS = 600;
 const MAP_PADDING_PX = 48;
@@ -126,6 +154,32 @@ const clusterColor: ExpressionSpecification = [
   cssVar("--ok"),
 ];
 
+const themeNow = (): Theme => (prefersDark() ? "dark" : "light");
+
+const tokenColors = (): PinColors =>
+  Object.fromEntries(Object.entries(TOKEN_VARS).map(([key, name]) => [key, cssVar(name)])) as unknown as PinColors;
+
+function pinImage(theme: Theme, selected = false): ExpressionSpecification {
+  const id = (tier: Tier) => pinImageId(tier, theme, selected);
+  return ["match", ["get", "tier"], "Critical", id("Critical"), "Watch", id("Watch"), id("OK")];
+}
+
+const onlyId = (id: string | null): ExpressionSpecification => ["==", ["get", "transformer_id"], id ?? ""];
+
+/** Labels for every single pin except the hovered and selected ones, which carry their own. */
+const labelFilter = (activeId: string | null, selectedId: string | null): ExpressionSpecification => [
+  "all",
+  ["!", ["has", "point_count"]],
+  ["!", onlyId(activeId)],
+  ["!", onlyId(selectedId)],
+];
+
+const labelPaint = () => ({
+  "text-color": cssVar("--foreground"),
+  "text-halo-color": cssVar("--card"),
+  "text-halo-width": 1.5,
+});
+
 function pinsGeoJson(items: Item[]): FeatureCollection<Point> {
   return {
     type: "FeatureCollection",
@@ -160,7 +214,7 @@ function chargersGeoJson(chargers: Charger[]): FeatureCollection<Point> {
     features: chargers.map((c) => ({
       type: "Feature",
       geometry: { type: "Point", coordinates: [c.lon, c.lat] },
-      properties: { station_id: c.station_id },
+      properties: { station_id: c.station_id, dc: isDcCapable(c.n_dc) },
     })),
   };
 }
@@ -207,6 +261,9 @@ function addLayers(
   bands: CoverageBands | null,
   chargers: Charger[],
   ringRadiusM: number,
+  theme: Theme,
+  activeId: string | null,
+  selectedId: string | null,
 ) {
   // CSS variables are read here, not at import time, so each style load follows the current theme.
   const tier = tierColor(["get", "tier"]);
@@ -283,26 +340,25 @@ function addLayers(
   });
   map.addLayer({
     id: LAYER.chargers,
-    type: "circle",
+    type: "symbol",
     source: CHARGERS,
-    layout: { visibility: "none" },
-    // Hollow and larger than a pin, so a charger never reads as a transformer.
-    paint: {
-      "circle-color": cssVar("--card"),
-      "circle-radius": 6,
-      "circle-stroke-color": cssVar("--foreground"),
-      "circle-stroke-width": 3,
+    // Hollow badge with a charger glyph, so a charger never reads as a transformer. DC stations carry a tag.
+    layout: {
+      visibility: "none",
+      "icon-image": ["case", ["get", "dc"], chargerImageId(true, theme), chargerImageId(false, theme)],
+      "icon-allow-overlap": true,
     },
   });
+  // Same badge family as the pins: filled with the worst tier inside, count in the card color.
   map.addLayer({
     id: LAYER.clusters,
     type: "circle",
     source: PINS,
     filter: ["has", "point_count"],
     paint: {
-      "circle-color": cssVar("--card"),
-      "circle-stroke-color": clusterColor,
-      "circle-stroke-width": 4,
+      "circle-color": clusterColor,
+      "circle-stroke-color": cssVar("--card"),
+      "circle-stroke-width": 2,
       "circle-radius": ["step", ["get", "point_count"], 16, 5, 20, 15, 26],
     },
   });
@@ -312,17 +368,8 @@ function addLayers(
     source: PINS,
     filter: ["has", "point_count"],
     layout: { "text-field": ["get", "point_count_abbreviated"], "text-font": LABEL_FONT, "text-size": 13 },
-    paint: { "text-color": cssVar("--foreground") },
+    paint: { "text-color": cssVar("--card") },
   });
-  const radius: ExpressionSpecification = [
-    "match",
-    ["get", "tier"],
-    "Critical",
-    PIN_RADIUS_PX.Critical,
-    "Watch",
-    PIN_RADIUS_PX.Watch,
-    PIN_RADIUS_PX.OK,
-  ];
   map.addSource(CLAMPS, { type: "geojson", data: clampsGeoJson(clamps, shown), promoteId: "clamp_id" });
   map.addLayer({
     id: LAYER.clamps,
@@ -337,34 +384,65 @@ function addLayers(
       "circle-stroke-width": ["case", isSelected, 3, 1.25],
     },
   });
-  map.addLayer({
-    id: LAYER.pins,
-    type: "circle",
-    source: PINS,
-    filter: ["!", ["has", "point_count"]],
-    layout: { "circle-sort-key": ["get", "rank"] },
-    paint: {
-      "circle-color": tier,
-      "circle-radius": ["case", isActive, ["*", radius, ACTIVE_SCALE], radius],
-      "circle-stroke-color": cssVar("--card"),
-      "circle-stroke-width": 2,
-    },
-  });
+  // Labels give way to each other, Critical first, and draw under the pins, so a pin is never covered.
+  // A hovered or selected pin draws its own label further down.
   map.addLayer({
     id: LAYER.pinLabels,
     type: "symbol",
     source: PINS,
     minzoom: LABEL_MIN_ZOOM,
-    filter: ["!", ["has", "point_count"]],
+    filter: labelFilter(activeId, selectedId),
     layout: {
       "text-field": ["get", "transformer_id"],
       "text-font": LABEL_FONT,
-      "text-size": 12,
-      "text-offset": [0, 1.2],
+      "text-size": LABEL_SIZE_PX,
+      "text-offset": [0, LABEL_OFFSET_EM],
       "text-anchor": "top",
+      "symbol-sort-key": ["-", 0, ["get", "rank"]],
     },
-    paint: { "text-color": cssVar("--foreground"), "text-halo-color": cssVar("--card"), "text-halo-width": 1.5 },
+    paint: labelPaint(),
   });
+  // Every pin always shows (a hidden Critical pin would be a miss); worse tiers draw on top.
+  map.addLayer({
+    id: LAYER.pins,
+    type: "symbol",
+    source: PINS,
+    filter: ["!", ["has", "point_count"]],
+    layout: {
+      "icon-image": pinImage(theme),
+      "icon-size": pinSize(1),
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true,
+      "symbol-sort-key": ["get", "rank"],
+    },
+  });
+  // Hovered (or list-focused) pin: larger. Selected pin: larger with a --ring outline. Layout cannot read
+  // feature-state, so these two layers follow the IDs through their filters.
+  for (const [id, selected, filterId] of [
+    [LAYER.pinActive, false, activeId],
+    [LAYER.pinSelected, true, selectedId],
+  ] as const) {
+    map.addLayer({
+      id,
+      type: "symbol",
+      source: PINS,
+      filter: onlyId(filterId),
+      layout: {
+        "icon-image": pinImage(theme, selected),
+        "icon-size": pinSize(ACTIVE_ICON_SCALE),
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+        "text-field": ["step", ["zoom"], "", LABEL_MIN_ZOOM, ["get", "transformer_id"]],
+        "text-font": LABEL_FONT,
+        "text-size": LABEL_SIZE_PX,
+        "text-offset": [0, LABEL_OFFSET_EM * ACTIVE_ICON_SCALE + 0.4], // clear of the selection ring
+        "text-anchor": "top",
+        "text-allow-overlap": true,
+        "text-ignore-placement": true,
+      },
+      paint: labelPaint(),
+    });
+  }
 }
 
 function setActive(map: MapLibreMap, id: string | null, active: boolean) {
@@ -382,6 +460,7 @@ const idOf = (e: MapLayerMouseEvent) => {
 /** The nearest pin within TAP_TOLERANCE_PX of the tap, else a cluster, else the service area under it. */
 function pickAt(map: MapLibreMap, e: MapMouseEvent) {
   const { x, y } = e.point;
+  const TAP_TOLERANCE_PX = tapTolerancePx();
   const box: [[number, number], [number, number]] = [
     [x - TAP_TOLERANCE_PX, y - TAP_TOLERANCE_PX],
     [x + TAP_TOLERANCE_PX, y + TAP_TOLERANCE_PX],
@@ -402,6 +481,8 @@ function pickAt(map: MapLibreMap, e: MapMouseEvent) {
     return { kind: "clamp" as const, feature: clamp.feature };
   }
   if (pin !== undefined) return { kind: "pin" as const, feature: pin.feature };
+  const charger = nearest(LAYER.chargers);
+  if (charger !== undefined) return { kind: "charger" as const, feature: charger.feature };
   const cluster = nearest(LAYER.clusters);
   if (cluster !== undefined) return { kind: "cluster" as const, feature: cluster.feature };
   const area = map.queryRenderedFeatures(e.point, { layers: [LAYER.areaFill, LAYER.coverageFill] })[0];
@@ -412,12 +493,17 @@ const reducedMotion = () =>
   typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** Moves focus into a popover when it opens (or changes), and closes it on Escape. */
-function usePopoverFocus(closeRef: RefObject<HTMLButtonElement | null>, key: string, onClose: () => void) {
+function usePopoverFocus(
+  closeRef: RefObject<HTMLButtonElement | null>,
+  key: string,
+  onClose: () => void,
+  takeFocus = true,
+) {
   const latestClose = useRef(onClose);
   latestClose.current = onClose;
   useEffect(() => {
-    closeRef.current?.focus();
-  }, [closeRef, key]);
+    if (takeFocus) closeRef.current?.focus();
+  }, [closeRef, key, takeFocus]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") latestClose.current();
@@ -473,6 +559,66 @@ function ClampPopover({ clamp, asOf, onClose }: { clamp: Clamp; asOf: string | n
       <span>
         <SimulatedLabel show={clamp.is_simulated} />
       </span>
+    </div>
+  );
+}
+
+const kw = new Intl.NumberFormat([], { maximumFractionDigits: 1 });
+
+/** A public charger's DOE listing: connectors, power and price where listed. */
+export function ChargerPopover({
+  charger,
+  pinned,
+  onClose,
+}: {
+  charger: Charger;
+  /** Opened by a tap or click (focus moves in), not by hover (focus stays put). */
+  pinned: boolean;
+  onClose: () => void;
+}) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  usePopoverFocus(closeRef, charger.station_id, onClose, pinned);
+  const price = priceRange(charger.price_min_php_kwh, charger.price_max_php_kwh);
+  const place = [charger.barangay, charger.city].filter(Boolean).join(", ");
+  return (
+    <div
+      role="dialog"
+      aria-label={`EV charger ${charger.name}`}
+      className="absolute top-2 right-14 left-2 z-20 grid max-lg:top-24 gap-2 rounded-xl border bg-popover p-4 shadow-lg sm:left-auto sm:w-80"
+    >
+      <div className="flex items-start gap-2">
+        <div className="grid min-w-0 gap-0.5">
+          <h2 className="text-xl">{charger.name}</h2>
+          {place !== "" && <p className="text-sm text-muted-foreground">{place}</p>}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="ml-auto size-11 shrink-0 rounded-full sm:size-9"
+          aria-label="Close"
+          ref={closeRef}
+          onClick={onClose}
+        >
+          <X aria-hidden="true" />
+        </Button>
+      </div>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+        <dt className="text-muted-foreground">Connectors</dt>
+        <dd className="tabular-nums">
+          {charger.n_ac ?? "?"} AC, {charger.n_dc ?? "?"} DC
+        </dd>
+        <dt className="text-muted-foreground">Power</dt>
+        <dd className="tabular-nums">
+          {charger.max_capacity_kw == null ? "max kW not listed" : `Up to ${kw.format(charger.max_capacity_kw)} kW`}
+        </dd>
+        {price !== null && (
+          <>
+            <dt className="text-muted-foreground">Price</dt>
+            <dd className="tabular-nums">{price}</dd>
+          </>
+        )}
+      </dl>
+      <p className="text-sm text-muted-foreground">Source: DOE</p>
     </div>
   );
 }
@@ -594,6 +740,8 @@ export function TransformerMap({
   });
   const selected = items.find((i) => i.transformer_id === selectedId);
   const [clampId, setClampId] = useState<string | null>(null);
+  // A charger opens on hover (mouse) or tap; a tapped one stays open after the pointer leaves.
+  const [charger, setCharger] = useState<{ id: string; pinned: boolean } | null>(null);
   const [zoom, setZoom] = useState(0);
   const [locationMessage, setLocationMessage] = useState("");
   useEffect(() => {
@@ -611,10 +759,17 @@ export function TransformerMap({
     };
   }, [clampId]);
   const selectedClamp = clamps.find((c) => c.clamp_id === clampId);
-  // One popover at a time: picking a transformer closes the clamp popover.
+  const shownCharger = chargers.find((c) => c.station_id === charger?.id);
+  // One popover at a time: picking a transformer closes the clamp and charger popovers.
   useEffect(() => {
-    if (selectedId !== null) setClampId(null);
+    if (selectedId !== null) {
+      setClampId(null);
+      setCharger(null);
+    }
   }, [selectedId]);
+  useEffect(() => {
+    if (overlay !== "ev") setCharger(null);
+  }, [overlay]);
   const latest = useRef({
     items,
     shownIds,
@@ -622,7 +777,9 @@ export function TransformerMap({
     onHover,
     onSelect,
     setClampId,
+    setCharger,
     activeId,
+    selectedId,
     clampId,
     leftInsetPx,
     overlay,
@@ -637,7 +794,9 @@ export function TransformerMap({
     onHover,
     onSelect,
     setClampId,
+    setCharger,
     activeId,
+    selectedId,
     clampId,
     leftInsetPx,
     overlay,
@@ -664,6 +823,14 @@ export function TransformerMap({
     setActive(map, activeId, true);
     return () => setActive(map, activeId, false);
   }, [activeId]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!isAlive(map) || !map.getLayer(LAYER.pinLabels)) return;
+    map.setFilter(LAYER.pinActive, onlyId(activeId));
+    map.setFilter(LAYER.pinSelected, onlyId(selectedId));
+    map.setFilter(LAYER.pinLabels, labelFilter(activeId, selectedId));
+  }, [activeId, selectedId]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -731,9 +898,18 @@ export function TransformerMap({
           if (picked === null) {
             latest.current.onSelect(null);
             latest.current.setClampId(null);
+            latest.current.setCharger(null);
             return;
           }
           const { feature } = picked;
+          if (picked.kind === "charger") {
+            const id = feature.properties?.station_id;
+            latest.current.onSelect(null);
+            latest.current.setClampId(null);
+            if (typeof id === "string") latest.current.setCharger({ id, pinned: true });
+            return;
+          }
+          latest.current.setCharger(null);
           if (picked.kind === "clamp") {
             const id = feature.properties?.clamp_id;
             latest.current.onSelect(null);
@@ -768,10 +944,38 @@ export function TransformerMap({
           map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
           map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
         }
+        map.on("mousemove", LAYER.chargers, (e) => {
+          map.getCanvas().style.cursor = "pointer";
+          const id = e.features?.[0]?.properties?.station_id;
+          if (typeof id === "string" && latest.current.selectedId === null) {
+            latest.current.setCharger((now) => (now?.pinned ? now : { id, pinned: false }));
+          }
+        });
+        map.on("mouseleave", LAYER.chargers, () => {
+          map.getCanvas().style.cursor = "";
+          latest.current.setCharger((now) => (now?.pinned ? now : null));
+        });
       }}
       onStyle={(map) => {
         const now = latest.current;
-        addLayers(map, now.items, now.shownIds, now.clamps, now.coverageBands, now.chargers, now.ringRadiusM);
+        const theme = themeNow();
+        const style = map.style;
+        // Images are drawn from the tokens of the theme that just loaded; symbols redraw once they land.
+        registerPinImages(map, theme, tokenColors(), window.devicePixelRatio || 1, undefined, () => {
+          return isAlive(map) && map.style === style;
+        }).catch((error: unknown) => console.warn("Map pin icons failed to draw", error));
+        addLayers(
+          map,
+          now.items,
+          now.shownIds,
+          now.clamps,
+          now.coverageBands,
+          now.chargers,
+          now.ringRadiusM,
+          theme,
+          now.activeId,
+          now.selectedId,
+        );
         applyOverlay(map, now.overlay);
         setActive(map, now.activeId, true);
         const selectedClampId = latest.current.clampId;
@@ -832,6 +1036,9 @@ export function TransformerMap({
       )}
       {selectedClamp !== undefined && (
         <ClampPopover clamp={selectedClamp} asOf={clampsAsOf} onClose={() => setClampId(null)} />
+      )}
+      {shownCharger !== undefined && selected === undefined && selectedClamp === undefined && (
+        <ChargerPopover charger={shownCharger} pinned={charger?.pinned ?? false} onClose={() => setCharger(null)} />
       )}
     </Map>
   );

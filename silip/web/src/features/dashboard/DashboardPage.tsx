@@ -18,6 +18,7 @@ import { Button } from "../../shared/ui/components/button";
 import { Card } from "../../shared/ui/components/card";
 import { Skeleton } from "../../shared/ui/components/skeleton";
 import { ErrorBoundary, Freshness, useDocumentTitle } from "../../shared/ui/feedback";
+import { EvLegend, RiskLegend } from "./MapLegends";
 import { useChargers, useCoverage } from "./queries";
 import { SummaryRow } from "./SummaryRow";
 import { AREA_MIN_ZOOM, RING_MIN_ZOOM, type CoverageBands, type Overlay } from "./overlays";
@@ -428,28 +429,12 @@ export function DashboardPage() {
       const km = chargers.data.radius_m / 1000;
       return (
         <div className="grid gap-1 rounded-xl bg-card/90 px-2.5 py-1.5 text-xs text-muted-foreground">
-          <span className="flex items-center gap-2">
-            <span aria-hidden="true" className="size-3 rounded-full border-[3px] border-foreground bg-card" />
-            Public EV charger, source: DOE
-          </span>
-          <span className="flex items-center gap-2">
-            <span aria-hidden="true" className="size-3 rounded-full border-2 border-dashed border-foreground" />
-            {km} km reach{zoom < RING_MIN_ZOOM ? " (zoom in to see)" : ""}
-          </span>
+          <EvLegend reach={`${km} km reach${zoom < RING_MIN_ZOOM ? " (zoom in to see)" : ""}`} />
           <SimulatedLabel show={chargers.data.is_simulated} />
         </div>
       );
     }
-    return (
-      <>
-        <div className="flex gap-1 rounded-full bg-card/90 p-1">
-          <TierBadge tier="Critical" />
-          <TierBadge tier="Watch" />
-          <TierBadge tier="OK" />
-        </div>
-        <p className={pill}>Shaded: estimated service area</p>
-      </>
-    );
+    return <RiskLegend />;
   };
 
   return (

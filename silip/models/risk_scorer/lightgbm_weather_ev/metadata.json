@@ -1,0 +1,111 @@
+{
+  "task": "risk_scorer",
+  "name": "lightgbm_weather_ev",
+  "features": [
+    "peak_load_pct",
+    "mean_load_pct",
+    "hours_over_100",
+    "hours_over_110",
+    "hours_over_90",
+    "coverage_pct",
+    "rated_kva",
+    "heat_index_max_c",
+    "ev_evening_step_kw",
+    "ev_stations_within",
+    "reporting_pct"
+  ],
+  "forecaster": "lightgbm_weather",
+  "thresholds": {
+    "critical": 0.05,
+    "watch": 0.03
+  },
+  "reasons": "top 3 positive pred_contrib values, sentences in silip_ml.risk.domain.REASON_TEMPLATES",
+  "kept": true,
+  "kept_status": "provisional: pending the evaluator's seed-8 check",
+  "kept_reason": "recall at >= 12 h lead at least rules and lightgbm, false alarms no higher than rules",
+  "false_alarm_budget_per_tx_month": 6.974789915966387,
+  "label": "trip rule on true load: above 110% of usable rating for 3 h in a row (silip-domain)",
+  "params": {
+    "n_estimators": 200,
+    "learning_rate": 0.05,
+    "num_leaves": 15,
+    "min_child_samples": 20
+  },
+  "training_window": {
+    "start": "2026-04-15 00:00:00+08:00",
+    "end": "2026-05-19 23:45:00+08:00"
+  },
+  "ev_stations": {
+    "file": "data/evcs_locations.csv",
+    "stations": 588,
+    "radius_m": 1000,
+    "note": "simulated EV homes are unrelated to DOE station locations: expect about zero gain"
+  },
+  "gain_share": {
+    "peak_load_pct": 0.1223,
+    "mean_load_pct": 0.0702,
+    "hours_over_100": 0.3171,
+    "hours_over_110": 0.1,
+    "hours_over_90": 0.0187,
+    "coverage_pct": 0.0342,
+    "rated_kva": 0.0358,
+    "heat_index_max_c": 0.1877,
+    "ev_evening_step_kw": 0.0529,
+    "ev_stations_within": 0.012,
+    "reporting_pct": 0.049
+  },
+  "metrics": {
+    "holdout_recall": 1.0,
+    "holdout_recall_12h": 1.0,
+    "holdout_false_alarms_per_tx_month": 4.873949579831933,
+    "comparison": {
+      "rules on lightgbm forecasts": {
+        "recall": 0.96,
+        "false_alarms_per_tx_month": 8.2353,
+        "trips": 25.0,
+        "windows": 357.0,
+        "recall at >= 12 h lead": 0.96
+      },
+      "lightgbm on lightgbm forecasts": {
+        "recall": 1.0,
+        "false_alarms_per_tx_month": 9.916,
+        "trips": 25.0,
+        "windows": 357.0,
+        "recall at >= 12 h lead": 1.0
+      },
+      "rules on lightgbm_weather forecasts": {
+        "recall": 0.96,
+        "false_alarms_per_tx_month": 6.5546,
+        "trips": 25.0,
+        "windows": 357.0,
+        "recall at >= 12 h lead": 0.96
+      },
+      "lightgbm_weather_ev on lightgbm_weather forecasts": {
+        "recall": 1.0,
+        "false_alarms_per_tx_month": 4.8739,
+        "trips": 25.0,
+        "windows": 357.0,
+        "recall at >= 12 h lead": 1.0
+      }
+    },
+    "trips": 25
+  },
+  "created": "2026-11-13",
+  "is_simulated": true,
+  "data": {
+    "dir": "data/sim",
+    "scale": "dev",
+    "seed": 7,
+    "transformer_load_sha256": "58de82c81f79645b5cb5233b6afa22d973e9a50fa8d420ddbc2e0d41db228a2a",
+    "transformers": 51
+  },
+  "holdout_start": "2026-05-20 00:00:00+08:00",
+  "versions": {
+    "python": "3.12.0",
+    "lightgbm": "4.7.0",
+    "numpy": "2.5.4",
+    "pandas": "3.1.1",
+    "scikit-learn": "1.9.1"
+  },
+  "trained_in": "notebooks/06_evaluate_and_export.ipynb"
+}

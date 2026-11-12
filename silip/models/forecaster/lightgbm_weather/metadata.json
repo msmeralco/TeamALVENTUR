@@ -1,0 +1,122 @@
+{
+  "task": "forecaster",
+  "name": "lightgbm_weather",
+  "features": [
+    "lag_1d",
+    "lag_2d",
+    "lag_7d",
+    "hour",
+    "day_of_week",
+    "is_weekend",
+    "is_holiday",
+    "hi_fcst_c",
+    "hi_fcst_minus_lag1d_c",
+    "rain_fcst_mm"
+  ],
+  "feature_params": {
+    "holidays": [
+      "2026-04-02",
+      "2026-04-03",
+      "2026-04-04",
+      "2026-04-09",
+      "2026-05-01",
+      "2026-06-12"
+    ],
+    "step_minutes": 15,
+    "steps_per_day": 96,
+    "weather_issued_by": "00:00 Asia/Manila of the run day"
+  },
+  "target": "transformer_kw",
+  "max_horizon_steps": 96,
+  "params": {
+    "n_estimators": 400,
+    "learning_rate": 0.025027964389387022,
+    "num_leaves": 57,
+    "min_child_samples": 213,
+    "subsample": 0.6694185491035058,
+    "colsample_bytree": 0.6618863149265657,
+    "reg_lambda": 0.059167191267678214,
+    "subsample_freq": 1
+  },
+  "training_window": {
+    "start": "2026-04-08 00:00:00+08:00",
+    "end": "2026-05-19 23:45:00+08:00"
+  },
+  "kept": false,
+  "kept_status": "provisional: pending the evaluator's seed-8 check",
+  "kept_reason": "not better than both seasonal_naive and lightgbm in: hot-spell days",
+  "weather": "simulated day-ahead forecasts (truth plus error), issued 00:00; never the true weather",
+  "gain_share": {
+    "lag_1d": 0.2885,
+    "lag_2d": 0.0594,
+    "lag_7d": 0.3942,
+    "hour": 0.1018,
+    "day_of_week": 0.0558,
+    "is_weekend": 0.009,
+    "is_holiday": 0.017,
+    "hi_fcst_c": 0.0366,
+    "hi_fcst_minus_lag1d_c": 0.0374,
+    "rain_fcst_mm": 0.0003
+  },
+  "metrics": {
+    "holdout_mae_kw": 3.6837928829871296,
+    "current_lightgbm_mae_kw": 4.662917415257549,
+    "baseline_seasonal_naive_mae_kw": 7.797002247217773,
+    "intervals": 33462,
+    "by_group_mae_kw": {
+      "all": {
+        "seasonal_naive": 7.797,
+        "lightgbm": 4.6629,
+        "lightgbm_weather": 3.6838
+      },
+      "hot-spell days": {
+        "seasonal_naive": 3.0727,
+        "lightgbm": 1.8474,
+        "lightgbm_weather": 2.3745
+      },
+      "25 kVA": {
+        "seasonal_naive": 4.4061,
+        "lightgbm": 3.375,
+        "lightgbm_weather": 2.2317
+      },
+      "37.5 kVA": {
+        "seasonal_naive": 4.3655,
+        "lightgbm": 3.2486,
+        "lightgbm_weather": 2.2923
+      },
+      "50 kVA": {
+        "seasonal_naive": 6.5514,
+        "lightgbm": 4.1279,
+        "lightgbm_weather": 3.2843
+      },
+      "75 kVA": {
+        "seasonal_naive": 8.6243,
+        "lightgbm": 5.0716,
+        "lightgbm_weather": 4.0573
+      },
+      "100 kVA": {
+        "seasonal_naive": 8.9811,
+        "lightgbm": 5.0983,
+        "lightgbm_weather": 4.0852
+      }
+    }
+  },
+  "created": "2026-11-13",
+  "is_simulated": true,
+  "data": {
+    "dir": "data/sim",
+    "scale": "dev",
+    "seed": 7,
+    "transformer_load_sha256": "58de82c81f79645b5cb5233b6afa22d973e9a50fa8d420ddbc2e0d41db228a2a",
+    "transformers": 51
+  },
+  "holdout_start": "2026-05-20 00:00:00+08:00",
+  "versions": {
+    "python": "3.12.0",
+    "lightgbm": "4.7.0",
+    "numpy": "2.5.4",
+    "pandas": "3.1.1",
+    "scikit-learn": "1.9.1"
+  },
+  "trained_in": "notebooks/06_evaluate_and_export.ipynb"
+}

@@ -12,12 +12,12 @@
   ],
   "forecaster": "lightgbm",
   "thresholds": {
-    "critical": 0.08,
+    "critical": 0.07,
     "watch": 0.04
   },
   "kept": false,
   "kept_reason": "higher recall but more false alarms than rules on the held-out week",
-  "false_alarm_budget_per_tx_month": 5.914285714285715,
+  "false_alarm_budget_per_tx_month": 5.546218487394958,
   "label": "trip rule on true load: above 110% of usable rating for 3 h in a row (silip-domain)",
   "params": {
     "n_estimators": 200,
@@ -31,19 +31,19 @@
   },
   "metrics": {
     "holdout_recall": 1.0,
-    "holdout_false_alarms_per_tx_month": 9.257142857142856,
+    "holdout_false_alarms_per_tx_month": 9.915966386554622,
     "baseline_rules_recall": 0.96,
-    "baseline_rules_false_alarms_per_tx_month": 8.657142857142858,
+    "baseline_rules_false_alarms_per_tx_month": 8.23529411764706,
     "trips": 25
   },
-  "created": "2026-11-12",
+  "created": "2026-11-13",
   "is_simulated": true,
   "data": {
     "dir": "data/sim",
     "scale": "dev",
     "seed": 7,
-    "transformer_load_sha256": "5c032b92e60ec91f4d2ad248e66fa69faeb2797eb31721ed8aa249fa0265205f",
-    "transformers": 50
+    "transformer_load_sha256": "58de82c81f79645b5cb5233b6afa22d973e9a50fa8d420ddbc2e0d41db228a2a",
+    "transformers": 51
   },
   "holdout_start": "2026-05-20 00:00:00+08:00",
   "versions": {

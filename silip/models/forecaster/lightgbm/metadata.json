@@ -25,13 +25,13 @@
   "target": "transformer_kw",
   "max_horizon_steps": 96,
   "params": {
-    "n_estimators": 250,
-    "learning_rate": 0.03698903508138494,
-    "num_leaves": 17,
-    "min_child_samples": 180,
-    "subsample": 0.6476856735419906,
-    "colsample_bytree": 0.8899624255110724,
-    "reg_lambda": 0.0030976559591515142,
+    "n_estimators": 200,
+    "learning_rate": 0.029563376483344235,
+    "num_leaves": 30,
+    "min_child_samples": 174,
+    "subsample": 0.717590096317249,
+    "colsample_bytree": 0.6529880974473807,
+    "reg_lambda": 0.0014636441693424017,
     "subsample_freq": 1
   },
   "training_window": {
@@ -40,18 +40,18 @@
   },
   "kept": true,
   "metrics": {
-    "holdout_mae_kw": 4.75284243032429,
-    "baseline_seasonal_naive_mae_kw": 7.821037618043947,
-    "intervals": 32830
+    "holdout_mae_kw": 4.662917415257549,
+    "baseline_seasonal_naive_mae_kw": 7.797002247217773,
+    "intervals": 33462
   },
-  "created": "2026-11-12",
+  "created": "2026-11-13",
   "is_simulated": true,
   "data": {
     "dir": "data/sim",
     "scale": "dev",
     "seed": 7,
-    "transformer_load_sha256": "5c032b92e60ec91f4d2ad248e66fa69faeb2797eb31721ed8aa249fa0265205f",
-    "transformers": 50
+    "transformer_load_sha256": "58de82c81f79645b5cb5233b6afa22d973e9a50fa8d420ddbc2e0d41db228a2a",
+    "transformers": 51
   },
   "holdout_start": "2026-05-20 00:00:00+08:00",
   "versions": {

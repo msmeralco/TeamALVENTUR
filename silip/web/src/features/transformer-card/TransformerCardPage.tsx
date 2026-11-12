@@ -3,13 +3,15 @@ import { Check, ChevronDown, ChevronLeft, ChevronRight, Copy } from "lucide-reac
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { REFRESH_INTERVAL_MS, api, unwrap, type Schemas } from "../../shared/api/client";
-import { clampCounts, filterSearch, readFilter, useClamps, useTransformers, visibleItems } from "../../shared/risk";
-import { PageHead, QueryView, SimulatedLabel, TierBadge, formatPct } from "../../shared/ui";
+import { filterSearch, readFilter, useTransformers, visibleItems } from "../../shared/risk";
+import { ActionBadge, PageHead, QueryView, SimulatedLabel, TierBadge, formatPct, formatWhen } from "../../shared/ui";
+import { HeatIndexChart } from "../../shared/ui/HeatIndexChart";
 import { Button } from "../../shared/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../shared/ui/components/card";
+import { Card } from "../../shared/ui/components/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../shared/ui/components/collapsible";
 import { Skeleton } from "../../shared/ui/components/skeleton";
 import { Freshness, useDocumentTitle } from "../../shared/ui/feedback";
+import { ActionBlock, ClampBlock, Drivers, EvBlock } from "./CardBlocks";
 import { LoadChart, Sparkline } from "./LoadChart";
 
 // Per viewer: whether they like the load history open. A convenience, so localStorage is fine.
@@ -34,11 +36,12 @@ export function historySummary(load: Schemas["LoadPoint"][]): string {
   return `${nextText}, ${lastText}`;
 }
 
+/** Open unless the viewer closed it before. */
 function readHistoryOpen(): boolean {
   try {
-    return window.localStorage.getItem(HISTORY_OPEN_KEY) === "true";
+    return window.localStorage.getItem(HISTORY_OPEN_KEY) !== "false";
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -83,7 +86,7 @@ function CopyIdButton({ id }: { id: string }) {
   );
 }
 
-/** "Risk map / T-106" plus Previous and Next in the list's current order and filter. */
+/** "Dashboard / T-106" plus Previous and Next in the list's current order and filter. */
 function CardNav({ transformerId }: { transformerId: string }) {
   const [params] = useSearchParams();
   const filter = readFilter(params);
@@ -121,7 +124,7 @@ function CardNav({ transformerId }: { transformerId: string }) {
               to={`/engineer${search}`}
               className="inline-flex min-h-11 items-center font-semibold text-muted-foreground no-underline hover:text-foreground sm:min-h-0"
             >
-              Risk map
+              Dashboard
             </Link>
           </li>
           <li aria-hidden="true" className="text-muted-foreground">
@@ -155,10 +158,10 @@ function LoadHistory({ card }: { card: Schemas["TransformerCard"] }) {
         saveHistoryOpen(next);
       }}
     >
-      <Card className="gap-0 py-0 shadow-none">
+      <Card id="load" tabIndex={-1} className="gap-0 py-0 shadow-none outline-none">
         <h2 className="text-xl">
           <CollapsibleTrigger className="group flex min-h-16 w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-xl px-6 py-4 text-left">
-            <span>Load history</span>
+            <span>Load and heat index</span>
             <span className="font-sans text-sm font-normal text-muted-foreground">{historySummary(card.load)}</span>
             <span className="ml-auto flex items-center gap-3">
               {card.load.length > 1 && <Sparkline points={card.load} />}
@@ -174,7 +177,22 @@ function LoadHistory({ card }: { card: Schemas["TransformerCard"] }) {
             {card.load.length === 0 ? (
               <p className="text-sm text-muted-foreground">No load readings for this transformer yet.</p>
             ) : (
-              <LoadChart points={card.load} ratedKva={card.rated_kva} />
+              <div className="grid gap-6">
+                <LoadChart points={card.load} ratedKva={card.rated_kva} />
+                {/* Its own scale under the same time axis: two measures never share one y-axis. */}
+                {(card.weather ?? []).some((h) => h.heat_index_c !== null) ? (
+                  <HeatIndexChart
+                    hours={(card.weather ?? []).map((h) => ({
+                      ts: h.ts,
+                      heatC: h.heat_index_c,
+                      rainMm: h.precipitation_mm,
+                    }))}
+                    domain={[new Date(card.load[0].ts).getTime(), new Date(card.load[card.load.length - 1].ts).getTime()]}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">No heat-index forecast for this transformer yet.</p>
+                )}
+              </div>
             )}
           </div>
         </CollapsibleContent>
@@ -200,9 +218,7 @@ function CardSkeleton() {
 /** One transformer: tier, all reasons, then load history on request. Decision support only. */
 export function TransformerCardPage() {
   const { transformerId = "" } = useParams();
-  useDocumentTitle(transformerId, "Risk map");
-  const clamps = useClamps();
-  const clampCount = clamps.data === undefined ? undefined : clampCounts(clamps.data.clamps).get(transformerId);
+  useDocumentTitle(transformerId, "Dashboard");
   const query = useQuery({
     queryKey: ["transformer", transformerId],
     queryFn: async () =>
@@ -220,6 +236,7 @@ export function TransformerCardPage() {
             <PageHead className="mb-0" title={card.transformer_id} lede={`Rated ${card.rated_kva} kVA`}>
               <div className="flex flex-wrap items-center gap-2">
                 <TierBadge tier={card.risk.tier} />
+                {card.action != null && <ActionBadge action={card.action} />}
                 <SimulatedLabel show={card.is_simulated} />
                 <Freshness fetchedAt={query.dataUpdatedAt} dataAsOf={card.as_of} />
                 <span className="sm:ml-auto">
@@ -230,53 +247,22 @@ export function TransformerCardPage() {
 
             <dl className="m-0 grid grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))] overflow-hidden rounded-xl border bg-card">
               <Fact label="Peak next 24 h, of rating">{orNoData(peakLoad(card.load, true))}</Fact>
-              <Fact label="Peak last 48 h, of rating">{orNoData(peakLoad(card.load, false))}</Fact>
-              <Fact label="Confidence">{formatPct(card.risk.confidence)}</Fact>
-              <Fact label="Coverage">{formatPct(card.risk.coverage_pct)} of homes</Fact>
-              <Fact label="Clamps online">
-                {clamps.data !== undefined ? (
-                  clampCount === undefined ? (
-                    "None installed"
-                  ) : (
-                    `${clampCount.online} of ${clampCount.total}`
-                  )
-                ) : clamps.isError ? (
-                  <span className="flex flex-wrap items-center gap-2 font-sans text-sm font-normal text-muted-foreground">
-                    Clamp status unavailable
-                    <Button
-                      variant="outline"
-                      className="min-h-11 rounded-full sm:min-h-8"
-                      onClick={() => void clamps.refetch()}
-                    >
-                      Retry
-                    </Button>
-                  </span>
-                ) : (
-                  <span className="font-sans text-sm font-normal text-muted-foreground">Loading…</span>
-                )}
+              <Fact label="Peak time">{card.peak_ts == null ? "No data" : formatWhen(new Date(card.peak_ts))}</Fact>
+              <Fact label="Heat index max">
+                {card.heat_index_max_c == null ? "No forecast" : `${card.heat_index_max_c.toFixed(1)} °C`}
               </Fact>
+              <Fact label="Coverage">{formatPct(card.risk.coverage_pct)} of homes</Fact>
+              <Fact label="Confidence">{formatPct(card.risk.confidence)}</Fact>
             </dl>
 
-            <Card className="shadow-none">
-              <CardHeader>
-                <CardTitle className="font-display text-xl">
-                  <h2>Why {card.risk.tier}</h2>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {card.risk.reasons.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No reasons given.</p>
-                ) : (
-                  <ol className="grid list-decimal gap-2 pl-5">
-                    {card.risk.reasons.map((reason) => (
-                      <li key={reason}>{reason}</li>
-                    ))}
-                  </ol>
-                )}
-              </CardContent>
-            </Card>
-
+            <ActionBlock card={card} />
+            <Drivers card={card} />
             <LoadHistory card={card} />
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <ClampBlock card={card} />
+              <EvBlock card={card} />
+            </div>
 
             <p className="max-w-2xl text-sm text-muted-foreground">
               Decision support only. An engineer decides what to do. Confidence depends on how many homes are metered.

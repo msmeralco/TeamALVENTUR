@@ -1,4 +1,4 @@
-import { List, Map as MapIcon, Search } from "lucide-react";
+import { List, Map as MapIcon, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -63,6 +63,25 @@ function rememberLastOpened(id: string) {
     window.sessionStorage.setItem(LAST_OPENED_KEY, id);
   } catch {
     // Storage blocked: the list just starts at the top.
+  }
+}
+
+// Wide screens can hide the queue panel to give the map the full width. A per-browser convenience.
+const PANEL_KEY = "silip.dashboard.panel";
+
+function readPanelOpen(): boolean {
+  try {
+    return window.localStorage.getItem(PANEL_KEY) !== "hidden";
+  } catch {
+    return true;
+  }
+}
+
+function rememberPanelOpen(open: boolean) {
+  try {
+    window.localStorage.setItem(PANEL_KEY, open ? "shown" : "hidden");
+  } catch {
+    // Storage blocked: the panel just opens next time.
   }
 }
 
@@ -334,9 +353,15 @@ export function DashboardPage() {
   // Phones show one at a time, and the queue leads: it answers "what do I do first".
   const [phoneView, setPhoneView] = useState<"list" | "map">("list");
   const [lastOpened] = useState(readLastOpened);
+  const [panelOpen, setPanelOpen] = useState(readPanelOpen);
   const restored = useRef(false);
   const loadFailed = query.data === undefined && !query.isPending;
-  const listShown = loadFailed || wide || phoneView === "list";
+  const panelHidden = wide && !panelOpen && !loadFailed;
+  const listShown = !panelHidden && (loadFailed || wide || phoneView === "list");
+  const togglePanel = (open: boolean) => {
+    setPanelOpen(open);
+    rememberPanelOpen(open);
+  };
   const mapShown = wide || phoneView === "map";
 
   const coverageData = coverage.data;
@@ -442,12 +467,32 @@ export function DashboardPage() {
       {/* Wide screens: one screen, queue and map side by side. Phones: the page scrolls, one view at a time. */}
       <section className="lg:flex lg:h-[calc(100dvh-4rem)] lg:flex-col">
         <SummaryRow />
-        <div className="relative lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[26rem_1fr]">
+        <div
+          className={cn(
+            "relative lg:grid lg:min-h-0 lg:flex-1",
+            panelHidden ? "lg:grid-cols-[1fr]" : "lg:grid-cols-[26rem_1fr]",
+          )}
+        >
           {listShown && (
-            <div className="flex flex-col bg-background lg:min-h-0 lg:border-r">
+            <div id="dashboard-panel" className="flex flex-col bg-background lg:min-h-0 lg:border-r">
               <div className="grid gap-3 border-b px-4 pt-4 pb-3">
                 <div className="grid gap-1">
-                  <h2 className="text-xl">Action queue</h2>
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 className="text-xl">Action queue</h2>
+                    {wide && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-full text-muted-foreground"
+                        aria-expanded="true"
+                        aria-controls="dashboard-panel"
+                        onClick={() => togglePanel(false)}
+                      >
+                        <PanelLeftClose aria-hidden="true" />
+                        Hide panel
+                      </Button>
+                    )}
+                  </div>
                   {query.data !== undefined && (
                     <p className="text-sm">
                       <span className={cn("font-semibold tabular-nums", inspect > 0 && "text-critical")}>
@@ -542,7 +587,19 @@ export function DashboardPage() {
               </ErrorBoundary>
             )}
             {query.data !== undefined && (
-              <div className="absolute top-2 left-2 z-10 max-w-[calc(100%-4rem)]">
+              <div className="absolute top-2 left-2 z-10 flex max-w-[calc(100%-4rem)] flex-wrap items-center gap-2">
+                {panelHidden && (
+                  <Button
+                    variant="outline"
+                    className="min-h-11 rounded-full bg-card shadow-lg sm:min-h-9"
+                    aria-expanded="false"
+                    aria-controls="dashboard-panel"
+                    onClick={() => togglePanel(true)}
+                  >
+                    <PanelLeftOpen aria-hidden="true" />
+                    Show panel
+                  </Button>
+                )}
                 <OverlayControl value={overlay} onChange={chooseOverlay} />
               </div>
             )}

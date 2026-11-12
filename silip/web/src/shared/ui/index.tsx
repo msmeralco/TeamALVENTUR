@@ -78,7 +78,7 @@ export function StateCard({
 }) {
   const Heading = level === 1 ? "h1" : "h2";
   return (
-    <Card role={role} className={cn("mx-auto mt-10 w-full max-w-md items-center gap-3 px-6 py-10 text-center", className)}>
+    <Card role={role} className={cn("mx-auto mt-10 w-full max-w-md items-center gap-3 px-6 py-10 text-center shadow-none", className)}>
       {/* The logo's navy lid vanishes on dark surfaces, so dark mode puts the mark on a cream tile. */}
       <span className="mb-1 grid size-20 place-items-center rounded-2xl bg-logo-tile">
         <img src="/brand/silip-mark-128.png" alt="" width={64} height={64} className="size-16" />

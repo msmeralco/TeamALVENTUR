@@ -90,7 +90,7 @@ export function AccountMenu() {
     return (
       <>
         <ThemeToggle />
-        <Button variant="outline" className="min-h-11 rounded-full sm:min-h-9" onClick={() => void signIn()}>
+        <Button variant="outline" className="min-h-11 rounded-full sm:min-h-9 pointer-coarse:min-h-11" onClick={() => void signIn()}>
           Sign in
         </Button>
       </>

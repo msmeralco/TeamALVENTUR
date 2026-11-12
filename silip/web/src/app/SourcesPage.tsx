@@ -21,8 +21,14 @@ export function SourcesPage() {
             {source.href === undefined ? (
               source.label
             ) : (
-              <a href={source.href} target="_blank" rel="noreferrer" className="underline-offset-4 hover:underline">
+              <a
+                href={source.href}
+                target="_blank"
+                rel="noreferrer"
+                className="underline-offset-4 hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
+              >
                 {source.label}
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             )}{" "}
             <span className="text-muted-foreground">({source.note})</span>

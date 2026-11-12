@@ -14,7 +14,7 @@ export function ThemeToggle({ withWord = false }: { withWord?: boolean }) {
     <Button
       variant="ghost"
       size={withWord ? "default" : "icon"}
-      className={withWord ? "min-h-11 rounded-full px-3 text-muted-foreground sm:min-h-9" : "size-11 rounded-full sm:size-9"}
+      className={withWord ? "min-h-11 rounded-full px-3 text-muted-foreground sm:min-h-9 pointer-coarse:min-h-11" : "size-11 rounded-full sm:size-9 pointer-coarse:size-11"}
       aria-label={`Theme: ${choice}`}
       onClick={() => setChoice(NEXT[choice])}
     >

@@ -13,10 +13,12 @@ import pandas as pd
 import pytest
 
 from silip_ml.core.config import get_ml_settings
-from silip_ml.features import load_features, risk_features
+from silip_ml.features import load_features, risk_features, weather_input
 from silip_ml.load.domain import history_grid
 from silip_ml.load.lightgbm import LightGBMForecaster
+from silip_ml.load.lightgbm_weather import LightGBMWeatherForecaster
 from silip_ml.risk.lightgbm import LightGBMScorer
+from silip_ml.risk.lightgbm_weather_ev import LightGBMWeatherEvScorer
 
 MODELS = get_ml_settings().models_dir
 
@@ -71,3 +73,56 @@ def test_risk_features_and_scores_match_the_notebook():
     np.testing.assert_array_equal(scorer.probability(features), expected["score"].to_numpy())
     tiers = [o.tier for o in scorer.score(forecast, transformers)]
     assert tiers == expected["tier"].tolist()
+
+
+def _parity_of(task: str, name: str, file: str) -> pd.DataFrame:
+    path = MODELS / task / name / "parity" / file
+    if not path.exists():
+        pytest.fail(f"{path} missing; run notebooks/06_evaluate_and_export.ipynb")
+    frame = _read(path)
+    if "issued_at" in frame:
+        frame["issued_at"] = pd.to_datetime(frame["issued_at"], format="ISO8601")
+    return frame
+
+
+def test_weather_load_features_and_predictions_match_the_notebook():
+    task, name = "forecaster", "lightgbm_weather"
+    history = _parity_of(task, name, "input_load.csv")
+    weather = weather_input(
+        _parity_of(task, name, "input_weather.csv"), _parity_of(task, name, "transformers.csv")
+    )
+    expected = _parity_of(task, name, "features.csv")
+    forecaster = LightGBMWeatherForecaster()
+    metadata = forecaster.artifact.metadata
+    grid = history_grid(history)
+    horizon = len(expected) // len(grid.transformer_ids)
+    rows = grid.steps + np.arange(horizon)
+    holidays = metadata["feature_params"]["holidays"]
+    actual = load_features(grid, rows, metadata["features"], holidays, weather)
+    np.testing.assert_array_equal(actual, expected[metadata["features"]].to_numpy())
+    predictions = _parity_of(task, name, "predictions.csv")
+    forecast = forecaster.predict(history, horizon, weather)
+    np.testing.assert_array_equal(forecast["kw_pred"].to_numpy(), predictions["kw_pred"].to_numpy())
+
+
+def test_weather_ev_risk_features_scores_and_contributions_match_the_notebook():
+    task, name = "risk_scorer", "lightgbm_weather_ev"
+    forecast = _parity_of(task, name, "input_forecast.csv")
+    history = _parity_of(task, name, "input_load.csv")
+    transformers = _parity_of(task, name, "transformers.csv")
+    weather = weather_input(_parity_of(task, name, "input_weather.csv"), transformers)
+    expected_features = _parity_of(task, name, "features.csv")
+    expected = _parity_of(task, name, "predictions.csv")
+    contributions = _parity_of(task, name, "contributions.csv")
+    scorer = LightGBMWeatherEvScorer()
+    names = scorer.artifact.features
+    features = risk_features(forecast, "kw_pred", transformers, weather, history)
+    assert features["transformer_id"].tolist() == expected_features["transformer_id"].tolist()
+    np.testing.assert_array_equal(features[names].to_numpy(), expected_features[names].to_numpy())
+    np.testing.assert_array_equal(scorer.probability(features), expected["score"].to_numpy())
+    np.testing.assert_array_equal(scorer.contributions(features), contributions[names].to_numpy())
+    outputs = scorer.score(forecast, transformers, weather, history)
+    assert [o.tier for o in outputs] == expected["tier"].tolist()
+    for output in outputs:
+        assert 1 <= len(output.reasons) <= 3
+        assert all("Open-Meteo" not in reason for reason in output.reasons)  # simulated weather

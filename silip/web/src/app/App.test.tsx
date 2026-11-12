@@ -553,5 +553,6 @@ describe("live demo page", () => {
     expect(screen.getByText("House 3 added a large new load (likely EV)")).toBeTruthy();
     expect(screen.getByText(/House 4: records say T1, voltage says T2 \(confidence 87%\)/)).toBeTruthy();
     expect(screen.getByText(/built from 4 of 4 homes by SIN/)).toBeTruthy();
+    expect(document.head.querySelector('meta[name="robots"]')?.getAttribute("content")).toBe("noindex");
   });
 });

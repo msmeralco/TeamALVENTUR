@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, type ReactNode, type RefObject } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { OutageCheck } from "../features/outages/OutagesPage";
 import { LoadChart } from "../features/transformer-card/LoadChart";
@@ -8,6 +8,7 @@ import { Button } from "../shared/ui/components/button";
 import { Card } from "../shared/ui/components/card";
 import { useDocumentTitle } from "../shared/ui/feedback";
 import { EXAMPLE_TRANSFORMER } from "./engineerExample";
+import { Decode, HUD_LABEL, HeroMap, LineDrawing } from "./LandingArt";
 
 const SECTION = "grid scroll-mt-24 gap-6";
 
@@ -19,50 +20,42 @@ const STEPS = [
   { label: "Map and outages", text: "Engineers see a risk map. Residents see open outages." },
 ];
 
-/**
- * The arrow from one step's circle to the next. Below lg the steps stack, so it runs down from the circle;
- * from lg they sit in a row of equal columns with a 24px gap, so it runs right to the next column's circle.
- */
-function Connector() {
-  return (
-    <span
-      aria-hidden="true"
-      className="absolute top-12 -bottom-4 left-5 flex -translate-x-1/2 flex-col items-center text-brand lg:top-5 lg:right-[calc(-50%+0.25rem)] lg:bottom-auto lg:left-[calc(50%+1.75rem)] lg:translate-x-0 lg:-translate-y-1/2 lg:flex-row"
-    >
-      <span className="w-0.5 flex-1 bg-current lg:h-0.5 lg:w-auto" />
-      <svg viewBox="0 0 10 10" className="-mt-2 size-2.5 rotate-90 lg:mt-0 lg:-ml-2 lg:rotate-0">
-        <path d="M1 1 9 5 1 9" fill="none" stroke="currentColor" strokeWidth={1.5} />
-      </svg>
-    </span>
-  );
-}
-
+/** Dark stage. Wide screens with a mouse pin it while the drawing builds step by step; others reveal in place. */
 function HowItWorks() {
   return (
-    <section id="how-it-works" aria-labelledby="how-it-works-title" className={SECTION}>
-      <h2 id="how-it-works-title" className="text-xl">
-        How it works
-      </h2>
-      <ol className="grid gap-6 lg:grid-cols-4">
-        {STEPS.map((s, i) => (
-          <li
-            key={s.label}
-            className="relative grid grid-cols-[2.5rem_1fr] items-start gap-x-4 lg:grid-cols-1 lg:justify-items-center lg:gap-y-3 lg:text-center"
-          >
-            <span
-              aria-hidden="true"
-              className="grid size-10 place-items-center rounded-full border-2 border-brand bg-card font-display font-bold"
-            >
-              {i + 1}
-            </span>
-            <div className="grid gap-1">
-              <h3 className="text-base font-semibold">{s.label}</h3>
-              <p className="text-sm text-balance text-muted-foreground">{s.text}</p>
-            </div>
-            {i < STEPS.length - 1 && <Connector />}
-          </li>
-        ))}
-      </ol>
+    <section
+      id="how-it-works"
+      data-stage
+      data-how
+      aria-labelledby="how-it-works-title"
+      className="scroll-mt-16 bg-stage text-foreground"
+    >
+      <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-20 sm:px-6 lg:min-h-[calc(100svh-4rem)] lg:grid-cols-2 lg:gap-16">
+        <div className="grid gap-8">
+          <h2 id="how-it-works-title" className="text-xl">
+            How it works
+          </h2>
+          <ol className="grid gap-6">
+            {STEPS.map((s, i) => (
+              <li key={s.label} data-step className="grid grid-cols-[2.5rem_1fr] items-start gap-x-4">
+                <span
+                  aria-hidden="true"
+                  className="grid size-10 place-items-center rounded-full border-2 border-brand font-display font-bold"
+                >
+                  {i + 1}
+                </span>
+                <div className="grid gap-1">
+                  <h3 className="text-base font-semibold">
+                    <Decode text={s.label} />
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{s.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <LineDrawing />
+      </div>
     </section>
   );
 }
@@ -93,7 +86,7 @@ function EngineerPreview() {
           forecast.
         </p>
       </div>
-      <Card className="gap-5 px-4 shadow-none sm:px-6">
+      <Card data-example-card className="gap-5 px-4 shadow-none sm:px-6">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="mr-2 text-xl">{t.transformer_id}</h3>
           <TierBadge tier={t.risk.tier} />
@@ -112,7 +105,9 @@ function EngineerPreview() {
             {t.rated_kva} kVA, {t.homes} homes
           </Fact>
         </dl>
-        <LoadChart points={[...t.load]} ratedKva={t.rated_kva} nowLabel="Snapshot" />
+        <div data-example-chart>
+          <LoadChart points={[...t.load]} ratedKva={t.rated_kva} nowLabel="Snapshot" />
+        </div>
       </Card>
     </section>
   );
@@ -131,7 +126,7 @@ function Privacy() {
       <h2 id="privacy-title" className="text-xl">
         Privacy, in plain words
       </h2>
-      <ul className="grid max-w-2xl list-disc gap-2 pl-5 marker:text-brand">
+      <ul data-privacy className="grid max-w-2xl list-disc gap-2 pl-5 marker:text-brand">
         {PRIVACY.map((line) => (
           <li key={line}>{line}</li>
         ))}
@@ -208,33 +203,129 @@ function useScrollToHash() {
   }, [hash, key]);
 }
 
+function reducedMotion(): boolean {
+  return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** Loads the scroll motion after first paint, never with reduced motion; the page works without it. */
+function useLandingMotion(root: RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    if (reducedMotion() || root.current === null) return;
+    const el = root.current;
+    let stop: (() => void) | null = null;
+    let cancelled = false;
+    void import("./landingMotion").then(({ startLandingMotion }) => {
+      if (!cancelled) stop = startLandingMotion(el);
+    });
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  }, [root]);
+}
+
+const MAP_CREDIT = [
+  { label: "OpenFreeMap", href: "https://openfreemap.org" },
+  { label: "© OpenMapTiles", href: "https://www.openmaptiles.org/" },
+  { label: "© OpenStreetMap contributors", href: "https://www.openstreetmap.org/copyright" },
+];
+
+/** Dark, full screen: the risk map still, the headline and the outage check, usable before any motion loads. */
+function Hero() {
+  return (
+    <section
+      data-stage
+      data-hero
+      aria-labelledby="hero-title"
+      className="relative isolate grid min-h-[calc(100svh-4rem)] overflow-hidden bg-stage text-foreground max-sm:min-h-[calc(100svh-8rem)]"
+    >
+      <HeroMap />
+      <div className="relative mx-auto grid w-full max-w-6xl content-between gap-5 px-4 pt-3 pb-4 sm:gap-8 sm:px-6 sm:pt-4 sm:pb-10">
+        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
+          {/* The HUD's title and legend: tier colors always come with their word. */}
+          <div data-hud-label className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-semibold">
+            <Decode text={HUD_LABEL} />
+            <span className="flex gap-1">
+              <TierBadge tier="Critical" />
+              <TierBadge tier="OK" />
+            </span>
+          </div>
+          {/* Foreground, not muted: muted text drops under 4.5:1 over the brightest parts of the map. */}
+          <p className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-sm">
+            <SimulatedLabel show />
+            <span>
+              Map{" "}
+              {MAP_CREDIT.map((c, i) => (
+                <Fragment key={c.href}>
+                  {i > 0 && " "}
+                  <a href={c.href} target="_blank" rel="noreferrer" className="underline underline-offset-4">
+                    {c.label}
+                  </a>
+                </Fragment>
+              ))}
+            </span>
+          </p>
+        </div>
+        <div className="grid items-end gap-5 sm:gap-8 lg:grid-cols-[1fr_26rem] lg:gap-16">
+          <div data-hero-lift className="grid max-w-xl gap-3 sm:gap-4">
+            <h1 id="hero-title" className="text-3xl tracking-tight text-balance">
+              See the load on the transformer that feeds your street.
+            </h1>
+            <p className="text-pretty">
+              SILIP estimates it from homes that opt in. Grid engineers see which transformers may overload.
+              Residents can check for outages right here.
+            </p>
+          </div>
+          {/* The outage check scrolls inside its panel, so results are usable without scrolling the page. */}
+          <div
+            data-hero-lift
+            className="grid max-h-[60svh] gap-4 overflow-y-auto overscroll-contain rounded-xl border bg-card p-4 sm:p-5 lg:max-h-[calc(100svh-12rem)]"
+          >
+            <h2 className="text-xl">Is the power out near you?</h2>
+            <OutageCheck />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** A slim bracketed bar on the right edge that fills as you scroll. Decorative; only runs with motion. */
+function ScrollProgress() {
+  return (
+    <div
+      aria-hidden="true"
+      data-scroll-progress
+      className="pointer-events-none fixed top-1/2 right-3 z-10 hidden h-48 w-2 -translate-y-1/2 border-y-2 border-brand motion-safe:md:block"
+    >
+      <span className="absolute inset-y-1 left-1/2 w-px -translate-x-1/2 bg-brand/40" />
+      <span
+        data-fill
+        className="absolute inset-y-1 left-1/2 w-0.5 origin-top -translate-x-1/2 bg-brand"
+        style={{ transform: "scaleY(0)" }}
+      />
+    </div>
+  );
+}
+
 /** Public landing page: the outage check first, then what SILIP is, what engineers see, privacy and sign-in. */
 export function LandingPage() {
   useDocumentTitle();
   useScrollToHash();
+  const root = useRef<HTMLDivElement>(null);
+  useLandingMotion(root);
   return (
-    <div className="grid gap-16 sm:gap-24">
-      <section aria-labelledby="hero-title" className="grid items-start gap-10 lg:grid-cols-2 lg:gap-16">
-        <div className="grid justify-items-start gap-4">
-          <span className="grid place-items-center rounded-2xl bg-logo-tile p-1">
-            <img src="/brand/silip-mark-512.png" alt="" width={80} height={80} className="size-20" />
-          </span>
-          <h1 id="hero-title" className="text-3xl tracking-tight text-balance">
-            SILIP estimates the load on neighborhood transformers, from homes that opt in.
-          </h1>
-          <p className="max-w-xl text-muted-foreground">
-            Grid engineers see which transformers may overload. Residents can check for outages right here.
-          </p>
-        </div>
-        <div className="grid gap-4">
-          <h2 className="text-xl">Is the power out near you?</h2>
-          <OutageCheck />
-        </div>
-      </section>
+    <div ref={root}>
+      <Hero />
       <HowItWorks />
-      <EngineerPreview />
-      <Privacy />
-      <Doors />
+      <div data-curtain className="bg-background">
+        <div className="mx-auto grid max-w-6xl gap-16 px-4 py-16 sm:gap-24 sm:px-6 sm:py-24">
+          <EngineerPreview />
+          <Privacy />
+          <Doors />
+        </div>
+      </div>
+      <ScrollProgress />
     </div>
   );
 }

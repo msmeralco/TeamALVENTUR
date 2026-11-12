@@ -32,6 +32,7 @@ function useShowsSimulated(): boolean {
 export function Footer() {
   const { user, signIn } = useAuth();
   const simulated = useShowsSimulated();
+  const { pathname } = useLocation();
   return (
     <footer className="border-t bg-card max-sm:pb-[calc(4rem+env(safe-area-inset-bottom))]">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6">
@@ -78,6 +79,24 @@ export function Footer() {
           <span>{new Date().getFullYear()}</span>
         </div>
       </div>
+      {/* Landing page only: the giant wordmark that rises at the end. A picture of the name, so aria-hidden. */}
+      {pathname === "/" && (
+        <div aria-hidden="true" data-wordmark className="mx-auto max-w-6xl overflow-hidden px-4 sm:px-6">
+          <svg viewBox="0 0 1000 330" className="block w-full">
+            <text
+              x="500"
+              y="320"
+              textAnchor="middle"
+              textLength="990"
+              lengthAdjust="spacing"
+              className="fill-wordmark font-display font-bold"
+              style={{ fontSize: 440 }}
+            >
+              silip
+            </text>
+          </svg>
+        </div>
+      )}
     </footer>
   );
 }

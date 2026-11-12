@@ -9,6 +9,9 @@ import { dailyKwh } from "../features/household/UsagePage";
 // MapLibre needs WebGL, which jsdom lacks; the list beside the map carries the same data.
 vi.mock("../features/risk-map/TransformerMap", () => ({ TransformerMap: () => null }));
 vi.mock("../features/devices/InstallationMap", () => ({ InstallationMap: () => null }));
+// The landing scroll motion (GSAP, Lenis) is loaded lazily; tests check what renders without it.
+const startLandingMotion = vi.hoisted(() => vi.fn((_root: HTMLElement) => () => {}));
+vi.mock("./landingMotion", () => ({ startLandingMotion }));
 
 const OUTAGE = {
   outage_id: "O-0001",
@@ -111,7 +114,9 @@ describe("landing page", () => {
   it("opens on the outage check, then How it works and the labeled engineer example", async () => {
     mockApi({ "/api/v1/outages": [OUTAGE] });
     renderAt("/");
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/^SILIP estimates/);
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+      "See the load on the transformer that feeds your street.",
+    );
     expect(screen.getByRole("button", { name: "Near me" })).toBeTruthy();
     expect(await screen.findByText("overload")).toBeTruthy();
     expect(document.getElementById("how-it-works")?.querySelector("h2")?.textContent).toBe("How it works");
@@ -119,6 +124,54 @@ describe("landing page", () => {
     expect(screen.getByText("Snapshot")).toBeTruthy();
     expect(screen.queryByText("Now")).toBeNull();
     expect(document.title).toBe("SILIP");
+  });
+
+  it("answers the outage check inside the hero, with no scrolling", async () => {
+    mockApi({ "/api/v1/outages": [OUTAGE] });
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      geolocation: { getCurrentPosition: (ok: PositionCallback) => ok({ coords: { latitude: 14.58, longitude: 121.0 } } as GeolocationPosition) },
+    });
+    renderAt("/");
+    const hero = screen.getByRole("region", { name: "See the load on the transformer that feeds your street." });
+    await userEvent.click(within(hero).getByRole("button", { name: "Near me" }));
+    expect(await within(hero).findByText(/km from you/)).toBeTruthy();
+    expect(within(hero).getByText("overload")).toBeTruthy();
+    expect(within(hero).getAllByText("Simulated data").length).toBeGreaterThan(0);
+    expect(within(hero).getByRole("link", { name: "© OpenStreetMap contributors" })).toBeTruthy();
+  });
+
+  it("loads the scroll motion only when reduced motion is off", async () => {
+    startLandingMotion.mockClear();
+    mockApi({ "/api/v1/outages": [OUTAGE] });
+    renderAt("/");
+    await waitFor(() => expect(startLandingMotion).toHaveBeenCalledTimes(1));
+    expect(startLandingMotion).toHaveBeenCalledWith(document.querySelector("main > div"));
+  });
+
+  it("renders every section in its final state with reduced motion, and never loads the motion", async () => {
+    startLandingMotion.mockClear();
+    const matchMedia = window.matchMedia;
+    window.matchMedia = (query: string) =>
+      ({ ...matchMedia(query), matches: query.includes("min-width") || query.includes("reduce") }) as MediaQueryList;
+    try {
+      mockApi({ "/api/v1/outages": [OUTAGE] });
+      renderAt("/");
+      expect(await screen.findByText("overload")).toBeTruthy();
+      // Every decoding label shows its real text, and nothing is left hidden or offset by inline styles.
+      for (const label of ["Transformer risk, next 24 h", "Household clamp", "Summed per transformer", "Load and risk", "Map and outages"]) {
+        const shown = [...document.querySelectorAll<HTMLElement>("[data-decode]")].find((el) => el.dataset.decode === label);
+        expect(shown?.textContent).toBe(label);
+      }
+      expect(screen.getByText("Critical · T-132")).toBeTruthy();
+      for (const id of ["how-it-works", "engineers", "privacy", "sign-in"]) expect(document.getElementById(id)).toBeTruthy();
+      expect(document.querySelectorAll("[data-privacy] li")).toHaveLength(4);
+      expect(document.querySelector("[data-wordmark]")?.textContent).toBe("silip");
+      expect(document.querySelector('main [style*="opacity"], main [style*="clip-path"]')).toBeNull();
+      expect(startLandingMotion).not.toHaveBeenCalled();
+    } finally {
+      window.matchMedia = matchMedia;
+    }
   });
 
   it("sends old outage links with a query on / to /outages, keeping the query", async () => {

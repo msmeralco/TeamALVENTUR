@@ -217,8 +217,8 @@ function HomeRoute() {
 function Shell() {
   const location = useLocation();
   const { hasGroup } = useAuth();
-  // The risk map is a full-screen map; every other page sits in the centered column.
-  const fullBleed = location.pathname === "/engineer" && hasGroup("engineers");
+  // The risk map and the landing page are full width; every other page sits in the centered column.
+  const fullBleed = (location.pathname === "/engineer" && hasGroup("engineers")) || location.pathname === "/";
   return (
     // A full-height column, so the footer sits at the bottom of short pages such as the 404.
     <div className="flex min-h-dvh flex-col">

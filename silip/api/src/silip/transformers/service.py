@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
 import pandas as pd
 
+from silip.dashboard.domain import clamp_health, clamps_to_target, open_outage_ids
+from silip.dashboard.service import assess
+from silip.ev.service import transformer_ev
 from silip.shared.geo import BoundingBox
 from silip.shared.readings.adapters import LOCAL_TZ
 from silip.shared.readings.domain import DataSource
-from silip.shared.scores.domain import StoredRun
-from silip.shared.scores.service import score_window
+from silip.shared.scores.domain import ScoreDetail, StoredRun, WeatherStatus
 from silip.transformers.domain import (
     LoadPoint,
     TransformerCard,
@@ -21,10 +23,14 @@ from silip.transformers.domain import (
     TransformerNotFoundError,
     TransformerRisk,
 )
+from silip.weather.domain import WeatherOutlook, WeatherReader
+from silip.weather.service import cell_hours, no_forecast, outlook
 from silip_ml.readings.domain import load_pct
 from silip_ml.risk.domain import RiskOutput
+from silip_ml.weather import cell_id
 
 CARD_HISTORY = pd.Timedelta(hours=48)
+TIER_ORDER = {"Critical": 0, "Watch": 1, "OK": 2}
 
 
 class NoLoadDataError(LookupError):
@@ -33,25 +39,51 @@ class NoLoadDataError(LookupError):
 
 @dataclass(frozen=True)
 class RiskSnapshot:
-    """One scoring run: risk per transformer plus the forecast behind it."""
+    """One scoring run: risk per transformer, the forecast behind it and its dashboard fields."""
 
     transformers: pd.DataFrame
     forecast: pd.DataFrame
     risk: dict[str, RiskOutput]
     as_of: pd.Timestamp  # latest load interval scored
     scored_at: datetime
+    details: dict[str, ScoreDetail] = field(default_factory=dict)
+    forecaster: str | None = None
+    risk_scorer: str | None = None
+    weather_issued_at: datetime | None = None
+    weather_status: WeatherStatus | None = None
 
 
 def compute_risk(
-    source: DataSource, forecaster: str, risk_scorer: str, now: datetime
+    source: DataSource,
+    forecaster: str,
+    risk_scorer: str,
+    now: datetime,
+    weather_reader: WeatherReader | None = None,
+    ev_exposure: pd.DataFrame | None = None,
 ) -> RiskSnapshot:
-    """Score on request (DATA_SOURCE=simulated, no score store). Strategies are chosen by name."""
+    """Score on request (DATA_SOURCE=simulated, no score store). Strategies are chosen by name.
+
+    Simulated forecasts are read on the data's own clock, as the scoring job does.
+    """
     as_of = source.latest_load_ts()
     if as_of is None:
         raise NoLoadDataError
-    scored = score_window(source, as_of.to_pydatetime(), forecaster, risk_scorer)
-    risk = {score.transformer_id: score for score in scored.scores}
-    return RiskSnapshot(source.transformers(), scored.forecast, risk, as_of, now)
+    weather = (
+        no_forecast() if weather_reader is None else outlook(weather_reader, as_of.to_pydatetime())
+    )
+    assessed = assess(source, as_of, forecaster, risk_scorer, weather, ev_exposure)
+    return RiskSnapshot(
+        source.transformers(),
+        assessed.forecast,
+        {score.transformer_id: score for score in assessed.scores},
+        as_of,
+        now,
+        {detail.transformer_id: detail for detail in assessed.details},
+        assessed.forecaster,
+        risk_scorer,
+        weather.issued_at,
+        weather.status,
+    )
 
 
 def snapshot_from_run(stored: StoredRun, transformers: pd.DataFrame) -> RiskSnapshot:
@@ -59,38 +91,89 @@ def snapshot_from_run(stored: StoredRun, transformers: pd.DataFrame) -> RiskSnap
     risk = {score.transformer_id: score for score in stored.scores}
     scored = transformers[transformers["transformer_id"].isin(list(risk))]
     as_of = pd.Timestamp(stored.run.as_of).tz_convert(LOCAL_TZ)
-    return RiskSnapshot(scored, stored.forecast, risk, as_of, stored.run.finished_at)
+    return RiskSnapshot(
+        scored,
+        stored.forecast,
+        risk,
+        as_of,
+        stored.run.finished_at,
+        {detail.transformer_id: detail for detail in stored.details},
+        stored.run.forecaster,
+        stored.run.risk_scorer,
+        stored.run.weather_issued_at,
+        stored.run.weather_status,
+    )
 
 
-def _risk_row(snapshot: RiskSnapshot, row: Mapping[Hashable, Any]) -> TransformerRisk:
-    risk = snapshot.risk[row["transformer_id"]]
+def _stations_within(exposure: pd.DataFrame | None) -> dict[str, int]:
+    if exposure is None or exposure.empty:
+        return {}
+    return {
+        str(k): int(v)
+        for k, v in zip(exposure["transformer_id"], exposure["stations_within"], strict=True)
+    }
+
+
+def _risk_row(
+    snapshot: RiskSnapshot,
+    row: Mapping[Hashable, Any],
+    stations_within: Mapping[str, int],
+    open_outages: set[str],
+) -> TransformerRisk:
+    tid = row["transformer_id"]
+    risk = snapshot.risk[tid]
+    detail = snapshot.details.get(tid)
+    health = None
+    if detail is not None and detail.clamps_installed is not None:
+        health = clamp_health(int(row["homes"]), detail.clamps_installed, detail.clamps_online or 0)
     return TransformerRisk(
-        transformer_id=row["transformer_id"],
+        transformer_id=tid,
         lat=row["lat"],
         lon=row["lon"],
         rated_kva=row["rated_kva"],
         risk=risk,
         is_simulated=bool(row["is_simulated"]) or risk.is_simulated,
         scored_at=snapshot.scored_at,
+        action=None if detail is None else detail.action,
+        peak_ts=None if detail is None else detail.peak_ts,
+        top_reason=risk.reasons[0] if risk.reasons else None,
+        heat_index_max_c=None if detail is None else detail.heat_index_max_c,
+        ev_stations_within=stations_within.get(tid),
+        ev_evening_step_kw=None if detail is None else detail.ev_evening_step_kw,
+        clamp_health=health,
+        open_outage=tid in open_outages,
     )
 
 
-def risk_map(snapshot: RiskSnapshot, bbox: BoundingBox | None) -> list[TransformerRisk]:
+def risk_map(
+    snapshot: RiskSnapshot,
+    source: DataSource,
+    bbox: BoundingBox | None,
+    ev_exposure: pd.DataFrame | None = None,
+) -> list[TransformerRisk]:
     """Every transformer inside `bbox` (all when None), Critical first."""
-    order = {"Critical": 0, "Watch": 1, "OK": 2}
+    stations = _stations_within(ev_exposure)
+    outages = open_outage_ids(source.outages(), snapshot.as_of)
     rows = [
-        _risk_row(snapshot, row)
+        _risk_row(snapshot, row, stations, outages)
         for row in snapshot.transformers.to_dict("records")
         if row["transformer_id"] in snapshot.risk
         and (bbox is None or bbox.contains(row["lat"], row["lon"]))
     ]
-    return sorted(rows, key=lambda r: (order[r.risk.tier], -r.risk.peak_load_pct))
+    return sorted(rows, key=lambda r: (TIER_ORDER[r.risk.tier], -r.risk.peak_load_pct))
 
 
 def transformer_card(
-    snapshot: RiskSnapshot, source: DataSource, transformer_id: str
+    snapshot: RiskSnapshot,
+    source: DataSource,
+    transformer_id: str,
+    weather: WeatherOutlook | None = None,
+    weather_now: datetime | None = None,
+    stations: pd.DataFrame | None = None,
+    adoption: pd.DataFrame | None = None,
 ) -> TransformerCard:
-    """Risk plus the 48 h of load up to the run's interval and the forecast after it."""
+    """Risk plus the 48 h of load up to the run's interval and the forecast after it, the
+    drivers, the next 48 h of weather in its cell, EV exposure and the clamp target."""
     match = snapshot.transformers[snapshot.transformers["transformer_id"] == transformer_id]
     if match.empty:
         raise TransformerNotFoundError(transformer_id)
@@ -112,6 +195,34 @@ def transformer_card(
         )
         for ts, kw in zip(frame["ts"], frame[column], strict=True)
     ]
+    empty = pd.DataFrame(columns=["station_id", "name", "lat", "lon", "barangay", "city"])
+    ev = transformer_ev(
+        float(row["lat"]),
+        float(row["lon"]),
+        stations if stations is not None else empty,
+        adoption if adoption is not None else pd.DataFrame(),
+    )
+    outages = open_outage_ids(source.outages(), snapshot.as_of)
+    base = _risk_row(snapshot, row, {transformer_id: ev.stations_within}, outages)
+    detail = snapshot.details.get(transformer_id)
+    hours = (
+        []
+        if weather is None
+        else cell_hours(
+            weather,
+            cell_id(float(row["lat"]), float(row["lon"])),
+            weather_now if weather_now is not None else snapshot.as_of.to_pydatetime(),
+        )
+    )
+    health = base.clamp_health
     return TransformerCard(
-        **_risk_row(snapshot, row).model_dump(), as_of=snapshot.as_of, load=points
+        **base.model_dump(),
+        as_of=snapshot.as_of,
+        load=points,
+        drivers=[] if detail is None else detail.drivers,
+        weather=hours,
+        ev=ev,
+        clamps_to_target=None
+        if health is None
+        else clamps_to_target(health.homes, health.clamps_online),
     )

@@ -5,14 +5,20 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Literal, Protocol
+from typing import Protocol
 
 import pandas as pd
+from pydantic import BaseModel
+
+from silip.shared.scores.domain import WeatherStatus
 
 WEATHER_STALE_H = 6  # [VERIFY] a forecast older than this is shown as stale
 WEATHER_MAX_AGE_H = 24  # older than this, scoring uses the non-weather forecaster
 REFRESH_EVERY = timedelta(minutes=60)  # at most one Open-Meteo request per hour
 FORECAST_DAYS = 3
+OUTLOOK_HOURS = 48  # what the dashboard shows ahead
+# The provider label shown beside every weather number.
+SOURCE_LABELS = {"simulated": "Simulated", "open_meteo": "Open-Meteo"}
 LOCAL_TZ = "Asia/Manila"
 
 WEATHER_COLUMNS = [
@@ -29,8 +35,6 @@ WEATHER_COLUMNS = [
     "source",
     "is_simulated",
 ]
-
-WeatherStatus = Literal["fresh", "stale", "missing"]
 
 
 class WeatherFetchError(RuntimeError):
@@ -79,3 +83,43 @@ class WeatherStore(WeatherReader, Protocol):
     def insert(self, rows: pd.DataFrame) -> int:
         """Insert-only; returns rows added."""
         ...
+
+
+class WeatherHour(BaseModel):
+    """One forecast hour in one weather cell."""
+
+    ts: datetime
+    temperature_c: float | None
+    relative_humidity_pct: float | None
+    precipitation_mm: float | None
+    heat_index_c: float | None
+
+
+class AreaHour(BaseModel):
+    """One forecast hour across the cells in view: the hottest and wettest cell."""
+
+    ts: datetime
+    heat_index_max_c: float | None
+    temperature_max_c: float | None
+    precipitation_max_mm: float | None
+
+
+class CellPeak(BaseModel):
+    """A weather cell's hottest forecast hour in the outlook window."""
+
+    cell_id: str
+    lat: float
+    lon: float
+    heat_index_max_c: float | None
+    max_at: datetime | None
+
+
+class AreaOutlook(BaseModel):
+    """The next OUTLOOK_HOURS of forecast for the transformers in view."""
+
+    issued_at: datetime | None
+    status: WeatherStatus
+    source: str
+    hours: list[AreaHour]
+    cells: list[CellPeak]
+    is_simulated: bool

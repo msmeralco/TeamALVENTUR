@@ -7,12 +7,23 @@ from typing import Any
 
 import pandas as pd
 
-from silip.clamps.domain import ClampMap, ClampPoint, ClampStatus
-from silip.shared.geo import BoundingBox
-from silip.shared.readings.domain import DataSource
-
-# Four missed 15-minute readings. Design choice, no source: [VERIFY] against field reconnect data.
-OFFLINE_AFTER = pd.Timedelta(minutes=60)
+from silip.clamps.domain import (
+    ClampMap,
+    ClampPoint,
+    ClampStatus,
+    ClampTotals,
+    CoverageMap,
+    TransformerCoverage,
+)
+from silip.dashboard.domain import (
+    MIN_TRUST_REPORTING,
+    TARGET_COVERAGE,
+    by_transformer,
+    clamp_health,
+    clamps_to_target,
+)
+from silip.shared.geo import BoundingBox, within
+from silip.shared.readings.domain import OFFLINE_AFTER, DataSource
 
 
 def status(last_seen_at: pd.Timestamp | None, as_of: pd.Timestamp) -> ClampStatus:
@@ -63,4 +74,45 @@ def clamp_map(source: DataSource, bbox: BoundingBox | None) -> ClampMap:
         offline_after_min=offline_after_min,
         clamps=points,
         is_simulated=bool(clamps["is_simulated"].any()),
+    )
+
+
+def coverage(source: DataSource, bbox: BoundingBox | None) -> CoverageMap:
+    """Clamp health per transformer inside `bbox`, judged at the latest load interval (the
+    data's own clock, as scoring does). Counted where the data lives."""
+    offline_after_min = int(OFFLINE_AFTER.total_seconds() // 60)
+    as_of = source.latest_load_ts()
+    transformers = within(source.transformers(), bbox)
+    counts = by_transformer(source.clamp_counts(as_of.to_pydatetime())) if as_of else {}
+    rows = []
+    for row in transformers.to_dict("records"):
+        tid = str(row["transformer_id"])
+        found = counts.get(tid, {})
+        health = clamp_health(
+            int(row["homes"]),
+            int(found.get("clamps_installed", 0)),
+            int(found.get("clamps_online", 0)),
+        )
+        rows.append(
+            TransformerCoverage(
+                transformer_id=tid,
+                lat=row["lat"],
+                lon=row["lon"],
+                clamp_health=health,
+                clamps_to_target=clamps_to_target(health.homes, health.clamps_online),
+                is_simulated=bool(row["is_simulated"]) or bool(found.get("is_simulated")),
+            )
+        )
+    rows.sort(key=lambda r: (r.clamp_health.reporting_pct, r.transformer_id))
+    return CoverageMap(
+        as_of=None if as_of is None else as_of.to_pydatetime(),
+        offline_after_min=offline_after_min,
+        target_coverage=TARGET_COVERAGE,
+        min_trust_reporting=MIN_TRUST_REPORTING,
+        clamps=ClampTotals(
+            installed=sum(r.clamp_health.clamps_installed for r in rows),
+            online=sum(r.clamp_health.clamps_online for r in rows),
+        ),
+        transformers=rows,
+        is_simulated=any(r.is_simulated for r in rows),
     )

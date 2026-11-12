@@ -1,6 +1,7 @@
 """API test client on simulated data with a fake Cognito decoder (no network)."""
 
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -12,12 +13,16 @@ from silip.shared.deps import get_data_source
 from silip.shared.readings.adapters import SimulatedSource
 from tests.api.helpers import CLIENT_ID, FakeDecoder
 
+# Three made-up stations in the delivered DOE header: two near fixture transformers, one far.
+FIXTURE_EV = Path(__file__).parents[1] / "fixtures" / "ev"
+
 
 @pytest.fixture(scope="session")
 def client(sim_dir) -> Iterator[TestClient]:
     settings = ApiSettings(
         data_dir=sim_dir,
         data_source="simulated",
+        ev_data_dir=FIXTURE_EV,
         cognito_user_pool_id="pool",
         cognito_client_id=CLIENT_ID,
         auth_disabled=False,

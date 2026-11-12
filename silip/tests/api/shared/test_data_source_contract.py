@@ -13,7 +13,7 @@ import pytest
 from silip.shared.config import ApiSettings
 from silip.shared.db import connect
 from silip.shared.readings.adapters import NeonSource, SimulatedSource
-from silip.shared.readings.domain import DataSource
+from silip.shared.readings.domain import CLAMP_COUNT_COLUMNS, DataSource
 
 NEON_URL_SET = bool(os.environ.get("DATABASE_URL") or os.environ.get("DATABASE_POOLER_URL"))
 
@@ -83,6 +83,18 @@ def test_tables_have_the_contract_columns_and_types(source):
 def test_every_transformer_has_load(source):
     with_load = set(source.load()["transformer_id"])
     assert set(source.transformers()["transformer_id"]) <= with_load
+
+
+def test_clamp_counts_are_counts_per_transformer(source):
+    clamps = source.clamps()
+    as_of = clamps["last_seen_at"].max()
+    counts = source.clamp_counts(as_of)
+    assert list(counts.columns) == CLAMP_COUNT_COLUMNS
+    assert counts["clamps_installed"].sum() == len(clamps)
+    assert (counts["clamps_online"] <= counts["clamps_installed"]).all()
+    assert 0 < counts["clamps_online"].sum() < len(clamps)  # the simulator has dead clamps
+    later = source.clamp_counts(as_of + pd.Timedelta(days=30))
+    assert later["clamps_online"].sum() == 0
 
 
 def test_clamps_carry_no_household_identity(source):

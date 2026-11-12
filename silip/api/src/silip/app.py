@@ -15,12 +15,15 @@ from mangum import Mangum
 
 from silip.bench.api import router as bench_router
 from silip.clamps.api import router as clamps_router
+from silip.dashboard.api import router as dashboard_router
 from silip.devices.api import router as devices_router
+from silip.ev.api import router as ev_router
 from silip.ingest.api import router as ingest_router
 from silip.outages.api import router as outages_router
 from silip.shared.auth.api import router as auth_router
 from silip.shared.config import get_settings
 from silip.transformers.api import router as transformers_router
+from silip.weather.api import router as weather_router
 
 # Fail at cold start, not on the first request, if AUTH_DISABLED=true is set inside Lambda.
 get_settings()
@@ -28,7 +31,7 @@ get_settings()
 app = FastAPI(
     title="SILIP API",
     version="0.1.0",
-    description="Transformer risk and outages for engineers. Decision support only.",
+    description="Transformer risk and the engineer decision dashboard. Decision support only.",
 )
 
 
@@ -39,7 +42,10 @@ def health() -> dict[str, str]:
 
 for router in (
     auth_router,
+    dashboard_router,
     transformers_router,
+    weather_router,
+    ev_router,
     outages_router,
     clamps_router,
     devices_router,

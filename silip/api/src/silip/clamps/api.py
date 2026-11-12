@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from silip.clamps import service
-from silip.clamps.domain import ClampMap
+from silip.clamps.domain import ClampMap, CoverageMap
 from silip.shared.auth.api import AUTH_RESPONSES, Engineer
 from silip.shared.deps import Source
-from silip.shared.geo import BoundingBox
+from silip.shared.geo import BoundingBox, parse_bbox
 
 router = APIRouter(prefix="/api/v1/clamps", tags=["clamps"])
 
@@ -27,3 +27,12 @@ def list_clamps(
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return service.clamp_map(source, box)
+
+
+@router.get("/coverage", response_model=CoverageMap, responses=AUTH_RESPONSES)
+def clamp_coverage(
+    source: Source, _: Engineer, box: Annotated[BoundingBox | None, Depends(parse_bbox)]
+) -> CoverageMap:
+    """Clamps installed and online, homes reporting, and clamps still needed for the target,
+    per transformer, least covered first. Counts only."""
+    return service.coverage(source, box)

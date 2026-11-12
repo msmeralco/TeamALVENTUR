@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 
-from silip.scoring.handler import utc_now
+from silip.scoring.handler import ev_exposure, run_weather, utc_now
 from silip.scoring.service import run_once
 from silip.shared.config import get_settings
 from silip.shared.deps import get_data_source, get_score_store
@@ -18,7 +18,13 @@ def main() -> None:
         return
     started = time.perf_counter()
     result = run_once(
-        get_data_source(settings), store, settings.forecaster, settings.risk_scorer, utc_now
+        get_data_source(settings),
+        store,
+        settings.forecaster,
+        settings.risk_scorer,
+        utc_now,
+        run_weather(settings),
+        ev_exposure(settings),
     )
     seconds = time.perf_counter() - started
     print(

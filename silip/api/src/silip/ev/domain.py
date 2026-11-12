@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Literal, Protocol
 
 import pandas as pd
+from pydantic import BaseModel
 
 STATION_SOURCE = "DOE EVCS list (data/evcs_locations.csv)"
 STATION_COLUMNS = [
@@ -46,6 +47,7 @@ EXPOSURE_COLUMNS = [
 ]
 
 AdoptionStatus = Literal["loaded", "not_loaded"]
+ScenarioLabel = Literal["Scenario, not a forecast"]
 
 
 @dataclass(frozen=True)
@@ -73,3 +75,65 @@ class EvStore(Protocol):
     def adoption(self) -> pd.DataFrame: ...
 
     def exposure(self) -> pd.DataFrame: ...
+
+
+class Charger(BaseModel):
+    """One public DOE charging station (a public site, not a home)."""
+
+    station_id: str
+    name: str
+    lat: float
+    lon: float
+    barangay: str | None
+    city: str | None
+
+
+class ChargerMap(BaseModel):
+    """DOE stations in view, and the radius used to link them to transformers."""
+
+    radius_m: int
+    source: str
+    stations: list[Charger]
+    is_simulated: bool
+
+
+class AdoptionPoint(BaseModel):
+    period: str
+    geography_level: str
+    geography: str
+    metric: str
+    vehicle_class: str
+    value: float
+    unit: str
+
+
+class Adoption(BaseModel):
+    """Delivered EV adoption statistics; `not_loaded` until the file arrives."""
+
+    status: AdoptionStatus
+    series: list[AdoptionPoint]
+    source_url: str | None
+    is_simulated: bool
+
+
+class AdoptionScenario(BaseModel):
+    """The latest adoption figure, shown for planning only. Not a model input."""
+
+    label: ScenarioLabel = "Scenario, not a forecast"
+    period: str
+    geography: str
+    metric: str
+    vehicle_class: str
+    value: float
+    unit: str
+    source_url: str | None
+
+
+class TransformerEv(BaseModel):
+    """EV exposure of one transformer: DOE stations within the radius."""
+
+    stations_within: int
+    nearest_station_m: float | None
+    radius_m: int
+    stations: list[Charger]
+    adoption_scenario: AdoptionScenario | None

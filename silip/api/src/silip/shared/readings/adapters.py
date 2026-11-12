@@ -11,6 +11,7 @@ from typing import Any, ClassVar, LiteralString
 import pandas as pd
 import psycopg
 
+from silip.shared.readings.domain import CLAMP_COUNT_COLUMNS, OFFLINE_AFTER
 from silip_ml.readings.dataset import Dataset, load_dataset
 
 CLAMP_COLUMNS = [
@@ -71,6 +72,22 @@ class SimulatedSource:
 
     def clamps(self) -> pd.DataFrame:
         return self._clamps
+
+    def clamp_counts(self, as_of: datetime) -> pd.DataFrame:
+        clamps = self._clamps
+        online = clamps["last_seen_at"].notna() & (
+            clamps["last_seen_at"] >= pd.Timestamp(as_of) - OFFLINE_AFTER
+        )
+        counts = (
+            clamps.assign(online=online)
+            .groupby("transformer_id", as_index=False)
+            .agg(
+                clamps_installed=("clamp_id", "size"),
+                clamps_online=("online", "sum"),
+                is_simulated=("is_simulated", "any"),
+            )
+        )
+        return counts.astype({"clamps_online": int})[CLAMP_COUNT_COLUMNS]
 
 
 BUCKET: LiteralString = "date_bin('15 minutes', ts, TIMESTAMPTZ '2000-01-01')"
@@ -161,6 +178,20 @@ class _NeonSource:
             " FROM clamp c JOIN household h USING (sin_hash)"
             " WHERE h.lat IS NOT NULL AND h.lon IS NOT NULL ORDER BY c.clamp_id"
         )
+
+    def clamp_counts(self, as_of: datetime) -> pd.DataFrame:
+        # Counted in SQL: no clamp_id, sin_hash or home location leaves the database.
+        counts = self._frame(
+            "SELECT h.transformer_id, count(*)::int AS clamps_installed,"
+            " (count(*) FILTER (WHERE c.last_seen_at >= %(as_of)s::timestamptz"
+            " - %(offline_after)s::interval))::int AS clamps_online,"
+            " bool_or(c.is_simulated OR h.is_simulated) AS is_simulated"
+            " FROM clamp c JOIN household h USING (sin_hash)"
+            " WHERE h.transformer_id NOT LIKE 'BENCH-%%' GROUP BY h.transformer_id"
+            " ORDER BY h.transformer_id",
+            {"as_of": _db_time(as_of), "offline_after": OFFLINE_AFTER.to_pytimedelta()},
+        )
+        return counts if not counts.empty else pd.DataFrame(columns=CLAMP_COUNT_COLUMNS)
 
 
 class ClampSource(_NeonSource):

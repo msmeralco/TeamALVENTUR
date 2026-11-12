@@ -7,7 +7,7 @@ from typing import Any
 import pandas as pd
 
 from silip.shared.auth.domain import AuthenticationError
-from silip.shared.scores.domain import DuplicateRunError, ScoreRun, StoredRun
+from silip.shared.scores.domain import DuplicateRunError, ScoreDetail, ScoreRun, StoredRun
 from silip_ml.risk.domain import RiskOutput
 
 CLIENT_ID = "test-client"
@@ -47,11 +47,15 @@ class FakeScoreStore:
         )
 
     def write_run(
-        self, run: ScoreRun, scores: Sequence[RiskOutput], forecast: pd.DataFrame
+        self,
+        run: ScoreRun,
+        scores: Sequence[RiskOutput],
+        forecast: pd.DataFrame,
+        details: Sequence[ScoreDetail] = (),
     ) -> None:
         if FakeScoreStore.has_complete_run(self, run.as_of, run.forecaster, run.risk_scorer):
             raise DuplicateRunError(run.as_of.isoformat())  # the unique index on score_run
-        self.complete.append(StoredRun(run, tuple(scores), forecast.copy()))
+        self.complete.append(StoredRun(run, tuple(scores), forecast.copy(), tuple(details)))
 
     def write_failed(self, run: ScoreRun, error_class: str) -> None:
         self.failed.append((run, error_class))

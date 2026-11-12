@@ -84,7 +84,7 @@ def test_reads_the_latest_completed_run_from_the_store(client, overrides, sim_di
 
     latest = store.latest_run()
     assert latest is not None and latest.run.run_id == newer.run_id
-    stored = {score.transformer_id: score.model_dump() for score in latest.scores}
+    stored = {s.transformer_id: s.model_dump(mode="json") for s in latest.scores}
     assert {item["transformer_id"]: item["risk"] for item in body} == stored
     assert {item["scored_at"] for item in body} == {
         latest.run.finished_at.isoformat().replace("+00:00", "Z")
@@ -123,7 +123,7 @@ def test_simulated_mode_recomputes_after_the_ttl(client, overrides, sim_dir):
     assert {item["scored_at"] for item in first} == {"2026-01-01T00:00:00Z"}
 
 
-def test_transformer_without_a_week_of_readings_is_omitted_until_forecastable(dataset):
+def test_transformer_without_a_week_of_readings_is_omitted_until_forecastable(dataset, sim_dir):
     transformers = dataset.transformers.copy()
     added = transformers.iloc[0].copy()
     added["transformer_id"] = "T-150"
@@ -132,15 +132,18 @@ def test_transformer_without_a_week_of_readings_is_omitted_until_forecastable(da
     one_reading["transformer_id"] = "T-150"
     one_reading["ts"] = dataset.load["ts"].max()
     load = pd.concat([dataset.load, one_reading], ignore_index=True)
+    real = SimulatedSource(sim_dir)
     source = SimpleNamespace(
         transformers=lambda: transformers,
         load=lambda since=None: load if since is None else load[load["ts"] > since],
         latest_load_ts=lambda: load["ts"].max(),
+        outages=real.outages,
+        clamp_counts=real.clamp_counts,
     )
 
     snapshot = compute_risk(source, "seasonal_naive", "rules", START)
 
-    assert "T-150" not in {item.transformer_id for item in risk_map(snapshot, None)}
-    assert len(risk_map(snapshot, None)) == len(dataset.transformers)
+    assert "T-150" not in {item.transformer_id for item in risk_map(snapshot, source, None)}
+    assert len(risk_map(snapshot, source, None)) == len(dataset.transformers)
     with pytest.raises(TransformerDataUnavailableError):
         transformer_card(snapshot, source, "T-150")

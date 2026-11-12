@@ -5,10 +5,14 @@ from datetime import UTC, datetime
 import pandas as pd
 import pytest
 
+from silip.dashboard.domain import ACTIONS
 from silip.scoring import handler
+from silip.scoring.domain import LiveWeather, SimulatedWeatherInput
 from silip.scoring.service import run_once
 from silip.shared.config import ApiSettings
 from silip.shared.readings.adapters import SimulatedSource
+from silip.weather.adapters import SimulatedWeather
+from silip.weather.domain import WeatherFetchError
 from silip_ml.core.registry import UnknownStrategyError
 from silip_ml.readings.domain import STEPS_PER_DAY
 from tests.api.helpers import FakeScoreStore, StepClock
@@ -110,3 +114,106 @@ def test_losing_a_race_for_the_same_interval_is_a_skip_not_a_failure(sim_dir):
     again = run_once(source, store, "seasonal_naive", "rules", StepClock(START))
 
     assert again.status == "skipped" and store.failed == [] and len(store.complete) == 1
+
+
+class FailingFetcher:
+    def fetch(self, cells):
+        raise WeatherFetchError("provider down")
+
+
+class BrokenStore:
+    """A weather cache whose reads and inserts both fail (Neon unreachable)."""
+
+    def latest(self, as_of):
+        raise OSError("neon unreachable")
+
+    def insert(self, rows):
+        raise OSError("neon unreachable")
+
+
+class InsertFails(SimulatedWeather):
+    """Stored simulated forecasts readable, but the insert after a fetch fails."""
+
+    def insert(self, rows):
+        raise OSError("insert refused")
+
+
+class OkFetcher:
+    def __init__(self):
+        self.calls = 0
+
+    def fetch(self, cells):
+        self.calls += 1
+        return pd.DataFrame(
+            columns=[
+                "cell_id",
+                "lat",
+                "lon",
+                "ts",
+                "temperature_c",
+                "relative_humidity_pct",
+                "precipitation_mm",
+            ]
+        )
+
+
+def test_a_run_stores_dashboard_details_and_the_weather_it_used(sim_dir, dataset):
+    store = FakeScoreStore()
+    weather = SimulatedWeatherInput(SimulatedWeather(sim_dir))
+    run_once(SimulatedSource(sim_dir), store, "seasonal_naive", "rules", StepClock(START), weather)
+
+    stored = store.latest_run()
+    assert stored is not None
+    assert stored.run.weather_status in {"fresh", "stale"}
+    assert stored.run.weather_issued_at is not None
+    assert len(stored.details) == len(dataset.transformers)
+    for detail in stored.details:
+        assert detail.action in ACTIONS and detail.peak_ts is not None
+        assert detail.drivers and detail.drivers[0].feature == "peak_load_pct"
+        assert detail.clamps_online is not None and detail.clamps_installed is not None
+
+
+@pytest.mark.parametrize(
+    "weather",
+    [
+        LiveWeather(BrokenStore(), FailingFetcher()),
+        LiveWeather(BrokenStore(), OkFetcher()),
+    ],
+    ids=["provider and cache down", "cache insert fails"],
+)
+def test_a_weather_failure_never_fails_the_run(sim_dir, weather):
+    store = FakeScoreStore()
+    result = run_once(
+        SimulatedSource(sim_dir), store, "seasonal_naive", "rules", StepClock(START), weather
+    )
+
+    assert result.status == "complete" and store.failed == []
+    stored = store.latest_run()
+    assert stored is not None and stored.run.weather_status == "missing"
+    assert stored.run.weather_issued_at is None
+
+
+def test_a_failed_insert_falls_back_to_the_stored_forecast(sim_dir, dataset):
+    store, fetcher = FakeScoreStore(), OkFetcher()
+    latest = dataset.load["ts"].max().to_pydatetime()
+    weather = LiveWeather(InsertFails(sim_dir), fetcher)
+    run_once(SimulatedSource(sim_dir), store, "seasonal_naive", "rules", lambda: latest, weather)
+
+    stored = store.latest_run()
+    assert stored is not None and fetcher.calls == 1
+    assert stored.run.weather_status in {"fresh", "stale"}  # the cached simulated forecast
+
+
+def test_without_weather_a_weather_forecaster_falls_back_to_its_twin(sim_dir):
+    store = FakeScoreStore()
+    run_once(
+        SimulatedSource(sim_dir),
+        store,
+        "lightgbm_weather",
+        "rules",
+        StepClock(START),
+        LiveWeather(BrokenStore(), FailingFetcher()),
+    )
+
+    stored = store.latest_run()
+    assert stored is not None and stored.run.forecaster == "lightgbm"

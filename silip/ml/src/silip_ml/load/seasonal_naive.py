@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from silip_ml.core.registry import register
+from silip_ml.features import WeatherInput
 from silip_ml.load.domain import forecast_frame, history_grid
 from silip_ml.readings.domain import STEPS_PER_WEEK
 
@@ -23,7 +24,9 @@ class SeasonalNaive:
     def fit(self, load: pd.DataFrame) -> Self:
         return self
 
-    def predict(self, history: pd.DataFrame, horizon_steps: int) -> pd.DataFrame:
+    def predict(
+        self, history: pd.DataFrame, horizon_steps: int, weather: WeatherInput | None = None
+    ) -> pd.DataFrame:
         grid = history_grid(history)
         last_week = grid.values[-STEPS_PER_WEEK:]  # (steps, transformers)
         kw_pred = last_week[np.arange(horizon_steps) % STEPS_PER_WEEK]

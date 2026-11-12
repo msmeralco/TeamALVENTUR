@@ -16,7 +16,7 @@ import pandas as pd
 from silip_ml.core.artifacts import Artifact, load_artifact
 from silip_ml.core.config import get_ml_settings
 from silip_ml.core.registry import register
-from silip_ml.features import risk_features
+from silip_ml.features import WeatherInput, risk_features
 from silip_ml.risk.domain import RiskOutput, Tier, risk_output
 
 TASK, NAME = "risk_scorer", "lightgbm"
@@ -26,12 +26,14 @@ TASK, NAME = "risk_scorer", "lightgbm"
 class LightGBMScorer:
     """Kept only if the backtest beats `rules` on recall without more false alarms."""
 
+    name = NAME  # artifact folder; subclasses that only change the artifact override it
+
     def __init__(self, models_dir: Path | None = None) -> None:
         self._models_dir = models_dir or get_ml_settings().models_dir
 
     @property
     def artifact(self) -> Artifact:
-        return load_artifact(Path(self._models_dir), TASK, NAME)
+        return load_artifact(Path(self._models_dir), TASK, self.name)
 
     def fit(self, load: pd.DataFrame, transformers: pd.DataFrame) -> Self:
         return self  # trained in the notebooks; kept for callers that still call fit
@@ -42,8 +44,14 @@ class LightGBMScorer:
         x = features[artifact.features].to_numpy(dtype=np.float64)
         return np.asarray(artifact.booster.predict(x), dtype=np.float64)
 
-    def score(self, forecast: pd.DataFrame, transformers: pd.DataFrame) -> list[RiskOutput]:
-        features = risk_features(forecast, "kw_pred", transformers)
+    def score(
+        self,
+        forecast: pd.DataFrame,
+        transformers: pd.DataFrame,
+        weather: WeatherInput | None = None,
+        history: pd.DataFrame | None = None,
+    ) -> list[RiskOutput]:
+        features = risk_features(forecast, "kw_pred", transformers, weather, history)
         thresholds = self.artifact.metadata["thresholds"]
         tiers = _tiers(self.probability(features), thresholds["critical"], thresholds["watch"])
         return [

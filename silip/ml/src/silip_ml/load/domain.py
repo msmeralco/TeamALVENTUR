@@ -7,7 +7,7 @@ from typing import Protocol, Self
 import numpy as np
 import pandas as pd
 
-from silip_ml.features import STEP, Grid, to_grid
+from silip_ml.features import STEP, Grid, WeatherInput, to_grid
 from silip_ml.readings.domain import STEPS_PER_WEEK
 
 __all__ = ["STEP", "Forecaster", "InsufficientHistoryError", "forecast_frame", "history_grid"]
@@ -29,7 +29,11 @@ class Forecaster(Protocol):
 
     def fit(self, load: pd.DataFrame) -> Self: ...
 
-    def predict(self, history: pd.DataFrame, horizon_steps: int) -> pd.DataFrame: ...
+    def predict(
+        self, history: pd.DataFrame, horizon_steps: int, weather: WeatherInput | None = None
+    ) -> pd.DataFrame:
+        """`weather` (hourly forecasts and cells) is read only by strategies that use it."""
+        ...
 
 
 def history_grid(history: pd.DataFrame, min_steps: int = STEPS_PER_WEEK) -> Grid:

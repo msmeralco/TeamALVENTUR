@@ -17,18 +17,26 @@ from silip_ml.core.privacy import sin_hash
 from silip_ml.readings.aggregate import sum_by_transformer
 from silip_ml.readings.dataset import FILES
 from silip_ml.readings.domain import INTERVAL, STEPS_PER_DAY, load_pct
+from silip_ml.readings.osm_buildings import SEARCH_RADIUS_M, load_buildings
+from silip_ml.readings.osm_buildings import SNAPSHOT_PATH as BUILDINGS_PATH
+from silip_ml.readings.osm_transformers import SNAPSHOT_PATH, load_sites, sample_sites
 
 RATINGS_KVA = [25, 37.5, 50, 75, 100]
 CLAMP_SHARE = 0.6
 EV_SHARE = 0.2
-# Simulated area: a box around Metro Manila, only to place pins on a map.
-CENTER_LAT, CENTER_LON, SPREAD_DEG = 14.58, 121.0, 0.05
 # Trip rule from silip-domain: load >110% for 3+ h on 3+ days.
 TRIP_LOAD_PCT, TRIP_MIN_STEPS, TRIP_MIN_DAYS = 1.10, 12, 3
 OTHER_OUTAGES_PER_DAY = 0.05
 MEDIAN_DURATION_MIN = {"overload": 180, "weather": 150, "equipment": 240}
 DURATION_SIGMA = 0.5
 GASP_JITTER_DEG, REPORT_JITTER_DEG = 0.0003, 0.0015
+# Clamps: SCT-013-000 per docs/SPEC.md#hardware; IDs follow the firmware's MQTT client ID.
+CT_MODEL = "SCT-013-000"
+CLAMP_ID = "silip-node-{:04d}"
+INSTALL_WINDOW_DAYS = 120  # clamps went in up to this long before the run starts
+OFFLINE_SHARE = 0.05  # clamps that stopped reporting before the run ended
+SHARED_UNIT_JITTER_M = 4  # homes sharing one building (multi-unit) sit a few metres apart
+METERS_PER_DEG_LAT = 111_320
 
 
 def _homes_kw(
@@ -70,9 +78,83 @@ def _signals(rng: np.random.Generator, outage: dict, clamped: int) -> list[dict]
     ]
 
 
-def simulate(transformers: int, days: int, seed: int, salt: str) -> dict[str, pd.DataFrame]:
-    """Build every table in memory. Keys match `silip_ml.readings.dataset.FILES`."""
+def _place_homes(
+    rng: np.random.Generator,
+    homes: int,
+    lat: float,
+    lon: float,
+    near: pd.DataFrame,
+    taken: set[int],
+) -> pd.DataFrame:
+    """One spot per home: the nearest free OSM buildings, shared as units when there are too few.
+
+    Without any building nearby, homes scatter within `SEARCH_RADIUS_M` (osm_way_id stays empty).
+    """
+    free = near[~near["osm_way_id"].isin(taken)]
+    pool = free if len(free) > 0 else near
+    if len(pool) == 0:
+        radius = SEARCH_RADIUS_M * np.sqrt(rng.random(homes))
+        angle = rng.uniform(0, 2 * np.pi, homes)
+        dy, dx = radius * np.sin(angle), radius * np.cos(angle)
+        way = pd.Series([pd.NA] * homes, dtype="Int64")
+        base_lat, base_lon = np.full(homes, lat), np.full(homes, lon)
+    else:
+        picks = pool.iloc[np.arange(homes) % len(pool)]  # nearest first, then units share
+        taken.update(picks["osm_way_id"].astype(int))
+        shared = np.arange(homes) >= len(pool)
+        dy, dx = (rng.normal(0, SHARED_UNIT_JITTER_M, (2, homes)) * shared).astype(float)
+        way = picks["osm_way_id"].astype("Int64").reset_index(drop=True)
+        base_lat, base_lon = picks["lat"].to_numpy(), picks["lon"].to_numpy()
+    k_lon = METERS_PER_DEG_LAT * np.cos(np.radians(lat))
+    return pd.DataFrame(
+        {"lat": base_lat + dy / METERS_PER_DEG_LAT, "lon": base_lon + dx / k_lon, "osm_way_id": way}
+    )
+
+
+def _clamps(
+    rng: np.random.Generator, hashes: list[str], first_id: int, ts: pd.DatetimeIndex
+) -> list[dict]:
+    """One clamp per opted-in home: install date before the run, last report near its end."""
+    rows = []
+    for i, h in enumerate(hashes):
+        installed = ts[0] - pd.Timedelta(days=float(rng.uniform(1, INSTALL_WINDOW_DAYS)))
+        offline = rng.random() < OFFLINE_SHARE
+        gap_min = rng.uniform(60, 3 * 24 * 60) if offline else rng.uniform(0, 15)
+        rows.append(
+            {
+                "clamp_id": CLAMP_ID.format(first_id + i),
+                "sin_hash": h,
+                "ct_model": CT_MODEL,
+                "installed_at": installed.floor("min"),
+                "last_seen_at": (ts[-1] - pd.Timedelta(minutes=float(gap_min))).floor("s"),
+            }
+        )
+    return rows
+
+
+def simulate(
+    transformers: int,
+    days: int,
+    seed: int,
+    salt: str,
+    sites_path: Path = SNAPSHOT_PATH,
+    buildings_path: Path = BUILDINGS_PATH,
+) -> dict[str, pd.DataFrame]:
+    """Build every table in memory. Keys match `silip_ml.readings.dataset.FILES`.
+
+    Transformer positions are real OSM sites (`sites_path`) and homes sit on real OSM buildings
+    near them (`buildings_path`); load, homes, clamps and outages are simulated.
+
+    Raises:
+        NotEnoughSitesError: if `transformers` exceeds the sites in the snapshot.
+    """
+    sites = sample_sites(load_sites(sites_path), transformers, seed)
+    buildings = load_buildings(buildings_path)
     rng = np.random.default_rng(seed)
+    # A separate stream, so adding homes' places and clamps leaves every load number unchanged.
+    place_rng = np.random.default_rng([seed, 1])
+    taken: set[int] = set()
+    clamp_rows: list[dict] = []
     ts = pd.date_range("2026-04-01", periods=days * STEPS_PER_DAY, freq=INTERVAL, tz="Asia/Manila")
     day = (ts.day_of_year - ts.day_of_year[0]).to_numpy()
     heat = 36 + 5 * np.sin(day / 4) + rng.normal(0, 1.5, len(ts))  # heat index, C
@@ -90,10 +172,8 @@ def simulate(transformers: int, days: int, seed: int, salt: str) -> dict[str, pd
         tid = f"T-{100 + t}"
         rated = float(rng.choice(RATINGS_KVA))
         homes = int(rng.integers(20, 61))
-        lat, lon = (
-            CENTER_LAT + rng.uniform(-1, 1) * SPREAD_DEG,
-            CENTER_LON + rng.uniform(-1, 1) * SPREAD_DEG,
-        )
+        site = sites.iloc[t]
+        lat, lon = float(site["lat"]), float(site["lon"])
         hashes = [sin_hash(f"{tid}-{h}", salt) for h in range(homes)]
         has_clamp = rng.random(homes) < CLAMP_SHARE
         kw = _homes_kw(rng, homes, heat, hour)
@@ -132,12 +212,17 @@ def simulate(transformers: int, days: int, seed: int, salt: str) -> dict[str, pd
                 "coverage_pct": has_clamp.mean(),
                 "lat": lat,
                 "lon": lon,
+                "osm_node_id": int(site["osm_node_id"]),
             }
         )
+        near = buildings[buildings["osm_node_id"] == site["osm_node_id"]]
+        places = _place_homes(place_rng, homes, lat, lon, near, taken)
         sin_rows += [
-            {"sin_hash": h, "transformer_id": tid, "has_clamp": bool(c)}
-            for h, c in zip(hashes, has_clamp, strict=True)
+            {"sin_hash": h, "transformer_id": tid, "has_clamp": bool(c), **place}
+            for h, c, place in zip(hashes, has_clamp, places.to_dict("records"), strict=True)
         ]
+        clamped = [h for h, c in zip(hashes, has_clamp, strict=True) if c]
+        clamp_rows += _clamps(place_rng, clamped, len(clamp_rows) + 1, ts)
         if t == 0:  # per-home detail for one transformer, for the household view
             household_frames.append(readings[np.repeat(has_clamp, len(ts))])
 
@@ -170,6 +255,7 @@ def simulate(transformers: int, days: int, seed: int, salt: str) -> dict[str, pd
         "outages": pd.DataFrame(outage_rows),
         "signals": pd.DataFrame(signal_rows),
         "households": pd.concat(household_frames, ignore_index=True),
+        "clamps": pd.DataFrame(clamp_rows),
     }
     return {name: frame.assign(is_simulated=True) for name, frame in tables.items()}
 

@@ -30,7 +30,7 @@ function useShowsSimulated(): boolean {
 }
 
 export function Footer() {
-  const { user, signIn } = useAuth();
+  const { user, signIn, hasGroup } = useAuth();
   const simulated = useShowsSimulated();
   const { pathname } = useLocation();
   return (
@@ -41,9 +41,6 @@ export function Footer() {
             <h2 id="footer-product" className={HEADING}>
               Product
             </h2>
-            <Link to="/outages" className={LINK}>
-              Outages
-            </Link>
             <Link to="/#how-it-works" className={LINK}>
               How it works
             </Link>
@@ -51,6 +48,11 @@ export function Footer() {
               <button type="button" className={`${LINK} cursor-pointer`} onClick={() => void signIn()}>
                 Sign in
               </button>
+            )}
+            {hasGroup("engineers") && (
+              <Link to="/engineer" className={LINK}>
+                Risk map
+              </Link>
             )}
           </nav>
           <div className="grid content-start justify-items-start gap-2">

@@ -132,7 +132,7 @@ export function LineDrawing() {
         <path pathLength={1} className={line} d="M240 160 H460" />
         <path pathLength={1} className={line} d="M240 150 C 280 146 300 96 334 112 S 404 52 460 70" />
       </g>
-      {/* 4. Map and outages: a map pin. */}
+      {/* 4. Risk map: a map pin. */}
       <g data-draw-step>
         <path
           pathLength={1}

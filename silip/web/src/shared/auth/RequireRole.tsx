@@ -24,7 +24,7 @@ function SignInCard({ role, sessionEnded }: { role: Group; sessionEnded: boolean
             Sign in
           </Button>
           <Button asChild variant="outline" className="min-h-11 rounded-full">
-            <Link to="/outages">See current outages</Link>
+            <Link to="/">Back to home</Link>
           </Button>
         </>
       }
@@ -45,7 +45,7 @@ function NoAccessCard({ role }: { role: Group }) {
       title="Not available for this account"
       actions={
         <Button asChild className="min-h-11 rounded-full">
-          <Link to="/outages">See current outages</Link>
+          <Link to="/">Back to home</Link>
         </Button>
       }
     >

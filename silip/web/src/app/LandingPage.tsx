@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useRef, type ReactNode, type RefObject } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { OutageCheck } from "../features/outages/OutagesPage";
 import { LoadChart } from "../features/transformer-card/LoadChart";
 import { useAuth, type Group } from "../shared/auth";
 import { SimulatedLabel, TierBadge, formatPct } from "../shared/ui";
@@ -17,7 +16,7 @@ const STEPS = [
   { label: "Household clamp", text: "A clamp on an opted-in home's wiring reads its power use, after the meter." },
   { label: "Summed per transformer", text: "Readings are added up per transformer, matched by a hashed Service ID." },
   { label: "Load and risk", text: "SILIP estimates the load and forecasts the next 24 hours." },
-  { label: "Map and outages", text: "Engineers see a risk map. Residents see open outages." },
+  { label: "Risk map", text: "Engineers see which transformers may overload, with coverage and confidence." },
 ];
 
 /** Dark stage. Wide screens with a mouse pin it while the drawing builds step by step; others reveal in place. */
@@ -118,7 +117,6 @@ function EngineerPreview() {
 const PRIVACY = [
   "Households opt in. No clamp goes in without the owner's consent.",
   "Service IDs are stored only as salted hashes, never as plain numbers.",
-  "A household sees only its own usage.",
   "SILIP never touches Meralco's meter, seal, service drop or transformer.",
 ];
 
@@ -145,16 +143,9 @@ const DOORS: { title: string; text: string; to: string; open: string; group: Gro
     open: "Open risk map",
     group: "engineers",
   },
-  {
-    title: "For households",
-    text: "See your home's own usage for the last 7 days. Only you can see it.",
-    to: "/me/usage",
-    open: "Open my usage",
-    group: "households",
-  },
 ];
 
-/** Signed out: both doors, each with Sign in. Signed in: only the doors to the viewer's own views. */
+/** Signed out: the engineer door with Sign in. Signed in: the door only if it is the viewer's own view. */
 function Doors() {
   const { user, signIn, hasGroup } = useAuth();
   const doors = user === null ? DOORS : DOORS.filter((door) => hasGroup(door.group));
@@ -232,7 +223,25 @@ const MAP_CREDIT = [
   { label: "© OpenStreetMap contributors", href: "https://www.openstreetmap.org/copyright" },
 ];
 
-/** Dark, full screen: the risk map still, the headline and the outage check, usable before any motion loads. */
+/** The hero's one primary action: Sign in when signed out, the risk map for engineers. */
+function HeroAction() {
+  const { user, signIn, hasGroup } = useAuth();
+  if (user === null) {
+    return (
+      <Button className="min-h-11 w-fit rounded-full px-6" onClick={() => void signIn("/engineer")}>
+        Sign in
+      </Button>
+    );
+  }
+  if (!hasGroup("engineers")) return null;
+  return (
+    <Button asChild className="min-h-11 w-fit rounded-full px-6">
+      <Link to="/engineer">Open risk map</Link>
+    </Button>
+  );
+}
+
+/** Dark, full screen: the risk map still, the headline and the one action, usable before any motion loads. */
 function Hero() {
   return (
     <section
@@ -268,23 +277,16 @@ function Hero() {
             </span>
           </p>
         </div>
-        <div className="grid items-end gap-5 sm:gap-8 lg:grid-cols-[1fr_26rem] lg:gap-16">
-          <div data-hero-lift className="grid max-w-3xl gap-3 sm:gap-5">
-            <h1 id="hero-title" className="text-display text-balance">
-              See the load on the transformer that feeds your street.
-            </h1>
-            <p className="max-w-xl text-pretty">
-              SILIP estimates it from homes that opt in. Grid engineers see which transformers may overload.
-              Residents can check for outages right here.
-            </p>
-          </div>
-          {/* The outage check scrolls inside its panel, so results are usable without scrolling the page. */}
-          <div
-            data-hero-lift
-            className="grid max-h-[60svh] gap-4 overflow-y-auto overscroll-contain rounded-xl border bg-card p-4 sm:p-5 lg:max-h-[calc(100svh-12rem)]"
-          >
-            <h2 className="text-xl">Is the power out near you?</h2>
-            <OutageCheck />
+        <div data-hero-lift className="grid max-w-4xl gap-3 sm:gap-5">
+          <h1 id="hero-title" className="text-display text-balance">
+            See the load on the transformer that feeds your street.
+          </h1>
+          <p className="max-w-xl text-pretty">
+            SILIP estimates it from homes that opt in, so grid engineers can see which transformers may overload in
+            the next 24 hours.
+          </p>
+          <div className="pt-1 sm:pt-2">
+            <HeroAction />
           </div>
         </div>
       </div>
@@ -310,7 +312,7 @@ function ScrollProgress() {
   );
 }
 
-/** Public landing page: the outage check first, then what SILIP is, what engineers see, privacy and sign-in. */
+/** Public landing page: the headline and Sign in first, then how it works, what engineers see, privacy and sign-in. */
 export function LandingPage() {
   useDocumentTitle();
   useScrollToHash();

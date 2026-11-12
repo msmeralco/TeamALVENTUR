@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { createDevBackend, devUser, takeReturnPath, type AuthBackend } from "../shared/auth";
 import { matchesId, normalizeId, reportAge } from "../shared/risk";
-import { dailyKwh } from "../features/household/UsagePage";
 
 // MapLibre needs WebGL, which jsdom lacks; the list beside the map carries the same data.
 vi.mock("../features/risk-map/TransformerMap", () => ({ TransformerMap: () => null }));
@@ -12,19 +11,6 @@ vi.mock("../features/devices/InstallationMap", () => ({ InstallationMap: () => n
 // The landing scroll motion (GSAP, Lenis) is loaded lazily; tests check what renders without it.
 const startLandingMotion = vi.hoisted(() => vi.fn((_root: HTMLElement) => () => {}));
 vi.mock("./landingMotion", () => ({ startLandingMotion }));
-
-const OUTAGE = {
-  outage_id: "O-0001",
-  status: "open",
-  cause: "overload",
-  started_at: "2026-04-30T20:15:00+08:00",
-  area_lat: 14.581,
-  area_lon: 121.002,
-  eta_p10_min: 90,
-  eta_p50_min: 180,
-  eta_p90_min: 300,
-  is_simulated: true,
-};
 
 function risk(id: string, tier: "OK" | "Watch" | "Critical", peak: number) {
   return {
@@ -73,77 +59,36 @@ function renderAt(path: string, backend: AuthBackend = createDevBackend()) {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("public outage view", () => {
-  it("leads with the expected time back, shows the window once, the cause and the Simulated data label", async () => {
-    mockApi({ "/api/v1/outages": [OUTAGE] });
-    renderAt("/outages");
-    expect(await screen.findByText("overload")).toBeTruthy();
-    expect(screen.getByText(/^Expected back around /)).toBeTruthy();
-    expect(screen.getAllByText(/^Window /)).toHaveLength(1);
-    expect(screen.getByText("Power out")).toBeTruthy();
-    expect(screen.queryByText(/1 h 30 min/)).toBeNull();
-    expect(screen.getByText("Simulated data")).toBeTruthy();
-    expect(screen.getAllByText(/^Updated /).length).toBeGreaterThan(0);
-    expect(document.title).toBe("Outages · SILIP");
-  });
-
-  it("hides the area search until the API sends area names", async () => {
-    mockApi({ "/api/v1/outages": [OUTAGE] });
-    renderAt("/outages");
-    await screen.findByText("overload");
-    expect(screen.queryByRole("searchbox", { name: "Search by area" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Near me" })).toBeTruthy();
-  });
-
-  it("says calmly when nothing is out and keeps the advice to report to Meralco", async () => {
-    mockApi({ "/api/v1/outages": [] });
-    renderAt("/outages");
-    expect(await screen.findByText("No open outages right now.")).toBeTruthy();
-    expect(screen.getByText("If your power is out, report it to Meralco.")).toBeTruthy();
-  });
-
-  it("shows an error with a retry when the API fails", async () => {
-    mockApi({ "/api/v1/outages": { detail: "boom" } }, 500);
-    renderAt("/outages");
-    const alert = await screen.findByRole("alert", {}, { timeout: 3000 });
-    expect(within(alert).getByRole("button", { name: "Try again" })).toBeTruthy();
-  });
-});
-
 describe("landing page", () => {
-  it("opens on the outage check, then How it works and the labeled engineer example", async () => {
-    mockApi({ "/api/v1/outages": [OUTAGE] });
-    renderAt("/");
+  it("opens on the headline and Sign in, then How it works and the labeled engineer example", async () => {
+    mockApi({});
+    renderAt("/", { ...createDevBackend(), load: async () => null });
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
       "See the load on the transformer that feeds your street.",
     );
-    expect(screen.getByRole("button", { name: "Near me" })).toBeTruthy();
-    expect(await screen.findByText("overload")).toBeTruthy();
+    const hero = screen.getByRole("region", { name: "See the load on the transformer that feeds your street." });
+    expect(await within(hero).findByRole("button", { name: "Sign in" })).toBeTruthy();
+    expect(within(hero).getAllByText("Simulated data").length).toBeGreaterThan(0);
+    expect(within(hero).getByRole("link", { name: "© OpenStreetMap contributors" })).toBeTruthy();
+    expect(within(hero).queryByRole("button", { name: "Near me" })).toBeNull();
     expect(document.getElementById("how-it-works")?.querySelector("h2")?.textContent).toBe("How it works");
     expect(screen.getByText("Example")).toBeTruthy();
     expect(screen.getByText("Snapshot")).toBeTruthy();
     expect(screen.queryByText("Now")).toBeNull();
+    expect(screen.queryByText(/household sees|For households|outages/i)).toBeNull();
     expect(document.title).toBe("SILIP");
   });
 
-  it("answers the outage check inside the hero, with no scrolling", async () => {
-    mockApi({ "/api/v1/outages": [OUTAGE] });
-    vi.stubGlobal("navigator", {
-      ...navigator,
-      geolocation: { getCurrentPosition: (ok: PositionCallback) => ok({ coords: { latitude: 14.58, longitude: 121.0 } } as GeolocationPosition) },
-    });
+  it("gives engineers Open risk map as the hero's primary action", async () => {
+    mockApi({});
     renderAt("/");
     const hero = screen.getByRole("region", { name: "See the load on the transformer that feeds your street." });
-    await userEvent.click(within(hero).getByRole("button", { name: "Near me" }));
-    expect(await within(hero).findByText(/km from you/)).toBeTruthy();
-    expect(within(hero).getByText("overload")).toBeTruthy();
-    expect(within(hero).getAllByText("Simulated data").length).toBeGreaterThan(0);
-    expect(within(hero).getByRole("link", { name: "© OpenStreetMap contributors" })).toBeTruthy();
+    expect((await within(hero).findByRole("link", { name: "Open risk map" })).getAttribute("href")).toBe("/engineer");
   });
 
   it("loads the scroll motion only when reduced motion is off", async () => {
     startLandingMotion.mockClear();
-    mockApi({ "/api/v1/outages": [OUTAGE] });
+    mockApi({});
     renderAt("/");
     await waitFor(() => expect(startLandingMotion).toHaveBeenCalledTimes(1));
     expect(startLandingMotion).toHaveBeenCalledWith(document.querySelector("main > div"));
@@ -155,17 +100,17 @@ describe("landing page", () => {
     window.matchMedia = (query: string) =>
       ({ ...matchMedia(query), matches: query.includes("min-width") || query.includes("reduce") }) as MediaQueryList;
     try {
-      mockApi({ "/api/v1/outages": [OUTAGE] });
+      mockApi({});
       renderAt("/");
-      expect(await screen.findByText("overload")).toBeTruthy();
+      expect((await screen.findAllByRole("link", { name: "Open risk map" })).length).toBeGreaterThan(0);
       // Every decoding label shows its real text, and nothing is left hidden or offset by inline styles.
-      for (const label of ["Transformer risk, next 24 h", "Household clamp", "Summed per transformer", "Load and risk", "Map and outages"]) {
+      for (const label of ["Transformer risk, next 24 h", "Household clamp", "Summed per transformer", "Load and risk", "Risk map"]) {
         const shown = [...document.querySelectorAll<HTMLElement>("[data-decode]")].find((el) => el.dataset.decode === label);
         expect(shown?.textContent).toBe(label);
       }
       expect(screen.getByText("Critical · T-132")).toBeTruthy();
       for (const id of ["how-it-works", "engineers", "privacy", "sign-in"]) expect(document.getElementById(id)).toBeTruthy();
-      expect(document.querySelectorAll("[data-privacy] li")).toHaveLength(4);
+      expect(document.querySelectorAll("[data-privacy] li")).toHaveLength(3);
       expect(document.querySelector("[data-wordmark]")?.textContent).toBe("silip");
       expect(document.querySelector('main [style*="opacity"], main [style*="clip-path"]')).toBeNull();
       expect(startLandingMotion).not.toHaveBeenCalled();
@@ -174,13 +119,16 @@ describe("landing page", () => {
     }
   });
 
-  it("sends old outage links with a query on / to /outages, keeping the query", async () => {
-    mockApi({ "/api/v1/outages": [OUTAGE] });
-    renderAt("/?area=pasig#x");
-    expect(await screen.findByRole("heading", { level: 1, name: "Power outages" })).toBeTruthy();
-    expect(window.location.pathname).toBe("/outages");
-    expect(window.location.search).toBe("?area=pasig");
-    expect(window.location.hash).toBe("#x");
+  it("sends the retired /outages and /me/usage links home, or to the risk map for engineers", async () => {
+    mockApi({ "/api/v1/transformers": LIST });
+    for (const path of ["/outages", "/me/usage"]) {
+      const visitor = renderAt(path, { ...createDevBackend(), load: async () => null });
+      await waitFor(() => expect(window.location.pathname).toBe("/"));
+      visitor.unmount();
+      const engineer = renderAt(path);
+      await waitFor(() => expect(window.location.pathname).toBe("/engineer"));
+      engineer.unmount();
+    }
   });
 
   it("gives the header the stage color only while a stage section is under it, and only on /", async () => {
@@ -198,7 +146,7 @@ describe("landing page", () => {
         disconnect() {}
       },
     );
-    mockApi({ "/api/v1/outages": [OUTAGE], "/api/v1/transformers": LIST });
+    mockApi({ "/api/v1/transformers": LIST });
     renderAt("/");
     const header = screen.getAllByRole("banner")[0];
     const cross = (isIntersecting: boolean) =>
@@ -220,7 +168,7 @@ describe("landing page", () => {
   });
 
   it("scrolls to How it works when the link carries its anchor", async () => {
-    mockApi({ "/api/v1/outages": [OUTAGE] });
+    mockApi({});
     const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
     renderAt("/#how-it-works");
     await waitFor(() => expect(scroll).toHaveBeenCalled());
@@ -396,7 +344,7 @@ describe("clamps", () => {
 
 describe("account", () => {
   it("confirms sign-out: Cancel keeps the session, Sign out ends it", async () => {
-    mockApi({ "/api/v1/outages": [OUTAGE] });
+    mockApi({});
     renderAt("/");
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Account: dev" }));
@@ -439,7 +387,7 @@ describe("account", () => {
     expect(window.location.pathname).toBe("/engineer");
   });
 
-  it("shows Try again and Back to outages when the sign-in callback fails", async () => {
+  it("shows Try again and Back to home when the sign-in callback fails", async () => {
     const backend: AuthBackend = {
       ...createDevBackend(),
       completeSignIn: async () => {
@@ -450,39 +398,39 @@ describe("account", () => {
     renderAt("/auth/callback?code=abc", backend);
     expect(await screen.findByText("Sign-in did not finish")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Back to outages" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Back to home" })).toBeTruthy();
   });
 });
 
 describe("navigation", () => {
   const signedOut: AuthBackend = { ...createDevBackend(), load: async () => null };
 
-  it("shows visitors Home, Outages and How it works, with no engineer or household tabs", async () => {
-    mockApi({ "/api/v1/outages": [OUTAGE] });
-    renderAt("/outages", signedOut);
+  it("shows visitors Home and How it works, with no engineer tabs", async () => {
+    mockApi({});
+    renderAt("/", signedOut);
     const nav = screen.getByRole("navigation", { name: "Main" });
     await within(nav).findByRole("link", { name: "Home" });
     const names = within(nav)
       .getAllByRole("link")
       .map((link) => link.getAttribute("aria-label") ?? link.textContent);
-    expect(names).toEqual(["Home", "Outages", "How it works"]);
-    expect(within(nav).getByRole("link", { name: "Outages" }).getAttribute("aria-current")).toBe("page");
-    expect(within(nav).getByRole("link", { name: "Home" }).getAttribute("aria-current")).toBeNull();
+    expect(names).toEqual(["Home", "How it works"]);
+    expect(within(nav).getByRole("link", { name: "Home" }).getAttribute("aria-current")).toBe("page");
   });
 
-  it("shows signed-in users their own views plus Outages", async () => {
-    mockApi({ "/api/v1/outages": [OUTAGE] });
-    renderAt("/outages");
+  it("shows engineers the risk map and devices, with no Outages or My usage", async () => {
+    mockApi({});
+    renderAt("/");
     const nav = screen.getByRole("navigation", { name: "Main" });
     expect(await within(nav).findByRole("link", { name: "Risk map" })).toBeTruthy();
-    expect(within(nav).getByRole("link", { name: "Outages" })).toBeTruthy();
-    expect(within(nav).queryByRole("link", { name: "Home" })).toBeNull();
+    expect(within(nav).getByRole("link", { name: "Devices" })).toBeTruthy();
+    expect(within(nav).queryByRole("link", { name: "Outages" })).toBeNull();
+    expect(within(nav).queryByRole("link", { name: /usage/i })).toBeNull();
   });
 
   it("lets a visitor cycle the theme from the header", async () => {
-    mockApi({ "/api/v1/outages": [OUTAGE] });
+    mockApi({});
     window.localStorage.removeItem("silip.theme");
-    renderAt("/outages", signedOut);
+    renderAt("/sources", signedOut);
     const header = screen.getAllByRole("banner")[0];
     const user = userEvent.setup();
     await user.click(await within(header).findByRole("button", { name: "Theme: system" }));
@@ -495,37 +443,32 @@ describe("navigation", () => {
 });
 
 describe("footer", () => {
-  it("renders the about line, the sources link and the simulated note once data is simulated", async () => {
-    mockApi({ "/api/v1/outages": [OUTAGE] });
-    renderAt("/outages", { ...createDevBackend(), load: async () => null });
+  it("renders the about line, the sources link, How it works, Sign in and the simulated note on the landing page", async () => {
+    mockApi({});
+    renderAt("/", { ...createDevBackend(), load: async () => null });
     const footer = screen.getByRole("contentinfo");
     expect(within(footer).getByText("Built by Alventur Solutions for the Meralco Idol Hackathon 2026.")).toBeTruthy();
     expect(within(footer).getByRole("link", { name: "Data sources" }).getAttribute("href")).toBe("/sources");
+    expect(within(footer).getByRole("link", { name: "How it works" })).toBeTruthy();
     expect(await within(footer).findByText("Items marked Simulated data use simulated readings.")).toBeTruthy();
     expect(await within(footer).findByRole("button", { name: "Sign in" })).toBeTruthy();
+    expect(within(footer).queryByRole("link", { name: "Outages" })).toBeNull();
     expect(within(footer).getByRole("button", { name: /^Theme: / })).toBeTruthy();
   });
 
-  it("hides the simulated note and Sign in when the data on screen is real and the viewer is signed in", async () => {
-    mockApi({ "/api/v1/outages": [{ ...OUTAGE, is_simulated: false }] });
-    renderAt("/outages");
-    await screen.findByText("overload");
+  it("gives engineers Risk map instead of Sign in, and hides the simulated note when the data is real", async () => {
+    mockApi({ "/api/v1/transformers": LIST.map((t) => ({ ...t, is_simulated: false, risk: { ...t.risk, is_simulated: false } })) });
+    renderAt("/engineer");
+    await screen.findByText("T-2");
     const footer = screen.getByRole("contentinfo");
-    await waitFor(() => expect(within(footer).queryByRole("button", { name: "Sign in" })).toBeNull());
+    expect(await within(footer).findByRole("link", { name: "Risk map" })).toBeTruthy();
+    expect(within(footer).queryByRole("button", { name: "Sign in" })).toBeNull();
     expect(within(footer).queryByText(/simulated/)).toBeNull();
-  });
-
-  it("shows the simulated note for a signed-in viewer when the data on screen is simulated", async () => {
-    mockApi({ "/api/v1/outages": [OUTAGE] });
-    renderAt("/outages");
-    await screen.findByText("overload");
-    const footer = screen.getByRole("contentinfo");
-    expect(await within(footer).findByText("Items marked Simulated data use simulated readings.")).toBeTruthy();
   });
 });
 
 describe("not found page", () => {
-  const as = (groups: ("engineers" | "households")[]): AuthBackend => ({
+  const as = (groups: "engineers"[]): AuthBackend => ({
     ...createDevBackend(),
     load: async () => ({ ...devUser, groups }),
   });
@@ -534,15 +477,12 @@ describe("not found page", () => {
       .getAllByRole("link")
       .map((link) => [link.textContent, link.getAttribute("data-variant")]);
 
-  it("offers Home and Outages to visitors, with Home as the one primary button", async () => {
+  it("offers Home to visitors as the one primary button", async () => {
     mockApi({});
     renderAt("/no-such-page", { ...createDevBackend(), load: async () => null });
     const main = screen.getByRole("main");
     expect(await within(main).findByText("This link may be old or mistyped.")).toBeTruthy();
-    expect(linksIn(main)).toEqual([
-      ["Home", "default"],
-      ["Outages", "outline"],
-    ]);
+    expect(linksIn(main)).toEqual([["Home", "default"]]);
     expect(document.title).toBe("Page not found · SILIP");
   });
 
@@ -554,21 +494,9 @@ describe("not found page", () => {
     expect(linksIn(main)).toEqual([
       ["Risk map", "default"],
       ["Home", "outline"],
-      ["Outages", "outline"],
     ]);
   });
 
-  it("leads households to their usage", async () => {
-    mockApi({});
-    renderAt("/no-such-page", as(["households"]));
-    const main = screen.getByRole("main");
-    expect(await within(main).findByRole("link", { name: "My usage" })).toBeTruthy();
-    expect(linksIn(main)).toEqual([
-      ["My usage", "default"],
-      ["Home", "outline"],
-      ["Outages", "outline"],
-    ]);
-  });
 });
 
 describe("data sources page", () => {
@@ -588,32 +516,6 @@ describe("return path", () => {
       window.sessionStorage.setItem("silip.returnTo", unsafe);
       expect(takeReturnPath()).toBe("/");
     }
-  });
-});
-
-describe("household usage", () => {
-  it("labels simulated data and marks partial days", async () => {
-    const points = [
-      { ts: "2026-11-10T10:00:00", kw: 2 },
-      { ts: "2026-11-10T10:15:00", kw: 2 },
-    ];
-    mockApi({ "/api/v1/me/usage": { total_kwh: 1, points, is_simulated: true } });
-    renderAt("/me/usage");
-    expect(await screen.findByText("partial day")).toBeTruthy();
-    expect(screen.getByText("Simulated data")).toBeTruthy();
-  });
-});
-
-describe("dailyKwh", () => {
-  it("sums 15-minute kW readings into kWh per day, oldest first", () => {
-    const days = dailyKwh([
-      { ts: "2026-11-11T10:00:00", kw: 2 },
-      { ts: "2026-11-10T10:00:00", kw: 4 },
-      { ts: "2026-11-11T10:15:00", kw: 2 },
-    ]);
-    expect(days.map((d) => d.kwh)).toEqual([1, 1]);
-    expect(days[0].day.getDate()).toBe(10);
-    expect(days.every((d) => !d.complete)).toBe(true);
   });
 });
 

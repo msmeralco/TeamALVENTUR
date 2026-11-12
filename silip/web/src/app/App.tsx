@@ -1,11 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Cpu, Gauge, House, Info, Map as MapIcon, ZapOff, type LucideIcon } from "lucide-react";
+import { Cpu, House, Info, Map as MapIcon, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { DemoPage } from "../features/demo/DemoPage";
 import { DevicesPage } from "../features/devices/DevicesPage";
-import { UsagePage } from "../features/household/UsagePage";
-import { OutagesPage } from "../features/outages/OutagesPage";
 import { RiskMapPage } from "../features/risk-map/RiskMapPage";
 import { TransformerCardPage } from "../features/transformer-card/TransformerCardPage";
 import { shouldRetry } from "../shared/api/client";
@@ -85,7 +83,7 @@ function AuthCallbackPage() {
             Try again
           </Button>
           <Button asChild variant="outline" className="min-h-11 rounded-full">
-            <Link to="/outages">Back to outages</Link>
+            <Link to="/">Back to home</Link>
           </Button>
         </>
       }
@@ -100,19 +98,13 @@ interface NotFoundLink {
   label: string;
 }
 
-/** Home and Outages for everyone, plus the viewer's own view, which then becomes the one primary button. */
+/** Home for everyone; engineers also get the risk map, which then becomes the one primary button. */
 function NotFoundPage() {
   useDocumentTitle("Page not found");
   const { hasGroup } = useAuth();
-  const own: NotFoundLink | null = hasGroup("engineers")
-    ? { to: "/engineer", label: "Risk map" }
-    : hasGroup("households")
-      ? { to: "/me/usage", label: "My usage" }
-      : null;
   const links: NotFoundLink[] = [
-    ...(own === null ? [] : [own]),
+    ...(hasGroup("engineers") ? [{ to: "/engineer", label: "Risk map" }] : []),
     { to: "/", label: "Home" },
-    { to: "/outages", label: "Outages" },
   ];
   return (
     <StateCard
@@ -145,16 +137,13 @@ interface NavItem {
 
 const PUBLIC_NAV: NavItem[] = [
   { to: "/", label: "Home", icon: House },
-  { to: "/outages", label: "Outages", icon: ZapOff },
   { to: "/#how-it-works", label: "How it works", icon: Info },
 ];
 
-// Signed in: the viewer's own views, then Outages. At most 4, so the phone tab bar never crowds.
+// Signed in as an engineer: the engineer views. Anyone else gets the public nav.
 const MEMBER_NAV: NavItem[] = [
   { to: "/engineer", label: "Risk map", short: "Map", icon: MapIcon, group: "engineers" },
   { to: "/engineer/devices", label: "Devices", icon: Cpu, group: "engineers" },
-  { to: "/me/usage", label: "My usage", short: "Usage", icon: Gauge, group: "households" },
-  { to: "/outages", label: "Outages", icon: ZapOff },
 ];
 
 function isCurrent(to: string, pathname: string, hash: string): boolean {
@@ -170,8 +159,9 @@ function MainNav({ onStage }: { onStage: boolean }) {
   const { pathname, hash } = useLocation();
   // On phones the nav is the bottom tab bar, far from the stage, so it keeps the page colors.
   const inHeader = useMediaQuery("(min-width: 40rem)");
-  const items =
-    user === null ? PUBLIC_NAV : MEMBER_NAV.filter((item) => item.group === undefined || hasGroup(item.group));
+  const member =
+    user === null ? [] : MEMBER_NAV.filter((item) => item.group === undefined || hasGroup(item.group));
+  const items = member.length > 0 ? member : PUBLIC_NAV;
   return (
     <nav
       aria-label="Main"
@@ -212,10 +202,11 @@ function MainNav({ onStage }: { onStage: boolean }) {
   );
 }
 
-/** Old outage links put their query on "/"; the outage list now lives at /outages, so send them there. */
-function HomeRoute() {
-  const { search, hash } = useLocation();
-  return search === "" ? <LandingPage /> : <Navigate to={`/outages${search}${hash}`} replace />;
+/** The outage and household views are gone; their old links go to the risk map for engineers, else home. */
+function RetiredRoute() {
+  const { status, hasGroup } = useAuth();
+  if (status === "loading") return null;
+  return <Navigate to={hasGroup("engineers") ? "/engineer" : "/"} replace />;
 }
 
 function Shell() {
@@ -274,8 +265,9 @@ function Shell() {
       >
         <RouteErrorBoundary key={location.pathname}>
           <Routes>
-            <Route path="/" element={<HomeRoute />} />
-            <Route path="/outages" element={<OutagesPage />} />
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/outages" element={<RetiredRoute />} />
+            <Route path="/me/usage" element={<RetiredRoute />} />
             <Route
               path="/engineer"
               element={
@@ -289,14 +281,6 @@ function Shell() {
               element={
                 <RequireRole role="engineers">
                   <TransformerCardPage />
-                </RequireRole>
-              }
-            />
-            <Route
-              path="/me/usage"
-              element={
-                <RequireRole role="households">
-                  <UsagePage />
                 </RequireRole>
               }
             />

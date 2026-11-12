@@ -19,6 +19,11 @@ export function outlookStatusText(outlook: Pick<Outlook, "status" | "issued_at">
   return issued === null ? "Forecast is current." : `Forecast issued ${issued}.`;
 }
 
+/** No hours to draw: nothing fetched yet, or the stored forecast is too old to use. */
+export function hasForecast(outlook: Pick<Outlook, "status" | "hours">): boolean {
+  return outlook.status !== "missing" && outlook.hours.length > 0;
+}
+
 /** Each queued Critical transformer's forecast peak, for marking on the heat-index line. */
 export function criticalPeaks(items: TransformerItem[]): PeakMark[] {
   return items
@@ -39,7 +44,10 @@ export function WeatherStrip({ items }: { items: TransformerItem[] }) {
           {query.data !== undefined && (
             <>
               <WeatherBadge status={query.data.status} />
-              <span className="text-sm text-muted-foreground">Source: {query.data.source}</span>
+              <span className="text-sm text-muted-foreground">
+                Source: {query.data.source}
+                {!hasForecast(query.data) && " (no forecast loaded yet)"}
+              </span>
               <SimulatedLabel show={query.data.is_simulated} />
             </>
           )}
@@ -53,20 +61,23 @@ export function WeatherStrip({ items }: { items: TransformerItem[] }) {
         >
           {(outlook) => (
             <div className="grid gap-3">
-              <p className="text-sm">{outlookStatusText(outlook)}</p>
-              {outlook.hours.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No forecast hours to show.</p>
+              {hasForecast(outlook) ? (
+                <>
+                  <p className="text-sm">{outlookStatusText(outlook)}</p>
+                  {outlook.note != null && <p className="text-sm text-muted-foreground">{outlook.note}.</p>}
+                  <HeatIndexChart
+                    hours={outlook.hours.map((h) => ({
+                      ts: h.ts,
+                      heatC: h.heat_index_max_c,
+                      rainMm: h.precipitation_max_mm,
+                    }))}
+                    marks={criticalPeaks(items)}
+                  />
+                  <p className="text-sm text-muted-foreground">Hottest hour across the weather cells in view.</p>
+                </>
               ) : (
-                <HeatIndexChart
-                  hours={outlook.hours.map((h) => ({
-                    ts: h.ts,
-                    heatC: h.heat_index_max_c,
-                    rainMm: h.precipitation_max_mm,
-                  }))}
-                  marks={criticalPeaks(items)}
-                />
+                <p className="text-sm text-muted-foreground">No forecast loaded yet.</p>
               )}
-              <p className="text-sm text-muted-foreground">Hottest hour across the weather cells in view.</p>
             </div>
           )}
         </QueryView>

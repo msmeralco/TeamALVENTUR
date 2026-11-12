@@ -181,14 +181,25 @@ function LoadHistory({ card }: { card: Schemas["TransformerCard"] }) {
                 <LoadChart points={card.load} ratedKva={card.rated_kva} />
                 {/* Its own scale under the same time axis: two measures never share one y-axis. */}
                 {(card.weather ?? []).some((h) => h.heat_index_c !== null) ? (
-                  <HeatIndexChart
-                    hours={(card.weather ?? []).map((h) => ({
-                      ts: h.ts,
-                      heatC: h.heat_index_c,
-                      rainMm: h.precipitation_mm,
-                    }))}
-                    domain={[new Date(card.load[0].ts).getTime(), new Date(card.load[card.load.length - 1].ts).getTime()]}
-                  />
+                  <div className="grid gap-2">
+                    {card.weather_note != null && <p className="text-sm text-muted-foreground">{card.weather_note}.</p>}
+                    <HeatIndexChart
+                      hours={(card.weather ?? []).map((h) => ({
+                        ts: h.ts,
+                        heatC: h.heat_index_c,
+                        rainMm: h.precipitation_mm,
+                      }))}
+                      // A live forecast is for days the simulated load does not cover: give it its own axis.
+                      domain={
+                        card.weather_note == null
+                          ? [
+                              new Date(card.load[0].ts).getTime(),
+                              new Date(card.load[card.load.length - 1].ts).getTime(),
+                            ]
+                          : undefined
+                      }
+                    />
+                  </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">No heat-index forecast for this transformer yet.</p>
                 )}

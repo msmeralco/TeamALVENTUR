@@ -1,6 +1,6 @@
 # 0004. Public landing page at `/`, outages at `/outages`
 
-- Status: Accepted
+- Status: Partially superseded by 0005
 - Date: 2026-11-13
 
 ## Context

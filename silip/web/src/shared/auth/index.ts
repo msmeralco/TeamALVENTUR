@@ -1,3 +1,3 @@
-export { AuthProvider, useAuth } from "./AuthProvider";
+export { AuthProvider, takeReturnPath, useAuth } from "./AuthProvider";
 export { RequireRole } from "./RequireRole";
-export { backendFromEnv, createDevBackend, type AuthBackend, type AuthUser } from "./backend";
+export { backendFromEnv, createDevBackend, devUser, type AuthBackend, type AuthUser, type Group } from "./backend";

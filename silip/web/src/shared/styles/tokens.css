@@ -1,45 +1,93 @@
-/* Design tokens (unslop skill). Light is the default; dark overrides below. */
+/*
+ * Design tokens (unslop skill), named the way shadcn/ui expects.
+ * Light is the default; dark follows the system unless data-theme="light", or is forced by data-theme="dark".
+ * #C2501E is the one action color. It is only --critical (and --destructive, which shadcn maps to it).
+ */
 :root {
-  --bg: #fafaf7;
-  --surface: #ffffff;
-  --text: #1c1e21;
-  --muted: #5b5f66;
-  --hairline: #e3e2dc;
-  --accent: #c2501e; /* the one thing that needs action */
-  --ok: #2f6b3f;
-  --watch: #8a6a00;
-  --critical: var(--accent);
+  --background: #fafaf7;
+  --foreground: #1c1e21;
+  --card: #ffffff;
+  --card-foreground: #1c1e21;
+  --popover: #ffffff;
+  --popover-foreground: #1c1e21;
+  --primary: #1c1e21;
+  --primary-foreground: #ffffff;
+  --secondary: #f2f1ec;
+  --secondary-foreground: #1c1e21;
+  --muted: #f2f1ec;
+  --muted-foreground: #5b5f66;
+  --accent: #f2f1ec; /* shadcn's hover fill, not the action color */
+  --accent-foreground: #1c1e21;
+  --border: #e3e2dc;
+  --input: #e3e2dc;
+  --ring: #1c1e21;
+  --radius: 1rem;
 
-  --font-body: "Inter", system-ui, sans-serif;
-  --font-display: "Space Grotesk", system-ui, sans-serif;
-  --size-sm: 0.8125rem;
-  --size-md: 1rem;
-  --size-lg: 1.25rem;
-  --size-xl: 2rem;
-  --space: 1rem;
-  --radius: 6px;
+  --critical: #c2501e;
+  --destructive: var(--critical);
+  --watch: #8a6a00;
+  --ok: #2f6b3f;
+  --critical-soft: #f8e7df;
+  --watch-soft: #f5efdc;
+  --ok-soft: #e8f0ea;
+  --map-building: #e9e7e0;
+  --overlay: rgb(28 30 33 / 0.45);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #141517;
-    --surface: #1c1e21;
-    --text: #ececea;
-    --muted: #a3a6ab;
-    --hairline: #2e3035;
-    --accent: #e0703f;
-    --ok: #6fbf84;
+    --background: #141517;
+    --foreground: #ececea;
+    --card: #1c1e21;
+    --card-foreground: #ececea;
+    --popover: #1c1e21;
+    --popover-foreground: #ececea;
+    --primary: #ececea;
+    --primary-foreground: #1c1e21;
+    --secondary: #24262a;
+    --secondary-foreground: #ececea;
+    --muted: #24262a;
+    --muted-foreground: #a3a6ab;
+    --accent: #24262a;
+    --accent-foreground: #ececea;
+    --border: #2e3035;
+    --input: #2e3035;
+    --ring: #ececea;
+    --critical: #e0703f;
     --watch: #d9b44a;
+    --ok: #6fbf84;
+    --critical-soft: #35221a;
+    --watch-soft: #2e2817;
+    --ok-soft: #1f2d23;
+    --map-building: #2a2c30;
+    --overlay: rgb(0 0 0 / 0.6);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #141517;
-  --surface: #1c1e21;
-  --text: #ececea;
-  --muted: #a3a6ab;
-  --hairline: #2e3035;
-  --accent: #e0703f;
-  --ok: #6fbf84;
+  --background: #141517;
+  --foreground: #ececea;
+  --card: #1c1e21;
+  --card-foreground: #ececea;
+  --popover: #1c1e21;
+  --popover-foreground: #ececea;
+  --primary: #ececea;
+  --primary-foreground: #1c1e21;
+  --secondary: #24262a;
+  --secondary-foreground: #ececea;
+  --muted: #24262a;
+  --muted-foreground: #a3a6ab;
+  --accent: #24262a;
+  --accent-foreground: #ececea;
+  --border: #2e3035;
+  --input: #2e3035;
+  --ring: #ececea;
+  --critical: #e0703f;
   --watch: #d9b44a;
+  --ok: #6fbf84;
+  --critical-soft: #35221a;
+  --watch-soft: #2e2817;
+  --ok-soft: #1f2d23;
+  --map-building: #2a2c30;
+  --overlay: rgb(0 0 0 / 0.6);
 }

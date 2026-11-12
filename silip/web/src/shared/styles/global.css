@@ -1,64 +1,123 @@
+@import "tailwindcss";
 @import "./tokens.css";
 
-* {
-  box-sizing: border-box;
+/* Dark mode: system preference (unless data-theme="light"), or data-theme="dark". */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
 }
 
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: var(--size-md);
-  line-height: 1.5;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-critical: var(--critical);
+  --color-watch: var(--watch);
+  --color-ok: var(--ok);
+  --color-critical-soft: var(--critical-soft);
+  --color-watch-soft: var(--watch-soft);
+  --color-ok-soft: var(--ok-soft);
+  --color-overlay: var(--overlay);
+
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 6px);
+  --radius-lg: calc(var(--radius) - 4px);
+  --radius-xl: var(--radius);
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Space Grotesk", system-ui, sans-serif;
 }
 
-h1,
-h2 {
-  font-family: var(--font-display);
-  margin: 0 0 calc(var(--space) / 2);
+/* unslop: four type sizes only. xs and sm share a size; base, xl and 3xl are the other three. */
+@theme {
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.4;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.4;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.3;
+  --text-3xl: 2rem;
+  --text-3xl--line-height: 1.15;
 }
 
-h1 {
-  font-size: var(--size-xl);
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display font-bold;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
 }
 
-h2 {
-  font-size: var(--size-lg);
+/* MapLibre controls follow the theme tokens. Its icons are dark SVGs, so invert them on dark cards. */
+.maplibregl-ctrl-group,
+.maplibregl-ctrl-attrib {
+  background: var(--card) !important;
+  color: var(--foreground);
+}
+.maplibregl-ctrl-group button + button {
+  border-top-color: var(--border) !important;
+}
+.maplibregl-ctrl-attrib a {
+  color: var(--muted-foreground) !important;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .maplibregl-ctrl-icon {
+    filter: invert(1);
+  }
+}
+:root[data-theme="dark"] .maplibregl-ctrl-icon {
+  filter: invert(1);
 }
 
-a {
-  color: inherit;
+/* Fitts: MapLibre's zoom, compass and attribution buttons are 29 px; make them 44 px on touch screens. */
+@media (pointer: coarse) {
+  .maplibregl-ctrl-group button,
+  .maplibregl-ctrl-attrib-button {
+    width: 44px;
+    height: 44px;
+  }
 }
 
-main {
-  max-width: 64rem;
-  margin: 0 auto;
-  padding: var(--space);
-}
-
-.muted {
-  color: var(--muted);
-  font-size: var(--size-sm);
-}
-
-.list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.list > li {
-  padding: calc(var(--space) * 0.75) 0;
-  border-bottom: 1px solid var(--hairline);
-}
-
-button {
-  font: inherit;
-  padding: 0.4rem 0.8rem;
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--text);
-  cursor: pointer;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

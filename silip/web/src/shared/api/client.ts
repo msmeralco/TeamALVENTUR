@@ -14,6 +14,19 @@ export function setTokenSource(source: () => string | null): () => void {
   };
 }
 
+/** Called when the API answers 401 to a request: the session ended. The auth provider registers it. */
+let onSessionEnded: () => void = () => {};
+
+export function setSessionEndedHandler(handler: () => void): () => void {
+  onSessionEnded = handler;
+  return () => {
+    if (onSessionEnded === handler) onSessionEnded = () => {};
+  };
+}
+
+/** How often open views refetch in the background (also on window focus). */
+export const REFRESH_INTERVAL_MS = 5 * 60_000;
+
 // Same origin: Vite proxies /api in dev, CloudFront routes /api to the API Lambda in AWS.
 export const api = createClient<paths>({
   baseUrl: window.location.origin,
@@ -26,12 +39,26 @@ api.use({
     if (token !== null) request.headers.set("Authorization", `Bearer ${token}`);
     return request;
   },
+  onResponse({ response }) {
+    if (response.status === 401) onSessionEnded();
+    return response;
+  },
 });
 
 /** Thrown for any non-2xx answer, so TanStack Query shows the error state. */
 export class ApiError extends Error {
   constructor(readonly status: number) {
-    super(status === 401 ? "Sign in required" : status === 403 ? "No access" : `Request failed (${status})`);
+    super(
+      status === 401
+        ? "Sign in required."
+        : status === 403
+          ? "No access."
+          : status === 404
+            ? "Not found."
+            : status >= 500
+              ? "The server had a problem. Try again in a moment."
+              : `Request failed (${status}).`,
+    );
   }
 }
 
@@ -39,4 +66,12 @@ export class ApiError extends Error {
 export function unwrap<T>(result: { data?: T; response: Response }): T {
   if (!result.response.ok || result.data === undefined) throw new ApiError(result.response.status);
   return result.data;
+}
+
+const NO_RETRY_STATUS = new Set([401, 403, 404]);
+
+/** Retry once, but not for answers a retry cannot change (signed out, no access, not found). */
+export function shouldRetry(failureCount: number, error: Error): boolean {
+  if (error instanceof ApiError && NO_RETRY_STATUS.has(error.status)) return false;
+  return failureCount < 1;
 }

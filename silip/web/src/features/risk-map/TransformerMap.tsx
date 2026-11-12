@@ -6,6 +6,7 @@ import type {
   MapMouseEvent,
   Map as MapLibreMap,
 } from "maplibre-gl";
+import { GeolocateControl } from "maplibre-gl";
 import type { FeatureCollection, Point } from "geojson";
 import { Maximize2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
@@ -67,11 +68,24 @@ const CLAMP_RADIUS_PX = 2.5;
 const CLAMP_SELECTED_RADIUS_PX = 5;
 // Pins are small; a tap within this many px of one picks it (about a 32 px target around the pin).
 const TAP_TOLERANCE_PX = 16;
-const FOCUS_ZOOM = 13; // past CLUSTER_MAX_ZOOM, so the focused pin is not inside a cluster
+const FOCUS_ZOOM = 15.5; // show the transformer label and nearby clamp points
 const EASE_MS = 600;
+const MAP_PADDING_PX = 48;
 // Critical areas get a stronger fill and outline than Watch, so they differ by more than hue in both themes.
 const AREA_FILL_OPACITY = { Critical: 0.34, Watch: 0.18, OK: 0.1 } as const;
 const AREA_LINE_WIDTH = { Critical: 2.5, Watch: 1.25, OK: 0.75 } as const;
+
+function geolocateFitOptions(leftInsetPx: number) {
+  return {
+    maxZoom: FOCUS_ZOOM,
+    padding: {
+      top: MAP_PADDING_PX,
+      right: MAP_PADDING_PX,
+      bottom: MAP_PADDING_PX,
+      left: MAP_PADDING_PX + leftInsetPx,
+    },
+  };
+}
 
 function byTier(values: Record<"Critical" | "Watch" | "OK", number>): ExpressionSpecification {
   return ["match", ["get", "tier"], "Critical", values.Critical, "Watch", values.Watch, values.OK];
@@ -437,6 +451,7 @@ export function TransformerMap({
   leftInsetPx,
 }: TransformerMapProps) {
   const mapRef = useRef<MapLibreMap | null>(null);
+  const geolocateRef = useRef<GeolocateControl | null>(null);
   const bounds = useMemo(() => boundsOf(items), [items]);
   // Read once: the map is created once, and later data should not yank the camera.
   const [start] = useState(() => {
@@ -446,6 +461,11 @@ export function TransformerMap({
   const selected = items.find((i) => i.transformer_id === selectedId);
   const [clampId, setClampId] = useState<string | null>(null);
   const [zoom, setZoom] = useState(0);
+  const [locationMessage, setLocationMessage] = useState("");
+  useEffect(() => {
+    const geolocate = geolocateRef.current;
+    if (geolocate !== null) geolocate.options.fitBoundsOptions = geolocateFitOptions(leftInsetPx);
+  }, [leftInsetPx]);
   useEffect(() => {
     const map = mapRef.current;
     if (!isAlive(map) || clampId === null || !map.getSource(CLAMPS)) return;
@@ -477,7 +497,7 @@ export function TransformerMap({
     if (!isAlive(map) || item === undefined) return;
     map.easeTo({
       center: [item.lon, item.lat],
-      zoom: Math.max(map.getZoom(), FOCUS_ZOOM),
+      zoom: FOCUS_ZOOM,
       duration: reducedMotion() ? 0 : EASE_MS,
       padding: { top: 0, right: 0, bottom: 0, left: leftInsetPx },
     });
@@ -504,6 +524,20 @@ export function TransformerMap({
         mapRef.current = map;
         setZoom(map.getZoom());
         map.on("zoomend", () => setZoom(map.getZoom()));
+        const geolocate = new GeolocateControl({
+          positionOptions: { enableHighAccuracy: true, timeout: 10_000, maximumAge: 5 * 60_000 },
+          trackUserLocation: false,
+          fitBoundsOptions: geolocateFitOptions(leftInsetPx),
+        });
+        geolocateRef.current = geolocate;
+        geolocate.on("geolocate", () => setLocationMessage(""));
+        geolocate.on("error", () => {
+          setLocationMessage("Location unavailable. Allow browser location access; local network pages need HTTPS.");
+        });
+        map.addControl(geolocate, "top-right");
+        if (!("geolocation" in navigator)) {
+          setLocationMessage("Location is not available in this browser.");
+        }
         // One click handler with a tolerance box: a cluster zooms in to split; a pin or area opens its popover.
         map.on("click", async (e) => {
           const picked = pickAt(map, e);
@@ -570,6 +604,14 @@ export function TransformerMap({
         <Maximize2 aria-hidden="true" />
         See all {items.length}
       </Button>
+      {locationMessage !== "" && (
+        <p
+          role="status"
+          className="absolute right-2 bottom-36 z-10 max-w-72 rounded-lg border bg-card/95 px-3 py-2 text-sm text-muted-foreground shadow-lg max-lg:bottom-44"
+        >
+          {locationMessage}
+        </p>
+      )}
       <div className="pointer-events-none absolute right-2 bottom-10 grid justify-items-end gap-1 max-lg:bottom-20">
         <div className="flex gap-1 rounded-full bg-card/90 p-1">
           <TierBadge tier="Critical" />

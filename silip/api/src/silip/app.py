@@ -44,6 +44,8 @@ for router in (
     outages_router,
     household_router,
     clamps_router,
+    devices_router,
+    ingest_router,
     bench_router,
 ):
     app.include_router(router)

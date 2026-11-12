@@ -85,29 +85,11 @@ def _sign_in_required() -> HTTPException:
     )
 
 
-<<<<<<< HEAD
 def require_user(token: BearerToken, settings: Settings, decoder: Decoder) -> AuthUser:
     """Any signed-in user, or 401."""
     if decoder is None:  # AUTH_DISABLED=true, local dev only
         return DEV_USER
     if token is None:
-=======
-def require_user(
-    credentials: Credentials,
-    settings: Settings,
-    decoder: Decoder,
-    forwarded: Annotated[str | None, Header(alias="X-Silip-Authorization")] = None,
-) -> AuthUser:
-    """Any signed-in user, or 401."""
-    if decoder is None:  # AUTH_DISABLED=true, local dev only
-        return DEV_USER
-    if forwarded is not None:
-        scheme, _, token = forwarded.partition(" ")
-        if scheme.lower() != "bearer" or not token:
-            raise _sign_in_required()
-        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
-    if credentials is None:
->>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
         raise _sign_in_required()
     try:
         return service.authenticate(decoder, token, cognito_pool(settings).client_id)

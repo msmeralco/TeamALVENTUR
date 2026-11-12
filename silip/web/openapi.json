@@ -39,29 +39,6 @@
         "summary": "Me",
         "description": "Who is signed in.",
         "operationId": "me_api_v1_me_get",
-        "security": [
-          {
-            "CognitoAccessToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-Silip-Authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Silip-Authorization"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -78,18 +55,7 @@
           },
           "403": {
             "description": "Signed in, but not in the required group"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
-<<<<<<< HEAD
         },
         "security": [
           {
@@ -99,9 +65,6 @@
             "CognitoAccessToken": []
           }
         ]
-=======
-        }
->>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
       }
     },
     "/api/v1/transformers": {
@@ -138,22 +101,6 @@
               "title": "Bbox"
             },
             "description": "min_lon,min_lat,max_lon,max_lat"
-          },
-          {
-            "name": "X-Silip-Authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Silip-Authorization"
-            }
           }
         ],
         "responses": {
@@ -217,22 +164,6 @@
             "schema": {
               "type": "string",
               "title": "Transformer Id"
-            }
-          },
-          {
-            "name": "X-Silip-Authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Silip-Authorization"
             }
           }
         ],
@@ -353,22 +284,6 @@
               "type": "string",
               "title": "Outage Id"
             }
-          },
-          {
-            "name": "X-Silip-Authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Silip-Authorization"
-            }
           }
         ],
         "responses": {
@@ -409,29 +324,6 @@
         "summary": "My Usage",
         "description": "The signed-in household's own last 7 days of usage.",
         "operationId": "my_usage_api_v1_me_usage_get",
-        "security": [
-          {
-            "CognitoAccessToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-Silip-Authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Silip-Authorization"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -448,18 +340,16 @@
           },
           "403": {
             "description": "Signed in, but not in the required group"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
-        }
+        },
+        "security": [
+          {
+            "CognitoAccessTokenHeader": []
+          },
+          {
+            "CognitoAccessToken": []
+          }
+        ]
       }
     },
     "/api/v1/me/device": {
@@ -469,32 +359,6 @@
         ],
         "summary": "My Device",
         "operationId": "my_device_api_v1_me_device_get",
-        "security": [
-          {
-            "CognitoAccessTokenHeader": []
-          },
-          {
-            "CognitoAccessToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-Silip-Authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Silip-Authorization"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -511,18 +375,16 @@
           },
           "403": {
             "description": "Signed in, but not in the required group"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
-        }
+        },
+        "security": [
+          {
+            "CognitoAccessTokenHeader": []
+          },
+          {
+            "CognitoAccessToken": []
+          }
+        ]
       }
     },
     "/api/v1/clamps": {
@@ -559,22 +421,6 @@
               "title": "Bbox"
             },
             "description": "min_lon,min_lat,max_lon,max_lat"
-          },
-          {
-            "name": "X-Silip-Authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Silip-Authorization"
-            }
           }
         ],
         "responses": {
@@ -607,16 +453,6 @@
         }
       }
     },
-<<<<<<< HEAD
-    "/api/v1/bench": {
-      "get": {
-        "tags": [
-          "bench"
-        ],
-        "summary": "Bench",
-        "description": "Public: the bench rig's mock homes and both transformers, from the last 10 minutes.",
-        "operationId": "bench_api_v1_bench_get",
-=======
     "/api/v1/devices": {
       "get": {
         "tags": [
@@ -624,85 +460,30 @@
         ],
         "summary": "Devices",
         "operationId": "devices_api_v1_devices_get",
-        "security": [
-          {
-            "CognitoAccessToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-Silip-Authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Silip-Authorization"
-            }
-          }
-        ],
->>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-<<<<<<< HEAD
-                  "$ref": "#/components/schemas/BenchSnapshot"
-=======
-                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/Device"
                   },
+                  "type": "array",
                   "title": "Response Devices Api V1 Devices Get"
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
->>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
-                }
-              }
-            }
           }
-        }
-<<<<<<< HEAD
-      }
-    },
-    "/api/v1/bench/{transformer_id}": {
-      "get": {
-        "tags": [
-          "bench"
-        ],
-        "summary": "Bench Transformer",
-        "description": "Public: one bench transformer. Refuses every transformer that is not on the bench.",
-        "operationId": "bench_transformer_api_v1_bench__transformer_id__get",
-        "parameters": [
+        },
+        "security": [
           {
-            "name": "transformer_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Transformer Id"
-            }
+            "CognitoAccessTokenHeader": []
+          },
+          {
+            "CognitoAccessToken": []
           }
-        ],
-        "responses": {
-          "200": {
-=======
+        ]
       },
       "post": {
         "tags": [
@@ -710,51 +491,23 @@
         ],
         "summary": "Register",
         "operationId": "register_api_v1_devices_post",
-        "security": [
-          {
-            "CognitoAccessToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-Silip-Authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Silip-Authorization"
-            }
-          }
-        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/DeviceRegistration"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "201": {
->>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-<<<<<<< HEAD
-                  "$ref": "#/components/schemas/BenchSnapshot"
-=======
                   "$ref": "#/components/schemas/DeviceSetup"
->>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
                 }
               }
             }
@@ -769,10 +522,16 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "CognitoAccessTokenHeader": []
+          },
+          {
+            "CognitoAccessToken": []
+          }
+        ]
       }
-<<<<<<< HEAD
-=======
     },
     "/api/v1/devices/transformers": {
       "get": {
@@ -781,55 +540,30 @@
         ],
         "summary": "Transformers",
         "operationId": "transformers_api_v1_devices_transformers_get",
-        "security": [
-          {
-            "CognitoAccessToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-Silip-Authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Silip-Authorization"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/TransformerOption"
                   },
+                  "type": "array",
                   "title": "Response Transformers Api V1 Devices Transformers Get"
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
-        }
+        },
+        "security": [
+          {
+            "CognitoAccessTokenHeader": []
+          },
+          {
+            "CognitoAccessToken": []
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -837,38 +571,15 @@
         ],
         "summary": "Add Transformer",
         "operationId": "add_transformer_api_v1_devices_transformers_post",
-        "security": [
-          {
-            "CognitoAccessToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "X-Silip-Authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Silip-Authorization"
-            }
-          }
-        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/TransformerRegistration"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "201": {
@@ -891,7 +602,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "CognitoAccessTokenHeader": []
+          },
+          {
+            "CognitoAccessToken": []
+          }
+        ]
       }
     },
     "/api/v1/devices/transformers/{transformer_id}/telemetry": {
@@ -902,6 +621,9 @@
         "summary": "Telemetry",
         "operationId": "telemetry_api_v1_devices_transformers__transformer_id__telemetry_get",
         "security": [
+          {
+            "CognitoAccessTokenHeader": []
+          },
           {
             "CognitoAccessToken": []
           }
@@ -914,22 +636,6 @@
             "schema": {
               "type": "string",
               "title": "Transformer Id"
-            }
-          },
-          {
-            "name": "X-Silip-Authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Silip-Authorization"
             }
           }
         ],
@@ -966,6 +672,9 @@
         "operationId": "assign_api_v1_devices__clamp_id__installation_put",
         "security": [
           {
+            "CognitoAccessTokenHeader": []
+          },
+          {
             "CognitoAccessToken": []
           }
         ],
@@ -977,22 +686,6 @@
             "schema": {
               "type": "string",
               "title": "Clamp Id"
-            }
-          },
-          {
-            "name": "X-Silip-Authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Silip-Authorization"
             }
           }
         ],
@@ -1039,6 +732,9 @@
         "operationId": "replace_key_api_v1_devices__clamp_id__key_post",
         "security": [
           {
+            "CognitoAccessTokenHeader": []
+          },
+          {
             "CognitoAccessToken": []
           }
         ],
@@ -1050,22 +746,6 @@
             "schema": {
               "type": "string",
               "title": "Clamp Id"
-            }
-          },
-          {
-            "name": "X-Silip-Authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Silip-Authorization"
             }
           }
         ],
@@ -1154,12 +834,109 @@
           }
         }
       }
->>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
+    },
+    "/api/v1/bench": {
+      "get": {
+        "tags": [
+          "bench"
+        ],
+        "summary": "Bench",
+        "description": "Public: the bench rig's mock homes and both transformers, from the last 3 minutes.",
+        "operationId": "bench_api_v1_bench_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchSnapshot"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bench/{transformer_id}": {
+      "get": {
+        "tags": [
+          "bench"
+        ],
+        "summary": "Bench Transformer",
+        "description": "Public: one bench transformer. Refuses every transformer that is not on the bench.",
+        "operationId": "bench_transformer_api_v1_bench__transformer_id__get",
+        "parameters": [
+          {
+            "name": "transformer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transformer Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchSnapshot"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
-<<<<<<< HEAD
+      "AggregatePoint": {
+        "properties": {
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          },
+          "measured_kw": {
+            "type": "number",
+            "title": "Measured Kw"
+          },
+          "energy_kwh": {
+            "type": "number",
+            "title": "Energy Kwh"
+          },
+          "homes_reporting": {
+            "type": "integer",
+            "title": "Homes Reporting"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ts",
+          "measured_kw",
+          "energy_kwh",
+          "homes_reporting",
+          "is_simulated"
+        ],
+        "title": "AggregatePoint"
+      },
       "BenchFingerprint": {
         "properties": {
           "home": {
@@ -1349,28 +1126,11 @@
             },
             "type": "array",
             "title": "Reasons"
-=======
-      "AggregatePoint": {
-        "properties": {
-          "ts": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Ts"
-          },
-          "measured_kw": {
-            "type": "number",
-            "title": "Measured Kw"
-          },
-          "energy_kwh": {
-            "type": "number",
-            "title": "Energy Kwh"
->>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
           },
           "homes_reporting": {
             "type": "integer",
             "title": "Homes Reporting"
           },
-<<<<<<< HEAD
           "homes_on_record": {
             "type": "integer",
             "title": "Homes On Record"
@@ -1385,16 +1145,10 @@
           "powered": {
             "type": "boolean",
             "title": "Powered"
-=======
-          "is_simulated": {
-            "type": "boolean",
-            "title": "Is Simulated"
->>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
           }
         },
         "type": "object",
         "required": [
-<<<<<<< HEAD
           "transformer_id",
           "rated_w",
           "total_w",
@@ -1407,15 +1161,6 @@
           "powered"
         ],
         "title": "BenchTransformerState"
-=======
-          "ts",
-          "measured_kw",
-          "energy_kwh",
-          "homes_reporting",
-          "is_simulated"
-        ],
-        "title": "AggregatePoint"
->>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
       },
       "ClampMap": {
         "properties": {

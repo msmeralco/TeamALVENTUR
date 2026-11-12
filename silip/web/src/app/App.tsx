@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Cpu, Gauge, House, Info, Map as MapIcon, ZapOff, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Link, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { DemoPage } from "../features/demo/DemoPage";
 import { DevicesPage } from "../features/devices/DevicesPage";
 import { UsagePage } from "../features/household/UsagePage";
@@ -92,41 +93,77 @@ function NotFoundPage() {
   );
 }
 
-const NAV: { to: string; label: string; end: boolean; group?: Group }[] = [
-  { to: "/", label: "Outages", end: true },
-  { to: "/engineer", label: "Risk map", end: false, group: "engineers" },
-  { to: "/engineer/devices", label: "Devices", end: true, group: "engineers" },
-  { to: "/me/usage", label: "My usage", end: false, group: "households" },
+interface NavItem {
+  to: string;
+  label: string;
+  /** Shown under the icon on phones when the full label would wrap. */
+  short?: string;
+  icon: LucideIcon;
+  group?: Group;
+}
+
+const PUBLIC_NAV: NavItem[] = [
+  { to: "/", label: "Home", icon: House },
+  { to: "/outages", label: "Outages", icon: ZapOff },
+  { to: "/#how-it-works", label: "How it works", icon: Info },
 ];
 
-/** Pill links in the header on wide screens; a bottom tab bar on phones. Signed-in users see only their views. */
+// Signed in: the viewer's own views, then Outages. At most 4, so the phone tab bar never crowds.
+const MEMBER_NAV: NavItem[] = [
+  { to: "/engineer", label: "Risk map", short: "Map", icon: MapIcon, group: "engineers" },
+  { to: "/engineer/devices", label: "Devices", icon: Cpu, group: "engineers" },
+  { to: "/me/usage", label: "My usage", short: "Usage", icon: Gauge, group: "households" },
+  { to: "/outages", label: "Outages", icon: ZapOff },
+];
+
+function isCurrent(to: string, pathname: string, hash: string): boolean {
+  const [path, anchor] = to.split("#");
+  if (path !== pathname) return false;
+  // Home and its "How it works" anchor share "/", so the hash decides which one is current.
+  return anchor === undefined ? hash !== "#how-it-works" : hash === `#${anchor}`;
+}
+
+/** Pill links in the header on wide screens; a bottom tab bar with icons on phones. */
 function MainNav() {
   const { user, hasGroup } = useAuth();
-  const items = NAV.filter((item) => item.group === undefined || user === null || hasGroup(item.group));
+  const { pathname, hash } = useLocation();
+  const items =
+    user === null ? PUBLIC_NAV : MEMBER_NAV.filter((item) => item.group === undefined || hasGroup(item.group));
   return (
     <nav
       aria-label="Main"
       className={cn(
         "flex gap-1",
-        "max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-20 max-sm:h-16 max-sm:gap-0 max-sm:border-t max-sm:bg-card max-sm:pb-[env(safe-area-inset-bottom)]",
+        "max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-20 max-sm:box-content max-sm:h-16 max-sm:gap-0 max-sm:border-t max-sm:bg-card max-sm:px-1 max-sm:pb-[env(safe-area-inset-bottom)]",
       )}
     >
-      {items.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          end={item.end}
-          className={({ isActive }) =>
-            cn(
-              "rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground no-underline transition-colors duration-150 hover:bg-accent hover:text-foreground",
-              "max-sm:m-2 max-sm:grid max-sm:flex-1 max-sm:place-items-center",
-              isActive && "bg-selected text-selected-foreground hover:bg-selected hover:text-selected-foreground",
-            )
-          }
-        >
-          {item.label}
-        </NavLink>
-      ))}
+      {items.map((item) => {
+        const current = isCurrent(item.to, pathname, hash);
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.to}
+            to={item.to}
+            aria-current={current ? "page" : undefined}
+            aria-label={item.short === undefined ? undefined : item.label}
+            className={cn(
+              "rounded-full px-3 py-2 text-sm font-semibold whitespace-nowrap text-muted-foreground no-underline transition-colors duration-150 hover:bg-accent hover:text-foreground lg:px-4",
+              "max-sm:my-1.5 max-sm:flex max-sm:min-h-11 max-sm:min-w-0 max-sm:flex-1 max-sm:flex-col max-sm:items-center max-sm:justify-center max-sm:gap-0.5 max-sm:rounded-xl max-sm:px-1 max-sm:py-1 max-sm:text-xs",
+              current && "bg-selected text-selected-foreground hover:bg-selected hover:text-selected-foreground",
+            )}
+          >
+            <Icon aria-hidden="true" className="size-5 sm:hidden" />
+            {item.short === undefined ? (
+              item.label
+            ) : (
+              <>
+                <span className="sm:hidden">{item.short}</span>
+                <span className="max-sm:hidden">{item.label}</span>
+              </>
+            )}
+          </Link>
+        );
+      })}
     </nav>
   );
 }
@@ -145,7 +182,7 @@ function Shell() {
         Skip to content
       </a>
       <header className="sticky top-0 z-20 border-b bg-card">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6 lg:gap-6">
           <Link
             to="/"
             aria-label="SILIP home"
@@ -175,6 +212,7 @@ function Shell() {
         <RouteErrorBoundary key={location.pathname}>
           <Routes>
             <Route path="/" element={<OutagesPage />} />
+            <Route path="/outages" element={<OutagesPage />} />
             <Route
               path="/engineer"
               element={

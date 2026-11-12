@@ -322,6 +322,46 @@ describe("account", () => {
   });
 });
 
+describe("navigation", () => {
+  const signedOut: AuthBackend = { ...createDevBackend(), load: async () => null };
+
+  it("shows visitors Home, Outages and How it works, with no engineer or household tabs", async () => {
+    mockApi({ "/api/v1/outages": [OUTAGE] });
+    renderAt("/outages", signedOut);
+    const nav = screen.getByRole("navigation", { name: "Main" });
+    await within(nav).findByRole("link", { name: "Home" });
+    const names = within(nav)
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("aria-label") ?? link.textContent);
+    expect(names).toEqual(["Home", "Outages", "How it works"]);
+    expect(within(nav).getByRole("link", { name: "Outages" }).getAttribute("aria-current")).toBe("page");
+    expect(within(nav).getByRole("link", { name: "Home" }).getAttribute("aria-current")).toBeNull();
+  });
+
+  it("shows signed-in users their own views plus Outages", async () => {
+    mockApi({ "/api/v1/outages": [OUTAGE] });
+    renderAt("/outages");
+    const nav = screen.getByRole("navigation", { name: "Main" });
+    expect(await within(nav).findByRole("link", { name: "Risk map" })).toBeTruthy();
+    expect(within(nav).getByRole("link", { name: "Outages" })).toBeTruthy();
+    expect(within(nav).queryByRole("link", { name: "Home" })).toBeNull();
+  });
+
+  it("lets a visitor cycle the theme from the header", async () => {
+    mockApi({ "/api/v1/outages": [OUTAGE] });
+    window.localStorage.removeItem("silip.theme");
+    renderAt("/outages", signedOut);
+    const header = screen.getAllByRole("banner")[0];
+    const user = userEvent.setup();
+    await user.click(await within(header).findByRole("button", { name: "Theme: system" }));
+    expect(document.documentElement.dataset.theme).toBe("light");
+    await user.click(within(header).getByRole("button", { name: "Theme: light" }));
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    await user.click(within(header).getByRole("button", { name: "Theme: dark" }));
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+  });
+});
+
 describe("return path", () => {
   it("never leaves the site", () => {
     for (const unsafe of ["//evil.example", "/\\evil.example", "https://evil.example", "/auth/callback"]) {

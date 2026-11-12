@@ -178,11 +178,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-<<<<<<< HEAD
     "/api/v1/bench": {
-=======
-    "/api/v1/devices": {
->>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
         parameters: {
             query?: never;
             header?: never;
@@ -191,7 +187,7 @@ export interface paths {
         };
         /**
          * Bench
-         * @description Public: the bench rig's mock homes and both transformers, from the last 10 minutes.
+         * @description Public: the bench rig's mock homes and both transformers, from the last 3 minutes.
          */
         get: operations["bench_api_v1_bench_get"];
         put?: never;
@@ -222,10 +218,130 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devices */
+        get: operations["devices_api_v1_devices_get"];
+        put?: never;
+        /** Register */
+        post: operations["register_api_v1_devices_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/transformers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Transformers */
+        get: operations["transformers_api_v1_devices_transformers_get"];
+        put?: never;
+        /** Add Transformer */
+        post: operations["add_transformer_api_v1_devices_transformers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/transformers/{transformer_id}/telemetry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Telemetry */
+        get: operations["telemetry_api_v1_devices_transformers__transformer_id__telemetry_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{clamp_id}/installation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Assign */
+        put: operations["assign_api_v1_devices__clamp_id__installation_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{clamp_id}/key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace Key */
+        post: operations["replace_key_api_v1_devices__clamp_id__key_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{clamp_id}/readings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Receive Reading */
+        post: operations["receive_reading_api_v1_devices__clamp_id__readings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AggregatePoint */
+        AggregatePoint: {
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /** Measured Kw */
+            measured_kw: number;
+            /** Energy Kwh */
+            energy_kwh: number;
+            /** Homes Reporting */
+            homes_reporting: number;
+            /** Is Simulated */
+            is_simulated: boolean;
+        };
         /** BenchFingerprint */
         BenchFingerprint: {
             /** Home */
@@ -789,6 +905,15 @@ export interface components {
             /** Scored At */
             scored_at?: string | null;
         };
+        /** TransformerTelemetry */
+        TransformerTelemetry: {
+            /** Transformer Id */
+            transformer_id: string;
+            /** Registered Homes */
+            registered_homes: number;
+            /** Points */
+            points: components["schemas"]["AggregatePoint"][];
+        };
         /** UsagePoint */
         UsagePoint: {
             /**
@@ -846,9 +971,7 @@ export interface operations {
     me_api_v1_me_get: {
         parameters: {
             query?: never;
-            header?: {
-                "X-Silip-Authorization"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -877,15 +1000,6 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     list_transformers_api_v1_transformers_get: {
@@ -894,9 +1008,7 @@ export interface operations {
                 /** @description min_lon,min_lat,max_lon,max_lat */
                 bbox?: string | null;
             };
-            header?: {
-                "X-Silip-Authorization"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -946,9 +1058,7 @@ export interface operations {
     get_transformer_api_v1_transformers__transformer_id__get: {
         parameters: {
             query?: never;
-            header?: {
-                "X-Silip-Authorization"?: string | null;
-            };
+            header?: never;
             path: {
                 transformer_id: string;
             };
@@ -1031,9 +1141,7 @@ export interface operations {
     get_outage_api_v1_outages__outage_id__get: {
         parameters: {
             query?: never;
-            header?: {
-                "X-Silip-Authorization"?: string | null;
-            };
+            header?: never;
             path: {
                 outage_id: string;
             };
@@ -1078,9 +1186,7 @@ export interface operations {
     my_usage_api_v1_me_usage_get: {
         parameters: {
             query?: never;
-            header?: {
-                "X-Silip-Authorization"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -1109,23 +1215,12 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     my_device_api_v1_me_device_get: {
         parameters: {
             query?: never;
-            header?: {
-                "X-Silip-Authorization"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -1154,15 +1249,6 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     list_clamps_api_v1_clamps_get: {
@@ -1171,9 +1257,7 @@ export interface operations {
                 /** @description min_lon,min_lat,max_lon,max_lat */
                 bbox?: string | null;
             };
-            header?: {
-                "X-Silip-Authorization"?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -1213,19 +1297,10 @@ export interface operations {
             };
         };
     };
-<<<<<<< HEAD
     bench_api_v1_bench_get: {
         parameters: {
             query?: never;
             header?: never;
-=======
-    devices_api_v1_devices_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Silip-Authorization"?: string | null;
-            };
->>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
             path?: never;
             cookie?: never;
         };
@@ -1261,6 +1336,244 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["BenchSnapshot"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    devices_api_v1_devices_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Device"][];
+                };
+            };
+        };
+    };
+    register_api_v1_devices_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceRegistration"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceSetup"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transformers_api_v1_devices_transformers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransformerOption"][];
+                };
+            };
+        };
+    };
+    add_transformer_api_v1_devices_transformers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransformerRegistration"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransformerOption"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    telemetry_api_v1_devices_transformers__transformer_id__telemetry_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transformer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransformerTelemetry"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_api_v1_devices__clamp_id__installation_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clamp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Installation"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Device"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replace_key_api_v1_devices__clamp_id__key_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clamp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceKey"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    receive_reading_api_v1_devices__clamp_id__readings_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Device-Key"?: string | null;
+            };
+            path: {
+                clamp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceReading"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

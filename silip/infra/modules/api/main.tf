@@ -1,12 +1,11 @@
-# API and ingest Lambdas from one container image, the database secret, and least-privilege roles.
+# API Lambda receives website requests and device HTTPS readings.
 # The function URL uses AWS_IAM auth; only CloudFront (OAC, web module) may call it.
 
 data "aws_region" "current" {}
 
 locals {
   functions = {
-    api    = { command = "silip.app.handler", memory = var.api_memory_mb, timeout = 30 }
-    ingest = { command = "silip.ingest.handler.handle", memory = 256, timeout = 10 }
+    api = { command = "silip.app.handler", memory = var.api_memory_mb, timeout = 30 }
   }
 }
 

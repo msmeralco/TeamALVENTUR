@@ -17,13 +17,3 @@ output "database_secret_arn" {
   description = "Secrets Manager secret the Lambdas read DATABASE_URL from."
   value       = aws_secretsmanager_secret.database_url.arn
 }
-
-output "ingest_function_name" {
-  description = "Ingest Lambda name, invoked by the IoT topic rule."
-  value       = aws_lambda_function.function["ingest"].function_name
-}
-
-output "ingest_function_arn" {
-  description = "Ingest Lambda ARN."
-  value       = aws_lambda_function.function["ingest"].arn
-}

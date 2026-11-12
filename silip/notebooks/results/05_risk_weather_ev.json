@@ -1,0 +1,60 @@
+{
+  "chosen": "lightgbm_weather_ev",
+  "variant": "unweighted",
+  "params": {
+    "n_estimators": 200,
+    "learning_rate": 0.05,
+    "num_leaves": 15,
+    "min_child_samples": 20
+  },
+  "features": [
+    "peak_load_pct",
+    "mean_load_pct",
+    "hours_over_100",
+    "hours_over_110",
+    "hours_over_90",
+    "coverage_pct",
+    "rated_kva",
+    "heat_index_max_c",
+    "ev_evening_step_kw",
+    "ev_stations_within",
+    "reporting_pct"
+  ],
+  "forecaster": "lightgbm_weather",
+  "thresholds": {
+    "critical": 0.05,
+    "watch": 0.03
+  },
+  "false_alarm_budget_per_tx_month": 6.974789915966387,
+  "first_training_day": "2026-04-15 00:00:00+08:00",
+  "stations": 588,
+  "gain_share": {
+    "peak_load_pct": 0.1624,
+    "mean_load_pct": 0.1049,
+    "hours_over_100": 0.3131,
+    "hours_over_110": 0.017,
+    "hours_over_90": 0.0279,
+    "coverage_pct": 0.0355,
+    "rated_kva": 0.022,
+    "heat_index_max_c": 0.19,
+    "ev_evening_step_kw": 0.0616,
+    "ev_stations_within": 0.0102,
+    "reporting_pct": 0.0555
+  },
+  "validation": {
+    "rules (lightgbm_weather forecasts)": {
+      "recall": 0.9451,
+      "false_alarms_per_tx_month": 6.9748,
+      "trips": 91.0,
+      "windows": 357.0,
+      "recall at >= 12 h lead": 0.9451
+    },
+    "lightgbm_weather_ev": {
+      "recall": 0.9121,
+      "false_alarms_per_tx_month": 6.0504,
+      "trips": 91.0,
+      "windows": 357.0,
+      "recall at >= 12 h lead": 0.9121
+    }
+  }
+}

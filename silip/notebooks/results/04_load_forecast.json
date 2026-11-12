@@ -1,13 +1,13 @@
 {
   "chosen": "lightgbm",
   "params": {
-    "n_estimators": 250,
-    "learning_rate": 0.03698903508138494,
-    "num_leaves": 17,
-    "min_child_samples": 180,
-    "subsample": 0.6476856735419906,
-    "colsample_bytree": 0.8899624255110724,
-    "reg_lambda": 0.0030976559591515142,
+    "n_estimators": 200,
+    "learning_rate": 0.029563376483344235,
+    "num_leaves": 30,
+    "min_child_samples": 174,
+    "subsample": 0.717590096317249,
+    "colsample_bytree": 0.6529880974473807,
+    "reg_lambda": 0.0014636441693424017,
     "subsample_freq": 1
   },
   "features": [
@@ -24,10 +24,10 @@
     "2026-05-20 00:00:00+08:00"
   ],
   "validation_mae_kw": {
-    "seasonal naive (baseline)": 6.7855,
-    "yesterday (lag_1d)": 5.8164,
-    "ridge (lags + hour)": 6.3479,
-    "LightGBM, default": 3.9335,
-    "LightGBM, tuned": 3.8536
+    "seasonal naive (baseline)": 6.7709,
+    "yesterday (lag_1d)": 5.8013,
+    "ridge (lags + hour)": 6.3312,
+    "LightGBM, default": 3.8479,
+    "LightGBM, tuned": 3.8793
   }
 }

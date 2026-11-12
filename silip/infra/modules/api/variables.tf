@@ -11,7 +11,7 @@ variable "image_tag" {
 variable "architecture" {
   type        = string
   description = "Lambda CPU architecture; the image must be built for it."
-  default     = "arm64"
+  default     = "x86_64"
   validation {
     condition     = contains(["arm64", "x86_64"], var.architecture)
     error_message = "architecture must be arm64 or x86_64."

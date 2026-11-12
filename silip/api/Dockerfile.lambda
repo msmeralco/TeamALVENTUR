@@ -1,8 +1,9 @@
 # API and ingest Lambdas share this image; Terraform sets the handler per function.
-# Build from the silip/ root:  docker build --platform linux/arm64 -f api/Dockerfile.lambda -t silip-api .
+# Build from the silip/ root:  docker build --platform linux/amd64 -f api/Dockerfile.lambda -t silip-api .
 FROM public.ecr.aws/lambda/python:3.12
 
-COPY --from=ghcr.io/astral-sh/uv:0.7.3 /uv /usr/local/bin/uv
+# uv from PyPI (same version as uv.lock was made with); avoids depending on ghcr.io at build time.
+RUN pip install --no-cache-dir uv==0.7.3
 
 WORKDIR /build
 COPY pyproject.toml uv.lock ./
@@ -11,9 +12,16 @@ COPY api api
 
 # Locked third-party dependencies, then the two workspace packages, into the task root.
 RUN uv export --frozen --no-dev --no-emit-workspace --package silip-api -o requirements.txt \
- && uv pip install --system --target "${LAMBDA_TASK_ROOT}" -r requirements.txt \
- && uv pip install --system --target "${LAMBDA_TASK_ROOT}" --no-deps ./ml ./api \
+ && uv pip install --target "${LAMBDA_TASK_ROOT}" -r requirements.txt \
+ && uv pip install --target "${LAMBDA_TASK_ROOT}" --no-deps ./ml ./api \
  && rm -rf /build
+
+# LightGBM needs the OpenMP runtime, which the Lambda base image lacks. Kept after the big layer
+# above so a rebuild reuses it.
+RUN dnf install -y libgomp && dnf clean all
+
+# Simulated dataset for DATA_SOURCE=simulated (run `make sim` before building). Labeled is_simulated.
+COPY data/sim ${LAMBDA_TASK_ROOT}/data/sim
 
 WORKDIR ${LAMBDA_TASK_ROOT}
 CMD ["silip.app.handler"]

@@ -1,5 +1,6 @@
 -- SILIP schema (Neon Postgres). Additive only: CREATE ... IF NOT EXISTS, never DROP.
--- Apply with: make db   (needs DATABASE_URL)
+-- Apply once as the database OWNER (Neon SQL Editor, or `make db` with an owner URL).
+-- The app role silip_app cannot create tables; it only reads and inserts (grants at the end).
 -- SINs exist only as salted hashes. Every table carries is_simulated.
 
 CREATE TABLE IF NOT EXISTS transformer (
@@ -68,3 +69,8 @@ CREATE TABLE IF NOT EXISTS outage_signal (
     is_simulated    boolean NOT NULL DEFAULT false
 );
 CREATE INDEX IF NOT EXISTS outage_signal_outage ON outage_signal (outage_id);
+
+-- The app role reads everything and inserts readings and outage data. No UPDATE or DELETE.
+GRANT USAGE ON SCHEMA public TO silip_app;
+GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA public TO silip_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT ON TABLES TO silip_app;

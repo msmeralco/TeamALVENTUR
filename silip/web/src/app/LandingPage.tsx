@@ -172,7 +172,7 @@ function EngineerPreview() {
           <h3 className="mr-2 text-xl">{t.transformer_id}</h3>
           <TierBadge tier={t.risk.tier} />
           <SimulatedLabel show />
-          <span className="text-sm text-muted-foreground">Example from simulated data</span>
+          <span className="text-sm text-muted-foreground">Example</span>
         </div>
         <ul className="grid list-disc gap-1 pl-5 marker:text-muted-foreground">
           {t.risk.reasons.map((reason) => (
@@ -186,7 +186,7 @@ function EngineerPreview() {
             {t.rated_kva} kVA, {t.homes} homes
           </Fact>
         </dl>
-        <LoadChart points={[...t.load]} ratedKva={t.rated_kva} />
+        <LoadChart points={[...t.load]} ratedKva={t.rated_kva} nowLabel="Snapshot" />
       </Card>
     </section>
   );

@@ -115,7 +115,9 @@ describe("landing page", () => {
     expect(screen.getByRole("button", { name: "Near me" })).toBeTruthy();
     expect(await screen.findByText("overload")).toBeTruthy();
     expect(document.getElementById("how-it-works")?.querySelector("h2")?.textContent).toBe("How it works");
-    expect(screen.getByText("Example from simulated data")).toBeTruthy();
+    expect(screen.getByText("Example")).toBeTruthy();
+    expect(screen.getByText("Snapshot")).toBeTruthy();
+    expect(screen.queryByText("Now")).toBeNull();
     expect(document.title).toBe("SILIP");
   });
 

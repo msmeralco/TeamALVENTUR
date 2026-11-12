@@ -118,6 +118,9 @@
           "403": {
             "description": "Signed in, but not in the required group"
           },
+          "503": {
+            "description": "No completed scoring run yet"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -171,6 +174,9 @@
           },
           "403": {
             "description": "Signed in, but not in the required group"
+          },
+          "503": {
+            "description": "No completed scoring run yet"
           },
           "422": {
             "description": "Validation Error",
@@ -844,6 +850,18 @@
             "type": "boolean",
             "title": "Is Simulated"
           },
+          "scored_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scored At"
+          },
           "as_of": {
             "type": "string",
             "format": "date-time",
@@ -895,6 +913,18 @@
           "is_simulated": {
             "type": "boolean",
             "title": "Is Simulated"
+          },
+          "scored_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scored At"
           }
         },
         "type": "object",

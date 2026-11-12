@@ -12,6 +12,7 @@ clamps:       clamp_id, transformer_id, lat, lon, ct_model, installed_at, last_s
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Protocol
 
 import pandas as pd
@@ -22,7 +23,13 @@ class DataSource(Protocol):
 
     def transformers(self) -> pd.DataFrame: ...
 
-    def load(self) -> pd.DataFrame: ...
+    def load(self, since: datetime | None = None) -> pd.DataFrame:
+        """Load rows with `ts > since` (all rows when None)."""
+        ...
+
+    def latest_load_ts(self) -> pd.Timestamp | None:
+        """The latest 15-minute load interval, by the data's own clock (never now()); None if empty."""
+        ...
 
     def outages(self) -> pd.DataFrame: ...
 

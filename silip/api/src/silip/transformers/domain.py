@@ -22,6 +22,7 @@ class TransformerRisk(BaseModel):
     rated_kva: float
     risk: RiskOutput
     is_simulated: bool
+    scored_at: datetime | None = None
 
 
 class LoadPoint(BaseModel):

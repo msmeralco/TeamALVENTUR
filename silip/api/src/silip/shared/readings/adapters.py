@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import datetime
 from functools import cached_property
 from pathlib import Path
 from typing import Any, ClassVar, LiteralString
@@ -39,8 +40,13 @@ class SimulatedSource:
     def transformers(self) -> pd.DataFrame:
         return self._data.transformers
 
-    def load(self) -> pd.DataFrame:
-        return self._data.load
+    def load(self, since: datetime | None = None) -> pd.DataFrame:
+        load = self._data.load
+        return load if since is None else load[load["ts"] > since]
+
+    def latest_load_ts(self) -> pd.Timestamp | None:
+        load = self._data.load
+        return None if load.empty else pd.Timestamp(load["ts"].max())
 
     def outages(self) -> pd.DataFrame:
         return self._data.outages
@@ -78,6 +84,19 @@ class SimulatedSource:
         return None if households.empty else str(households["sin_hash"].iloc[0])
 
 
+BUCKET: LiteralString = "date_bin('15 minutes', ts, TIMESTAMPTZ '2000-01-01')"
+
+
+def _after(column: LiteralString) -> LiteralString:
+    """SQL: `column > %(since)s`, or true when since is null (load everything)."""
+    return "(%(since)s::timestamptz IS NULL OR " + column + " > %(since)s::timestamptz)"
+
+
+def _db_time(since: datetime | None) -> datetime | None:
+    # pd.Timestamp is a datetime subclass; hand psycopg the plain type.
+    return None if since is None else pd.Timestamp(since).to_pydatetime()
+
+
 class _NeonSource:
     """Shared queries; subclasses differ only in where per-home kW comes from."""
 
@@ -103,16 +122,33 @@ class _NeonSource:
             " coverage_pct::float8 AS coverage_pct, lat, lon, is_simulated FROM transformer"
         )
 
-    def load(self) -> pd.DataFrame:
+    def _latest(self, sql: LiteralString) -> pd.Timestamp | None:
+        latest = self._frame(sql)["ts"].iloc[0]
+        return None if pd.isna(latest) else pd.Timestamp(latest).tz_convert(LOCAL_TZ)
+
+    def load(self, since: datetime | None = None) -> pd.DataFrame:
         # Measured homes only; spreading unmetered homes' kWh comes later (silip-domain skill).
+        # The WHERE only narrows the scan; HAVING keeps whole 15-minute buckets after `since`.
         sql: LiteralString = (
             "WITH per_home AS ("  # noqa: S608  (class constant, no user input)
             + self.PER_HOME_KW
-            + ") SELECT transformer_id, date_bin('15 minutes', ts, TIMESTAMPTZ '2000-01-01') AS ts,"
-            " SUM(kw) AS transformer_kw, bool_or(is_simulated) AS is_simulated"
-            " FROM per_home GROUP BY 1, 2 ORDER BY 1, 2"
+            + ") SELECT transformer_id, "
+            + BUCKET
+            + " AS ts, SUM(kw) AS transformer_kw, bool_or(is_simulated) AS is_simulated"
+            " FROM per_home WHERE (%(since)s::timestamptz IS NULL"
+            " OR ts > %(since)s::timestamptz - interval '15 minutes')"
+            " GROUP BY 1, 2 HAVING " + _after(BUCKET) + " ORDER BY 1, 2"
         )
-        return self._frame(sql)
+        return self._frame(sql, {"since": _db_time(since)})
+
+    def latest_load_ts(self) -> pd.Timestamp | None:
+        sql: LiteralString = (
+            "WITH per_home AS ("  # noqa: S608  (class constant, no user input)
+            + self.PER_HOME_KW
+            + ") SELECT date_bin('15 minutes', max(ts), TIMESTAMPTZ '2000-01-01') AS ts"
+            " FROM per_home"
+        )
+        return self._latest(sql)
 
     def outages(self) -> pd.DataFrame:
         return self._frame(
@@ -175,8 +211,12 @@ class NeonSource(_NeonSource):
         "SELECT transformer_id, sin_hash, ts, power_kw AS kw, is_simulated FROM household_load"
     )
 
-    def load(self) -> pd.DataFrame:
-        return self._frame(
-            "SELECT transformer_id, ts, transformer_kw::float8 AS transformer_kw, is_simulated"
-            " FROM transformer_load ORDER BY transformer_id, ts"
+    def load(self, since: datetime | None = None) -> pd.DataFrame:
+        sql: LiteralString = (
+            "SELECT transformer_id, ts, transformer_kw::float8 AS transformer_kw, is_simulated"  # noqa: S608  (constants only)
+            " FROM transformer_load WHERE " + _after("ts") + " ORDER BY transformer_id, ts"
         )
+        return self._frame(sql, {"since": _db_time(since)})
+
+    def latest_load_ts(self) -> pd.Timestamp | None:
+        return self._latest("SELECT max(ts) AS ts FROM transformer_load")

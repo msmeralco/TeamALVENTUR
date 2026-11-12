@@ -111,3 +111,15 @@ def test_clamps_carry_no_household_identity(source_and_home):
     clamps = source.clamps()
     assert "sin_hash" not in clamps.columns
     assert set(clamps["transformer_id"]) <= set(source.transformers()["transformer_id"])
+
+
+def test_load_since_keeps_later_rows_and_latest_is_the_data_clock(source_and_home):
+    source, _ = source_and_home
+    load = source.load()
+    latest = source.latest_load_ts()
+    assert latest is not None and latest == load["ts"].max()
+    assert latest.utcoffset() == pd.Timedelta(hours=8)
+    since = latest - pd.Timedelta(hours=48)
+    recent = source.load(since=since)
+    assert not recent.empty and (recent["ts"] > since).all()
+    assert len(recent) == int((load["ts"] > since).sum())

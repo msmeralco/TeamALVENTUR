@@ -17,6 +17,7 @@ import pandas as pd
 from pydantic import BaseModel
 
 from silip.shared.scores.domain import Action, ClampHealth, Driver, WeatherStatus
+from silip_ml.features import evening_step_kw as ml_evening_step_kw
 from silip_ml.readings.domain import load_pct
 from silip_ml.risk.domain import WATCH_LOAD_PCT, Tier
 
@@ -34,10 +35,8 @@ UPGRADE_LOOKBACK_DAYS = 7
 # Evening step above this suggests new EV charging worth an upgrade review. About one home
 # charger (3.3 to 7.4 kW in the simulator recipe, silip-domain). [VERIFY]
 EV_STEP_KW = 5.0
-# ADR 0007 evening step: mean kW 20:00 to 24:00 over the last 7 days minus days 8 to 28.
-EVENING_START_HOUR = 20
-EVENING_RECENT_DAYS, EVENING_BASELINE_DAYS = 7, 28
-HISTORY_WINDOW = pd.Timedelta(days=EVENING_BASELINE_DAYS)
+# Load read per run: the ADR 0007 evening step compares the last 7 days with days 8 to 28.
+HISTORY_WINDOW = pd.Timedelta(days=28)
 LOCAL_TZ = "Asia/Manila"
 ACTIONS: tuple[Action, ...] = get_args(Action)
 TIERS: tuple[Tier, ...] = get_args(Tier)
@@ -157,22 +156,13 @@ def _local(ts: pd.Series) -> pd.DatetimeIndex:
 
 
 def evening_step_kw(history: pd.DataFrame, as_of: pd.Timestamp) -> dict[str, float]:
-    """ADR 0007: mean kW 20:00-24:00 over the 7 days before `as_of` minus days 8 to 28.
-
-    A transformer without readings in both windows has no step (left out).
-    """
+    """ADR 0007 evening step per transformer (`silip_ml.features.evening_step_kw`, the risk
+    feature itself). A transformer without readings in both windows has no step (left out)."""
     if history.empty:
         return {}
-    local = _local(history["ts"])
-    end = pd.Timestamp(as_of).tz_convert(LOCAL_TZ)
-    evening = np.asarray(local.hour >= EVENING_START_HOUR)
-    recent_start = end - pd.Timedelta(days=EVENING_RECENT_DAYS)
-    baseline_start = end - pd.Timedelta(days=EVENING_BASELINE_DAYS)
-    recent = evening & np.asarray((local >= recent_start) & (local < end))
-    baseline = evening & np.asarray((local >= baseline_start) & (local < recent_start))
-    ids, kw = history["transformer_id"].astype(str), history["transformer_kw"].astype(float)
-    step = kw[recent].groupby(ids[recent]).mean() - kw[baseline].groupby(ids[baseline]).mean()
-    return {str(k): float(v) for k, v in step.dropna().items()}
+    ids = history["transformer_id"].astype(str).unique()
+    steps = ml_evening_step_kw(history, ids, pd.Timestamp(as_of))
+    return {str(t): float(v) for t, v in zip(ids, steps, strict=True) if not np.isnan(v)}
 
 
 def elevated_days(

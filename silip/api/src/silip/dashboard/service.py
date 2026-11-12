@@ -97,7 +97,9 @@ def score_details(
         heat = heat_peak(
             weather, cell_id(float(row["lat"]), float(row["lon"])), as_of, as_of + RISK_HORIZON
         )
-        step = steps.get(tid)
+        # The risk feature itself when the scorer computed it, so drivers and the field agree.
+        known = feature_row.get("ev_evening_step_kw") if feature_row is not None else None
+        step = float(known) if known is not None and not pd.isna(known) else steps.get(tid)
         details.append(
             ScoreDetail(
                 transformer_id=tid,

@@ -86,5 +86,8 @@ def score_window(
     forecast = forecast.assign(
         is_simulated=forecast["transformer_id"].map(flags).fillna(True).astype(bool)
     )
-    features = ml_features.risk_features(forecast, "kw_pred", transformers)
+    risk_features = ml_features.risk_features
+    features = risk_features(
+        forecast, "kw_pred", transformers, **accepted(risk_features, 3, **optional)
+    )
     return Scored(scores, forecast, features, history)

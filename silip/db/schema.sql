@@ -112,8 +112,51 @@ CREATE TABLE IF NOT EXISTS clamp (
     is_simulated    boolean NOT NULL
 );
 
+-- Scheduled risk scoring (silip.scoring). Insert-only: a run and all its rows go in one
+-- transaction, and the API reads the latest complete run. Transformer totals only: no sin_hash and
+-- no per-household rows. run_id is a uuid4 from the job (text, so no sequence grant is needed).
+-- as_of is the latest 15-minute load interval scored, by the data's own clock.
+CREATE TABLE IF NOT EXISTS score_run (
+    run_id          text PRIMARY KEY,
+    as_of           timestamptz NOT NULL,
+    started_at      timestamptz NOT NULL,
+    finished_at     timestamptz NOT NULL,
+    status          text NOT NULL CHECK (status IN ('complete', 'failed')),
+    forecaster      text NOT NULL,
+    risk_scorer     text NOT NULL,
+    transformers    integer NOT NULL,
+    error           text,  -- exception class name only, never a message
+    is_simulated    boolean NOT NULL
+);
+-- One complete run per data interval and strategy pair: a rerun of the same bucket is refused.
+CREATE UNIQUE INDEX IF NOT EXISTS score_run_bucket
+    ON score_run (as_of, forecaster, risk_scorer) WHERE status = 'complete';
+
+CREATE TABLE IF NOT EXISTS transformer_score (
+    run_id          text NOT NULL REFERENCES score_run,
+    transformer_id  text NOT NULL REFERENCES transformer,
+    tier            text NOT NULL CHECK (tier IN ('OK', 'Watch', 'Critical')),
+    reasons         text[] NOT NULL,
+    confidence      real NOT NULL,
+    peak_load_pct   real NOT NULL,
+    coverage_pct    real NOT NULL,
+    is_simulated    boolean NOT NULL,
+    PRIMARY KEY (run_id, transformer_id)
+);
+
+-- The 24 h forecast behind each score, for the transformer card.
+CREATE TABLE IF NOT EXISTS forecast_point (
+    run_id          text NOT NULL REFERENCES score_run,
+    transformer_id  text NOT NULL REFERENCES transformer,
+    ts              timestamptz NOT NULL,
+    kw_pred         real NOT NULL,
+    is_simulated    boolean NOT NULL,
+    PRIMARY KEY (run_id, transformer_id, ts)
+);
+
 -- The app role reads everything and inserts readings and outage data. No DELETE; UPDATE only on
--- household's place columns (granted below).
+-- household's place columns (granted below). The score tables above get SELECT, INSERT only, so
+-- the scoring job never rewrites a run. The owner applies this file (Neon SQL Editor or `make db`).
 GRANT USAGE ON SCHEMA public TO silip_app;
 GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA public TO silip_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT ON TABLES TO silip_app;

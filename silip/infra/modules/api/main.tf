@@ -1,4 +1,5 @@
-# API, ingest and scoring Lambdas from one container image, the database secret, and least-privilege roles.
+# API and scoring Lambdas from one container image, the database secret, and least-privilege roles.
+# The API Lambda also receives device HTTPS readings (no IoT Core ingest Lambda).
 # The function URL uses AWS_IAM auth; only CloudFront (OAC, web module) may call it.
 # Scoring is one more entry in local.functions, not a new module: it shares the image, secret, env
 # and per-function role/log-group pattern, so a module would only duplicate that wiring.
@@ -7,11 +8,12 @@ data "aws_region" "current" {}
 
 locals {
   functions = {
-    api    = { command = "silip.app.handler", memory = var.api_memory_mb, timeout = 30, reserved = null }
-    ingest = { command = "silip.ingest.handler.handle", memory = 256, timeout = 10, reserved = null }
-    # Writes risk scores to Neon on a schedule; reserved concurrency 1 so runs never overlap.
+    api = { command = "silip.app.handler", memory = var.api_memory_mb, timeout = 30, reserved = null }
+    # Writes risk scores to Neon on a schedule. No reserved concurrency: this account's Lambda limit is 10,
+    # and AWS refuses any reservation that leaves fewer than 10 unreserved. Runs are idempotent per
+    # 15-minute bucket (score_run), so a rare overlap repeats work but never double-writes.
     # Timeout is the Lambda max; measured 34 s at 2,000 transformers with lightgbm.
-    score = { command = "silip.scoring.handler.handle", memory = var.scoring_memory_mb, timeout = 900, reserved = 1 }
+    score = { command = "silip.scoring.handler.handle", memory = var.scoring_memory_mb, timeout = 900, reserved = null }
   }
 }
 

@@ -39,6 +39,29 @@
         "summary": "Me",
         "description": "Who is signed in.",
         "operationId": "me_api_v1_me_get",
+        "security": [
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Silip-Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Silip-Authorization"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -55,7 +78,18 @@
           },
           "403": {
             "description": "Signed in, but not in the required group"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
+<<<<<<< HEAD
         },
         "security": [
           {
@@ -65,6 +99,9 @@
             "CognitoAccessToken": []
           }
         ]
+=======
+        }
+>>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
       }
     },
     "/api/v1/transformers": {
@@ -101,6 +138,22 @@
               "title": "Bbox"
             },
             "description": "min_lon,min_lat,max_lon,max_lat"
+          },
+          {
+            "name": "X-Silip-Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Silip-Authorization"
+            }
           }
         ],
         "responses": {
@@ -164,6 +217,22 @@
             "schema": {
               "type": "string",
               "title": "Transformer Id"
+            }
+          },
+          {
+            "name": "X-Silip-Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Silip-Authorization"
             }
           }
         ],
@@ -284,6 +353,22 @@
               "type": "string",
               "title": "Outage Id"
             }
+          },
+          {
+            "name": "X-Silip-Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Silip-Authorization"
+            }
           }
         ],
         "responses": {
@@ -324,6 +409,29 @@
         "summary": "My Usage",
         "description": "The signed-in household's own last 7 days of usage.",
         "operationId": "my_usage_api_v1_me_usage_get",
+        "security": [
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Silip-Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Silip-Authorization"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -340,8 +448,27 @@
           },
           "403": {
             "description": "Signed in, but not in the required group"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
-        },
+        }
+      }
+    },
+    "/api/v1/me/device": {
+      "get": {
+        "tags": [
+          "household"
+        ],
+        "summary": "My Device",
+        "operationId": "my_device_api_v1_me_device_get",
         "security": [
           {
             "CognitoAccessTokenHeader": []
@@ -349,7 +476,53 @@
           {
             "CognitoAccessToken": []
           }
-        ]
+        ],
+        "parameters": [
+          {
+            "name": "X-Silip-Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Silip-Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdDevice"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Signed in, but not in the required group"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/clamps": {
@@ -386,6 +559,22 @@
               "title": "Bbox"
             },
             "description": "min_lon,min_lat,max_lon,max_lat"
+          },
+          {
+            "name": "X-Silip-Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Silip-Authorization"
+            }
           }
         ],
         "responses": {
@@ -418,6 +607,7 @@
         }
       }
     },
+<<<<<<< HEAD
     "/api/v1/bench": {
       "get": {
         "tags": [
@@ -426,18 +616,69 @@
         "summary": "Bench",
         "description": "Public: the bench rig's mock homes and both transformers, from the last 10 minutes.",
         "operationId": "bench_api_v1_bench_get",
+=======
+    "/api/v1/devices": {
+      "get": {
+        "tags": [
+          "devices"
+        ],
+        "summary": "Devices",
+        "operationId": "devices_api_v1_devices_get",
+        "security": [
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Silip-Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Silip-Authorization"
+            }
+          }
+        ],
+>>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
+<<<<<<< HEAD
                   "$ref": "#/components/schemas/BenchSnapshot"
+=======
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Device"
+                  },
+                  "title": "Response Devices Api V1 Devices Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+>>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
                 }
               }
             }
           }
         }
+<<<<<<< HEAD
       }
     },
     "/api/v1/bench/{transformer_id}": {
@@ -461,11 +702,59 @@
         ],
         "responses": {
           "200": {
+=======
+      },
+      "post": {
+        "tags": [
+          "devices"
+        ],
+        "summary": "Register",
+        "operationId": "register_api_v1_devices_post",
+        "security": [
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Silip-Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Silip-Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceRegistration"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+>>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
+<<<<<<< HEAD
                   "$ref": "#/components/schemas/BenchSnapshot"
+=======
+                  "$ref": "#/components/schemas/DeviceSetup"
+>>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
                 }
               }
             }
@@ -482,10 +771,395 @@
           }
         }
       }
+<<<<<<< HEAD
+=======
+    },
+    "/api/v1/devices/transformers": {
+      "get": {
+        "tags": [
+          "devices"
+        ],
+        "summary": "Transformers",
+        "operationId": "transformers_api_v1_devices_transformers_get",
+        "security": [
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Silip-Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Silip-Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransformerOption"
+                  },
+                  "title": "Response Transformers Api V1 Devices Transformers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "devices"
+        ],
+        "summary": "Add Transformer",
+        "operationId": "add_transformer_api_v1_devices_transformers_post",
+        "security": [
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Silip-Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Silip-Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransformerRegistration"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransformerOption"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/transformers/{transformer_id}/telemetry": {
+      "get": {
+        "tags": [
+          "devices"
+        ],
+        "summary": "Telemetry",
+        "operationId": "telemetry_api_v1_devices_transformers__transformer_id__telemetry_get",
+        "security": [
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transformer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transformer Id"
+            }
+          },
+          {
+            "name": "X-Silip-Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Silip-Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransformerTelemetry"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{clamp_id}/installation": {
+      "put": {
+        "tags": [
+          "devices"
+        ],
+        "summary": "Assign",
+        "operationId": "assign_api_v1_devices__clamp_id__installation_put",
+        "security": [
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "clamp_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clamp Id"
+            }
+          },
+          {
+            "name": "X-Silip-Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Silip-Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Installation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Device"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{clamp_id}/key": {
+      "post": {
+        "tags": [
+          "devices"
+        ],
+        "summary": "Replace Key",
+        "operationId": "replace_key_api_v1_devices__clamp_id__key_post",
+        "security": [
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "clamp_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clamp Id"
+            }
+          },
+          {
+            "name": "X-Silip-Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Silip-Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceKey"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{clamp_id}/readings": {
+      "post": {
+        "tags": [
+          "device-readings"
+        ],
+        "summary": "Receive Reading",
+        "operationId": "receive_reading_api_v1_devices__clamp_id__readings_post",
+        "parameters": [
+          {
+            "name": "clamp_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clamp Id"
+            }
+          },
+          {
+            "name": "X-Device-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 256
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Device-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceReading"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+>>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
     }
   },
   "components": {
     "schemas": {
+<<<<<<< HEAD
       "BenchFingerprint": {
         "properties": {
           "home": {
@@ -675,11 +1349,28 @@
             },
             "type": "array",
             "title": "Reasons"
+=======
+      "AggregatePoint": {
+        "properties": {
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          },
+          "measured_kw": {
+            "type": "number",
+            "title": "Measured Kw"
+          },
+          "energy_kwh": {
+            "type": "number",
+            "title": "Energy Kwh"
+>>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
           },
           "homes_reporting": {
             "type": "integer",
             "title": "Homes Reporting"
           },
+<<<<<<< HEAD
           "homes_on_record": {
             "type": "integer",
             "title": "Homes On Record"
@@ -694,10 +1385,16 @@
           "powered": {
             "type": "boolean",
             "title": "Powered"
+=======
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+>>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
           }
         },
         "type": "object",
         "required": [
+<<<<<<< HEAD
           "transformer_id",
           "rated_w",
           "total_w",
@@ -710,6 +1407,15 @@
           "powered"
         ],
         "title": "BenchTransformerState"
+=======
+          "ts",
+          "measured_kw",
+          "energy_kwh",
+          "homes_reporting",
+          "is_simulated"
+        ],
+        "title": "AggregatePoint"
+>>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
       },
       "ClampMap": {
         "properties": {
@@ -818,6 +1524,445 @@
         "title": "ClampPoint",
         "description": "One installed clamp, placed at its household's building. Carries no household identity."
       },
+      "Device": {
+        "properties": {
+          "clamp_id": {
+            "type": "string",
+            "title": "Clamp Id"
+          },
+          "transformer_id": {
+            "type": "string",
+            "title": "Transformer Id"
+          },
+          "lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lat"
+          },
+          "lon": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lon"
+          },
+          "location_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Label"
+          },
+          "ct_model": {
+            "type": "string",
+            "title": "Ct Model"
+          },
+          "installed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Installed At"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          },
+          "device_key_set": {
+            "type": "boolean",
+            "title": "Device Key Set",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "clamp_id",
+          "transformer_id",
+          "lat",
+          "lon",
+          "ct_model",
+          "installed_at",
+          "last_seen_at",
+          "status",
+          "is_simulated"
+        ],
+        "title": "Device"
+      },
+      "DeviceKey": {
+        "properties": {
+          "device_key": {
+            "type": "string",
+            "title": "Device Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device_key"
+        ],
+        "title": "DeviceKey"
+      },
+      "DeviceReading": {
+        "properties": {
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          },
+          "voltage_v": {
+            "type": "number",
+            "maximum": 300.0,
+            "minimum": 0.0,
+            "title": "Voltage V"
+          },
+          "current_a": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Current A",
+            "description": "SCT-013-000 range is 0 to 100 A"
+          },
+          "power_kw": {
+            "type": "number",
+            "title": "Power Kw",
+            "description": "Negative when rooftop solar exports"
+          },
+          "power_factor": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Power Factor"
+          },
+          "energy_kwh_interval": {
+            "type": "number",
+            "title": "Energy Kwh Interval"
+          },
+          "motion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Motion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "event": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "last_gasp"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated",
+            "default": false
+          },
+          "sin_hash": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sin Hash"
+          },
+          "transformer_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transformer Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ts",
+          "voltage_v",
+          "current_a",
+          "power_kw",
+          "power_factor",
+          "energy_kwh_interval"
+        ],
+        "title": "DeviceReading",
+        "description": "HTTP device report. Legacy identifiers are accepted but assignment is server-owned."
+      },
+      "DeviceRegistration": {
+        "properties": {
+          "clamp_id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9:_-]{1,128}$",
+            "title": "Clamp Id"
+          },
+          "sin_hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Sin Hash"
+          },
+          "transformer_id": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Transformer Id"
+          },
+          "lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Lon"
+          },
+          "location_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Label"
+          },
+          "ct_model": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Ct Model",
+            "default": "SCT-013-000"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated",
+            "default": false
+          },
+          "consent_confirmed": {
+            "type": "boolean",
+            "title": "Consent Confirmed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "transformer_id",
+          "lat",
+          "lon",
+          "consent_confirmed"
+        ],
+        "title": "DeviceRegistration"
+      },
+      "DeviceSetup": {
+        "properties": {
+          "clamp_id": {
+            "type": "string",
+            "title": "Clamp Id"
+          },
+          "transformer_id": {
+            "type": "string",
+            "title": "Transformer Id"
+          },
+          "lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lat"
+          },
+          "lon": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lon"
+          },
+          "location_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Label"
+          },
+          "ct_model": {
+            "type": "string",
+            "title": "Ct Model"
+          },
+          "installed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Installed At"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          },
+          "device_key_set": {
+            "type": "boolean",
+            "title": "Device Key Set",
+            "default": false
+          },
+          "device_key": {
+            "type": "string",
+            "title": "Device Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clamp_id",
+          "transformer_id",
+          "lat",
+          "lon",
+          "ct_model",
+          "installed_at",
+          "last_seen_at",
+          "status",
+          "is_simulated",
+          "device_key"
+        ],
+        "title": "DeviceSetup"
+      },
+      "ElectricalReading": {
+        "properties": {
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          },
+          "voltage_v": {
+            "type": "number",
+            "title": "Voltage V"
+          },
+          "current_a": {
+            "type": "number",
+            "title": "Current A"
+          },
+          "power_kw": {
+            "type": "number",
+            "title": "Power Kw"
+          },
+          "power_factor": {
+            "type": "number",
+            "title": "Power Factor"
+          },
+          "energy_kwh_interval": {
+            "type": "number",
+            "title": "Energy Kwh Interval"
+          },
+          "motion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Motion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "event": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ts",
+          "voltage_v",
+          "current_a",
+          "power_kw",
+          "power_factor",
+          "energy_kwh_interval",
+          "motion",
+          "event",
+          "is_simulated"
+        ],
+        "title": "ElectricalReading"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -830,6 +1975,90 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HouseholdDevice": {
+        "properties": {
+          "clamp_id": {
+            "type": "string",
+            "title": "Clamp Id"
+          },
+          "transformer_id": {
+            "type": "string",
+            "title": "Transformer Id"
+          },
+          "lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lat"
+          },
+          "lon": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lon"
+          },
+          "location_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Label"
+          },
+          "ct_model": {
+            "type": "string",
+            "title": "Ct Model"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          },
+          "readings": {
+            "items": {
+              "$ref": "#/components/schemas/ElectricalReading"
+            },
+            "type": "array",
+            "title": "Readings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clamp_id",
+          "transformer_id",
+          "lat",
+          "lon",
+          "ct_model",
+          "last_seen_at",
+          "is_simulated",
+          "readings"
+        ],
+        "title": "HouseholdDevice"
       },
       "HouseholdUsage": {
         "properties": {
@@ -857,6 +2086,48 @@
         ],
         "title": "HouseholdUsage",
         "description": "The last 7 days of the household's own load, in 15-minute intervals."
+      },
+      "Installation": {
+        "properties": {
+          "transformer_id": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Transformer Id"
+          },
+          "lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Lon"
+          },
+          "location_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "transformer_id",
+          "lat",
+          "lon"
+        ],
+        "title": "Installation"
       },
       "LoadPoint": {
         "properties": {
@@ -921,6 +2192,71 @@
         ],
         "title": "MeOut",
         "description": "The signed-in user."
+      },
+      "Motion": {
+        "properties": {
+          "sensor": {
+            "type": "string",
+            "const": "MPU6050",
+            "title": "Sensor"
+          },
+          "accel_m_s2": {
+            "$ref": "#/components/schemas/MotionAxes"
+          },
+          "gyro_dps": {
+            "$ref": "#/components/schemas/MotionAxes"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "stable",
+              "wiggling"
+            ],
+            "title": "State"
+          },
+          "tamper_assessment": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "suspected_tampering"
+            ],
+            "title": "Tamper Assessment"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sensor",
+          "accel_m_s2",
+          "gyro_dps",
+          "state",
+          "tamper_assessment"
+        ],
+        "title": "Motion"
+      },
+      "MotionAxes": {
+        "properties": {
+          "x": {
+            "type": "number",
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "title": "Y"
+          },
+          "z": {
+            "type": "number",
+            "title": "Z"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "z"
+        ],
+        "title": "MotionAxes"
       },
       "OutageDetail": {
         "properties": {
@@ -1197,6 +2533,90 @@
         "title": "TransformerCard",
         "description": "The transformer card: risk plus the last 48 h and the next 24 h of load."
       },
+      "TransformerOption": {
+        "properties": {
+          "transformer_id": {
+            "type": "string",
+            "title": "Transformer Id"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transformer_id",
+          "lat",
+          "lon",
+          "is_simulated"
+        ],
+        "title": "TransformerOption"
+      },
+      "TransformerRegistration": {
+        "properties": {
+          "transformer_id": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9:_-]{1,32}$",
+            "title": "Transformer Id"
+          },
+          "rated_kva": {
+            "type": "number",
+            "maximum": 100000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Rated Kva"
+          },
+          "lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Lon"
+          },
+          "homes": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Homes",
+            "default": 0
+          },
+          "coverage_pct": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Coverage Pct",
+            "default": 0
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "transformer_id",
+          "rated_kva",
+          "lat",
+          "lon"
+        ],
+        "title": "TransformerRegistration"
+      },
       "TransformerRisk": {
         "properties": {
           "transformer_id": {
@@ -1246,6 +2666,32 @@
         ],
         "title": "TransformerRisk",
         "description": "One pin on the engineer risk map."
+      },
+      "TransformerTelemetry": {
+        "properties": {
+          "transformer_id": {
+            "type": "string",
+            "title": "Transformer Id"
+          },
+          "registered_homes": {
+            "type": "integer",
+            "title": "Registered Homes"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/AggregatePoint"
+            },
+            "type": "array",
+            "title": "Points"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transformer_id",
+          "registered_homes",
+          "points"
+        ],
+        "title": "TransformerTelemetry"
       },
       "UsagePoint": {
         "properties": {

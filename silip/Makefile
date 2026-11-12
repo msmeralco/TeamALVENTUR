@@ -46,6 +46,7 @@ web:
 
 schemas:
 	uv run python -m silip_ml.readings.domain schemas/reading.json
+	uv run python -m silip_ml.readings.domain schemas/device-reading.json device
 	uv run python -m silip.app web/openapi.json
 	cd web && npm run gen:api
 

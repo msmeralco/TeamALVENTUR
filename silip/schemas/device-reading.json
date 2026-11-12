@@ -1,0 +1,172 @@
+{
+  "$defs": {
+    "Motion": {
+      "additionalProperties": false,
+      "properties": {
+        "sensor": {
+          "const": "MPU6050",
+          "title": "Sensor",
+          "type": "string"
+        },
+        "accel_m_s2": {
+          "$ref": "#/$defs/MotionAxes"
+        },
+        "gyro_dps": {
+          "$ref": "#/$defs/MotionAxes"
+        },
+        "state": {
+          "enum": [
+            "stable",
+            "wiggling"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "tamper_assessment": {
+          "enum": [
+            "normal",
+            "suspected_tampering"
+          ],
+          "title": "Tamper Assessment",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sensor",
+        "accel_m_s2",
+        "gyro_dps",
+        "state",
+        "tamper_assessment"
+      ],
+      "title": "Motion",
+      "type": "object"
+    },
+    "MotionAxes": {
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        },
+        "z": {
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "title": "MotionAxes",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "HTTP device report. Legacy identifiers are accepted but assignment is server-owned.",
+  "properties": {
+    "ts": {
+      "format": "date-time",
+      "title": "Ts",
+      "type": "string"
+    },
+    "voltage_v": {
+      "maximum": 300,
+      "minimum": 0,
+      "title": "Voltage V",
+      "type": "number"
+    },
+    "current_a": {
+      "description": "SCT-013-000 range is 0 to 100 A",
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Current A",
+      "type": "number"
+    },
+    "power_kw": {
+      "description": "Negative when rooftop solar exports",
+      "title": "Power Kw",
+      "type": "number"
+    },
+    "power_factor": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Power Factor",
+      "type": "number"
+    },
+    "energy_kwh_interval": {
+      "title": "Energy Kwh Interval",
+      "type": "number"
+    },
+    "motion": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Motion"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "event": {
+      "anyOf": [
+        {
+          "const": "last_gasp",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Event"
+    },
+    "is_simulated": {
+      "default": false,
+      "title": "Is Simulated",
+      "type": "boolean"
+    },
+    "sin_hash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sin Hash"
+    },
+    "transformer_id": {
+      "anyOf": [
+        {
+          "maxLength": 32,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Transformer Id"
+    }
+  },
+  "required": [
+    "ts",
+    "voltage_v",
+    "current_a",
+    "power_kw",
+    "power_factor",
+    "energy_kwh_interval"
+  ],
+  "title": "DeviceReading",
+  "type": "object"
+}

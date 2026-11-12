@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -8,6 +9,7 @@ import { dailyKwh } from "../features/household/UsagePage";
 
 // MapLibre needs WebGL, which jsdom lacks; the list beside the map carries the same data.
 vi.mock("../features/risk-map/TransformerMap", () => ({ TransformerMap: () => null }));
+vi.mock("../features/devices/InstallationMap", () => ({ InstallationMap: () => null }));
 
 const OUTAGE = {
   outage_id: "O-0001",

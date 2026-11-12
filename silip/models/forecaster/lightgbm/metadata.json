@@ -1,0 +1,65 @@
+{
+  "task": "forecaster",
+  "name": "lightgbm",
+  "features": [
+    "lag_1d",
+    "lag_2d",
+    "lag_7d",
+    "hour",
+    "day_of_week",
+    "is_weekend",
+    "is_holiday"
+  ],
+  "feature_params": {
+    "holidays": [
+      "2026-04-02",
+      "2026-04-03",
+      "2026-04-04",
+      "2026-04-09",
+      "2026-05-01",
+      "2026-06-12"
+    ],
+    "step_minutes": 15,
+    "steps_per_day": 96
+  },
+  "target": "transformer_kw",
+  "max_horizon_steps": 96,
+  "params": {
+    "n_estimators": 250,
+    "learning_rate": 0.03698903508138494,
+    "num_leaves": 17,
+    "min_child_samples": 180,
+    "subsample": 0.6476856735419906,
+    "colsample_bytree": 0.8899624255110724,
+    "reg_lambda": 0.0030976559591515142,
+    "subsample_freq": 1
+  },
+  "training_window": {
+    "start": "2026-04-08 00:00:00+08:00",
+    "end": "2026-05-19 23:45:00+08:00"
+  },
+  "kept": true,
+  "metrics": {
+    "holdout_mae_kw": 4.75284243032429,
+    "baseline_seasonal_naive_mae_kw": 7.821037618043947,
+    "intervals": 32830
+  },
+  "created": "2026-11-12",
+  "is_simulated": true,
+  "data": {
+    "dir": "data/sim",
+    "scale": "dev",
+    "seed": 7,
+    "transformer_load_sha256": "5c032b92e60ec91f4d2ad248e66fa69faeb2797eb31721ed8aa249fa0265205f",
+    "transformers": 50
+  },
+  "holdout_start": "2026-05-20 00:00:00+08:00",
+  "versions": {
+    "python": "3.12.0",
+    "lightgbm": "4.7.0",
+    "numpy": "2.5.4",
+    "pandas": "3.1.1",
+    "scikit-learn": "1.9.1"
+  },
+  "trained_in": "notebooks/06_evaluate_and_export.ipynb"
+}

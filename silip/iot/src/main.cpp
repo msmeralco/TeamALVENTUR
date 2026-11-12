@@ -3,7 +3,7 @@
 #include <time.h>
 
 #include "config.h"
-#include "mqtt_transport.h"
+#include "http_transport.h"
 #include "power.h"
 #include "secrets.h"
 #include "sensor.h"
@@ -11,7 +11,7 @@
 namespace {
 float volts[SAMPLES_PER_READING];
 float amps[SAMPLES_PER_READING];
-MqttTransport transport;  // swap for a LoRa transport here; nothing else changes
+HttpTransport transport;  // swap for a LoRa transport here; nothing else changes
 unsigned long last_publish_ms = 0;
 
 void iso_timestamp(char* out, size_t size) {
@@ -41,14 +41,12 @@ void loop() {
 
   char ts[32];
   iso_timestamp(ts, sizeof ts);
-  char topic[128];
-  snprintf(topic, sizeof topic, TOPIC_FORMAT, TRANSFORMER_ID, SIN_HASH);
   char json[384];
   snprintf(json, sizeof json,
-           "{\"sin_hash\":\"%s\",\"transformer_id\":\"%s\",\"ts\":\"%s\",\"voltage_v\":%.1f,"
+           "{\"ts\":\"%s\",\"voltage_v\":%.1f,"
            "\"current_a\":%.2f,\"power_kw\":%.3f,\"power_factor\":%.2f,\"energy_kwh_interval\":%.3f,"
            "\"event\":null}",
-           SIN_HASH, TRANSFORMER_ID, ts, reading.voltage_v, reading.current_a, reading.power_kw,
+           ts, reading.voltage_v, reading.current_a, reading.power_kw,
            reading.power_factor, energy_kwh);
-  if (!transport.publish(topic, json)) Serial.println("publish failed; will retry next interval");
+  if (!transport.publish(DEVICE_API_URL, json)) Serial.println("publish failed; will retry next interval");
 }

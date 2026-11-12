@@ -16,6 +16,7 @@ from silip.shared.readings.domain import DataSource
 from silip.transformers import service
 from silip.transformers.domain import (
     TransformerCard,
+    TransformerDataUnavailableError,
     TransformerNotFoundError,
     TransformerRisk,
 )
@@ -78,5 +79,7 @@ def get_transformer(
     """One transformer: risk, last 48 h of load and the 24 h forecast."""
     try:
         return service.transformer_card(snapshot, source, transformer_id)
+    except TransformerDataUnavailableError as error:
+        raise HTTPException(409, "Not enough readings to forecast this transformer yet") from error
     except TransformerNotFoundError as error:
         raise HTTPException(status_code=404, detail="Transformer not found") from error

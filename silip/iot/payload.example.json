@@ -1,0 +1,27 @@
+{
+  "sin_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "transformer_id": "T-104",
+  "ts": "2026-11-12T21:15:00+08:00",
+  "voltage_v": 219.8,
+  "current_a": 11.6,
+  "power_kw": 2.43,
+  "power_factor": 0.95,
+  "energy_kwh_interval": 0.61,
+  "motion": {
+    "sensor": "MPU6050",
+    "accel_m_s2": {
+      "x": 0.4,
+      "y": 1.2,
+      "z": 9.7
+    },
+    "gyro_dps": {
+      "x": 1.1,
+      "y": 0.6,
+      "z": 4.3
+    },
+    "state": "wiggling",
+    "tamper_assessment": "suspected_tampering"
+  },
+  "event": null,
+  "is_simulated": true
+}

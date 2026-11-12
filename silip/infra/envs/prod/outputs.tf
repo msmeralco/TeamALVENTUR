@@ -47,8 +47,3 @@ output "database_secret_arn" {
   description = "Put the Neon pooled URL here once: aws secretsmanager put-secret-value."
   value       = module.api.database_secret_arn
 }
-
-output "iot_node_policy" {
-  description = "Attach to each clamp node's certificate."
-  value       = module.ingest.node_policy_name
-}

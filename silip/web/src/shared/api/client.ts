@@ -34,11 +34,20 @@ export const api = createClient<paths>({
 });
 
 api.use({
-  onRequest({ request }) {
+  async onRequest({ request }) {
     const token = getAccessToken();
-    // Not Authorization: CloudFront replaces that header with its own SigV4 signature for the API Lambda.
-    // The API reads this one (see CLIENT_AUTH_HEADER in api/src/silip/shared/auth/api.py).
-    if (token !== null) request.headers.set("X-Silip-Authorization", `Bearer ${token}`);
+    if (token !== null) {
+      request.headers.set("Authorization", `Bearer ${token}`);
+      // CloudFront signs Authorization for the private Lambda origin.
+      request.headers.set("X-Silip-Authorization", `Bearer ${token}`);
+    }
+    if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
+      const digest = await crypto.subtle.digest("SHA-256", await request.clone().arrayBuffer());
+      request.headers.set(
+        "x-amz-content-sha256",
+        Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join(""),
+      );
+    }
     return request;
   },
   onResponse({ response }) {

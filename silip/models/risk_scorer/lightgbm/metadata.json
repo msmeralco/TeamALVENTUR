@@ -1,0 +1,57 @@
+{
+  "task": "risk_scorer",
+  "name": "lightgbm",
+  "features": [
+    "peak_load_pct",
+    "mean_load_pct",
+    "hours_over_100",
+    "hours_over_110",
+    "hours_over_90",
+    "coverage_pct",
+    "rated_kva"
+  ],
+  "forecaster": "lightgbm",
+  "thresholds": {
+    "critical": 0.08,
+    "watch": 0.04
+  },
+  "kept": false,
+  "kept_reason": "higher recall but more false alarms than rules on the held-out week",
+  "false_alarm_budget_per_tx_month": 5.914285714285715,
+  "label": "trip rule on true load: above 110% of usable rating for 3 h in a row (silip-domain)",
+  "params": {
+    "n_estimators": 200,
+    "learning_rate": 0.05,
+    "num_leaves": 7,
+    "min_child_samples": 40
+  },
+  "training_window": {
+    "start": "2026-04-15 00:00:00+08:00",
+    "end": "2026-05-19 23:45:00+08:00"
+  },
+  "metrics": {
+    "holdout_recall": 1.0,
+    "holdout_false_alarms_per_tx_month": 9.257142857142856,
+    "baseline_rules_recall": 0.96,
+    "baseline_rules_false_alarms_per_tx_month": 8.657142857142858,
+    "trips": 25
+  },
+  "created": "2026-11-12",
+  "is_simulated": true,
+  "data": {
+    "dir": "data/sim",
+    "scale": "dev",
+    "seed": 7,
+    "transformer_load_sha256": "5c032b92e60ec91f4d2ad248e66fa69faeb2797eb31721ed8aa249fa0265205f",
+    "transformers": 50
+  },
+  "holdout_start": "2026-05-20 00:00:00+08:00",
+  "versions": {
+    "python": "3.12.0",
+    "lightgbm": "4.7.0",
+    "numpy": "2.5.4",
+    "pandas": "3.1.1",
+    "scikit-learn": "1.9.1"
+  },
+  "trained_in": "notebooks/06_evaluate_and_export.ipynb"
+}

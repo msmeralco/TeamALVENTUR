@@ -5,10 +5,10 @@ tools: Read, Grep, Glob, Bash
 ---
 You review UI; you never edit. Use Bash only for read-only commands (`git diff`, `git status`).
 
-1. Read `.claude/skills/unslop/SKILL.md` and `.agents/rules/typescript-web.md` in full.
+1. Read `.claude/skills/unslop/SKILL.md`, `docs/design-system.md` and `.agents/rules/typescript-web.md` in full.
 2. Get the target: the screenshot path you were given, or changed files under `web/src/` from `git diff` and `git status`. Read each in full.
 3. Check:
-   - One accent color (#C2501E), used only for the one thing that needs action.
+   - One action color (`--critical`, #B5461A), used only for the one thing that needs action. Green (`--primary`, `--brand`) never marks a warning.
    - Tokens only: no raw hex, `rgb()` or px colors in components (`shared/styles/tokens.css` is the exception).
    - Status shows color + word (OK, Watch, Critical); coverage and confidence beside risk.
    - No gradients, glass, glows, emoji icons, three-card rows, accent bars or edge lines.

@@ -60,8 +60,19 @@ function AxisLabel({ ts }: { ts: string }) {
   );
 }
 
-/** Load as % of rating: last 48 h solid, next 24 h forecast dashed, with a 100% line. */
-export function LoadChart({ points, ratedKva }: { points: Point[]; ratedKva: number }) {
+/**
+ * Load as % of rating: last 48 h solid, next 24 h forecast dashed, with a 100% line.
+ * `nowLabel` names the line where the forecast starts; a fixed example says "Snapshot", since it is not now.
+ */
+export function LoadChart({
+  points,
+  ratedKva,
+  nowLabel = "Now",
+}: {
+  points: Point[];
+  ratedKva: number;
+  nowLabel?: string;
+}) {
   const [hover, setHover] = useState<number | null>(null);
   const yMax = Math.max(RATED_FRACTION * 1.2, ...points.map((p) => p.load_pct * HEADROOM));
   const x = (index: number) => (WIDTH * index) / Math.max(points.length - 1, 1);
@@ -194,7 +205,7 @@ export function LoadChart({ points, ratedKva }: { points: Point[]; ratedKva: num
         <AxisLabel ts={points[0].ts} />
         {nowIndex > 0 && (
           <span className="absolute -translate-x-1/2" style={{ left: xPct(nowIndex) }}>
-            Now
+            {nowLabel}
           </span>
         )}
         <AxisLabel ts={points[points.length - 1].ts} />

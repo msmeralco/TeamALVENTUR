@@ -1,8 +1,8 @@
 import { WifiOff } from "lucide-react";
 import { Component, useEffect, useState, type ReactNode } from "react";
 import { Button } from "./components/button";
-import { Card } from "./components/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./components/tooltip";
+import { StateCard } from "./index";
 
 const MS_PER_MIN = 60_000;
 const RELATIVE_TICK_MS = 30_000;
@@ -123,13 +123,17 @@ export function RouteErrorBoundary({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary
       fallback={
-        <Card role="alert" className="mx-auto mt-10 max-w-md items-center gap-3 px-6 py-10 text-center">
-          <h1 className="text-xl">This page stopped working</h1>
+        <StateCard
+          role="alert"
+          title="This page stopped working"
+          actions={
+            <Button className="min-h-11 rounded-full" onClick={() => window.location.reload()}>
+              Reload
+            </Button>
+          }
+        >
           <p className="text-sm text-muted-foreground">Reloading usually fixes it. Your sign-in is kept.</p>
-          <Button className="mt-2 rounded-full" onClick={() => window.location.reload()}>
-            Reload
-          </Button>
-        </Card>
+        </StateCard>
       }
     >
       {children}

@@ -453,71 +453,6 @@
         }
       }
     },
-    "/api/v1/bench": {
-      "get": {
-        "tags": [
-          "bench"
-        ],
-        "summary": "Bench",
-        "description": "Public: the bench rig's mock homes and both transformers, from the last 3 minutes.",
-        "operationId": "bench_api_v1_bench_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BenchSnapshot"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/bench/{transformer_id}": {
-      "get": {
-        "tags": [
-          "bench"
-        ],
-        "summary": "Bench Transformer",
-        "description": "Public: one bench transformer. Refuses every transformer that is not on the bench.",
-        "operationId": "bench_transformer_api_v1_bench__transformer_id__get",
-        "parameters": [
-          {
-            "name": "transformer_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Transformer Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BenchSnapshot"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/devices": {
       "get": {
         "tags": [
@@ -886,6 +821,71 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bench": {
+      "get": {
+        "tags": [
+          "bench"
+        ],
+        "summary": "Bench",
+        "description": "Public: the bench rig's mock homes and both transformers, from the last 3 minutes.",
+        "operationId": "bench_api_v1_bench_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchSnapshot"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bench/{transformer_id}": {
+      "get": {
+        "tags": [
+          "bench"
+        ],
+        "summary": "Bench Transformer",
+        "description": "Public: one bench transformer. Refuses every transformer that is not on the bench.",
+        "operationId": "bench_transformer_api_v1_bench__transformer_id__get",
+        "parameters": [
+          {
+            "name": "transformer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transformer Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchSnapshot"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",

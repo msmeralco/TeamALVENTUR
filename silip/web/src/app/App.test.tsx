@@ -1,27 +1,16 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { createDevBackend, devUser, takeReturnPath, type AuthBackend } from "../shared/auth";
 import { matchesId, normalizeId, reportAge } from "../shared/risk";
-import { dailyKwh } from "../features/household/UsagePage";
 
 // MapLibre needs WebGL, which jsdom lacks; the list beside the map carries the same data.
 vi.mock("../features/risk-map/TransformerMap", () => ({ TransformerMap: () => null }));
 vi.mock("../features/devices/InstallationMap", () => ({ InstallationMap: () => null }));
-
-const OUTAGE = {
-  outage_id: "O-0001",
-  status: "open",
-  cause: "overload",
-  started_at: "2026-04-30T20:15:00+08:00",
-  area_lat: 14.581,
-  area_lon: 121.002,
-  eta_p10_min: 90,
-  eta_p50_min: 180,
-  eta_p90_min: 300,
-  is_simulated: true,
-};
+// The landing scroll motion (GSAP, Lenis) is loaded lazily; tests check what renders without it.
+const startLandingMotion = vi.hoisted(() => vi.fn((_root: HTMLElement) => () => {}));
+vi.mock("./landingMotion", () => ({ startLandingMotion }));
 
 function risk(id: string, tier: "OK" | "Watch" | "Critical", peak: number) {
   return {
@@ -70,30 +59,121 @@ function renderAt(path: string, backend: AuthBackend = createDevBackend()) {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("public outage view", () => {
-  it("shows one restoration window, the cause and the Simulated data label", async () => {
-    mockApi({ "/api/v1/outages": [OUTAGE] });
-    renderAt("/");
-    expect(await screen.findByText("overload")).toBeTruthy();
-    expect(screen.getByText("Power expected back")).toBeTruthy();
-    expect(screen.queryByText(/1 h 30 min/)).toBeNull();
-    expect(screen.getByText("Simulated data")).toBeTruthy();
-    expect(document.title).toBe("Outages · SILIP");
+describe("landing page", () => {
+  it("opens on the headline and Sign in, then How it works and the labeled engineer example", async () => {
+    mockApi({});
+    renderAt("/", { ...createDevBackend(), load: async () => null });
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+      "See the load on the transformer that feeds your street.",
+    );
+    const hero = screen.getByRole("region", { name: "See the load on the transformer that feeds your street." });
+    expect(await within(hero).findByRole("button", { name: "Sign in" })).toBeTruthy();
+    expect(within(hero).getAllByText("Simulated data").length).toBeGreaterThan(0);
+    expect(within(hero).getByRole("link", { name: "© OpenStreetMap contributors" })).toBeTruthy();
+    expect(within(hero).queryByRole("button", { name: "Near me" })).toBeNull();
+    expect(document.getElementById("how-it-works")?.querySelector("h2")?.textContent).toBe("How it works");
+    expect(screen.getByText("Example")).toBeTruthy();
+    expect(screen.getByText("Snapshot")).toBeTruthy();
+    expect(screen.queryByText("Now")).toBeNull();
+    expect(screen.queryByText(/household sees|For households|outages/i)).toBeNull();
+    expect(document.title).toBe("SILIP");
   });
 
-  it("hides the area search until the API sends area names", async () => {
-    mockApi({ "/api/v1/outages": [OUTAGE] });
+  it("gives engineers Open risk map as the hero's primary action", async () => {
+    mockApi({});
     renderAt("/");
-    await screen.findByText("overload");
-    expect(screen.queryByRole("searchbox", { name: "Search by area" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Near me" })).toBeTruthy();
+    const hero = screen.getByRole("region", { name: "See the load on the transformer that feeds your street." });
+    expect((await within(hero).findByRole("link", { name: "Open risk map" })).getAttribute("href")).toBe("/engineer");
   });
 
-  it("shows an error with a retry when the API fails", async () => {
-    mockApi({ "/api/v1/outages": { detail: "boom" } }, 500);
+  it("loads the scroll motion only when reduced motion is off", async () => {
+    startLandingMotion.mockClear();
+    mockApi({});
     renderAt("/");
-    const alert = await screen.findByRole("alert", {}, { timeout: 3000 });
-    expect(within(alert).getByRole("button", { name: "Try again" })).toBeTruthy();
+    await waitFor(() => expect(startLandingMotion).toHaveBeenCalledTimes(1));
+    expect(startLandingMotion).toHaveBeenCalledWith(document.querySelector("main > div"));
+  });
+
+  it("renders every section in its final state with reduced motion, and never loads the motion", async () => {
+    startLandingMotion.mockClear();
+    const matchMedia = window.matchMedia;
+    window.matchMedia = (query: string) =>
+      ({ ...matchMedia(query), matches: query.includes("min-width") || query.includes("reduce") }) as MediaQueryList;
+    try {
+      mockApi({});
+      renderAt("/");
+      expect((await screen.findAllByRole("link", { name: "Open risk map" })).length).toBeGreaterThan(0);
+      // Every decoding label shows its real text, and nothing is left hidden or offset by inline styles.
+      for (const label of ["Transformer risk, next 24 h", "Household clamp", "Summed per transformer", "Load and risk", "Risk map"]) {
+        const shown = [...document.querySelectorAll<HTMLElement>("[data-decode]")].find((el) => el.dataset.decode === label);
+        expect(shown?.textContent).toBe(label);
+      }
+      expect(screen.getByText("Critical · T-132")).toBeTruthy();
+      for (const id of ["how-it-works", "engineers", "privacy", "sign-in"]) expect(document.getElementById(id)).toBeTruthy();
+      expect(document.querySelectorAll("[data-privacy] li")).toHaveLength(3);
+      expect(document.querySelector("[data-wordmark]")?.textContent).toBe("silip");
+      expect(document.querySelector('main [style*="opacity"], main [style*="clip-path"]')).toBeNull();
+      expect(startLandingMotion).not.toHaveBeenCalled();
+    } finally {
+      window.matchMedia = matchMedia;
+    }
+  });
+
+  it("sends the retired /outages and /me/usage links home, or to the risk map for engineers", async () => {
+    mockApi({ "/api/v1/transformers": LIST });
+    for (const path of ["/outages", "/me/usage"]) {
+      const visitor = renderAt(path, { ...createDevBackend(), load: async () => null });
+      await waitFor(() => expect(window.location.pathname).toBe("/"));
+      visitor.unmount();
+      const engineer = renderAt(path);
+      await waitFor(() => expect(window.location.pathname).toBe("/engineer"));
+      engineer.unmount();
+    }
+  });
+
+  it("gives the header the stage color only while a stage section is under it, and only on /", async () => {
+    const observers: { callback: IntersectionObserverCallback; targets: Element[] }[] = [];
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        targets: Element[] = [];
+        constructor(callback: IntersectionObserverCallback) {
+          observers.push({ callback, targets: this.targets });
+        }
+        observe(el: Element) {
+          this.targets.push(el);
+        }
+        disconnect() {}
+      },
+    );
+    mockApi({ "/api/v1/transformers": LIST });
+    renderAt("/");
+    const header = screen.getAllByRole("banner")[0];
+    const cross = (isIntersecting: boolean) =>
+      act(() => {
+        const { callback, targets } = observers[observers.length - 1];
+        callback(targets.map((target) => ({ target, isIntersecting }) as IntersectionObserverEntry), {} as IntersectionObserver);
+      });
+    await waitFor(() => expect(observers.length).toBeGreaterThan(0));
+    expect(observers[observers.length - 1].targets.every((t) => t.hasAttribute("data-stage"))).toBe(true);
+    cross(true);
+    expect(header.hasAttribute("data-over-stage")).toBe(true);
+    expect(within(header).getByRole("link", { name: "SILIP home" }).hasAttribute("data-stage")).toBe(true);
+    cross(false);
+    expect(header.hasAttribute("data-over-stage")).toBe(false);
+    cross(true);
+    await userEvent.click(within(header).getAllByRole("link", { name: "Risk map" })[0]);
+    await waitFor(() => expect(window.location.pathname).toBe("/engineer"));
+    expect(header.hasAttribute("data-over-stage")).toBe(false);
+  });
+
+  it("scrolls to How it works when the link carries its anchor", async () => {
+    mockApi({});
+    const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
+    renderAt("/#how-it-works");
+    await waitFor(() => expect(scroll).toHaveBeenCalled());
+    expect(scroll.mock.contexts[0]).toBe(document.getElementById("how-it-works"));
+    scroll.mockRestore();
   });
 });
 
@@ -264,7 +344,7 @@ describe("clamps", () => {
 
 describe("account", () => {
   it("confirms sign-out: Cancel keeps the session, Sign out ends it", async () => {
-    mockApi({ "/api/v1/outages": [OUTAGE] });
+    mockApi({});
     renderAt("/");
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Account: dev" }));
@@ -280,7 +360,7 @@ describe("account", () => {
     await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
     const again = await screen.findByRole("alertdialog", { name: "Sign out?" });
     await user.click(within(again).getByRole("button", { name: "Sign out" }));
-    expect(await screen.findByRole("button", { name: "Sign in" })).toBeTruthy();
+    expect(await within(screen.getAllByRole("banner")[0]).findByRole("button", { name: "Sign in" })).toBeTruthy();
   });
 
   it("comes back to the protected page after the sign-in redirect", async () => {
@@ -296,7 +376,7 @@ describe("account", () => {
       signOut: async () => {},
     };
     const first = renderAt("/engineer", backend);
-    await userEvent.click(await screen.findByRole("button", { name: "Sign in" }));
+    await userEvent.click(await within(screen.getAllByRole("banner")[0]).findByRole("button", { name: "Sign in" }));
     expect(window.sessionStorage.getItem("silip.returnTo")).toBe("/engineer");
     expect(takeReturnPath()).toBe("/engineer");
     window.sessionStorage.setItem("silip.returnTo", "/engineer");
@@ -307,7 +387,7 @@ describe("account", () => {
     expect(window.location.pathname).toBe("/engineer");
   });
 
-  it("shows Try again and Back to outages when the sign-in callback fails", async () => {
+  it("shows Try again and Back to home when the sign-in callback fails", async () => {
     const backend: AuthBackend = {
       ...createDevBackend(),
       completeSignIn: async () => {
@@ -318,7 +398,115 @@ describe("account", () => {
     renderAt("/auth/callback?code=abc", backend);
     expect(await screen.findByText("Sign-in did not finish")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Back to outages" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Back to home" })).toBeTruthy();
+  });
+});
+
+describe("navigation", () => {
+  const signedOut: AuthBackend = { ...createDevBackend(), load: async () => null };
+
+  it("shows visitors Home and How it works, with no engineer tabs", async () => {
+    mockApi({});
+    renderAt("/", signedOut);
+    const nav = screen.getByRole("navigation", { name: "Main" });
+    await within(nav).findByRole("link", { name: "Home" });
+    const names = within(nav)
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("aria-label") ?? link.textContent);
+    expect(names).toEqual(["Home", "How it works"]);
+    expect(within(nav).getByRole("link", { name: "Home" }).getAttribute("aria-current")).toBe("page");
+  });
+
+  it("shows engineers the risk map and devices, with no Outages or My usage", async () => {
+    mockApi({});
+    renderAt("/");
+    const nav = screen.getByRole("navigation", { name: "Main" });
+    expect(await within(nav).findByRole("link", { name: "Risk map" })).toBeTruthy();
+    expect(within(nav).getByRole("link", { name: "Devices" })).toBeTruthy();
+    expect(within(nav).queryByRole("link", { name: "Outages" })).toBeNull();
+    expect(within(nav).queryByRole("link", { name: /usage/i })).toBeNull();
+  });
+
+  it("lets a visitor cycle the theme from the header", async () => {
+    mockApi({});
+    window.localStorage.removeItem("silip.theme");
+    renderAt("/sources", signedOut);
+    const header = screen.getAllByRole("banner")[0];
+    const user = userEvent.setup();
+    await user.click(await within(header).findByRole("button", { name: "Theme: system" }));
+    expect(document.documentElement.dataset.theme).toBe("light");
+    await user.click(within(header).getByRole("button", { name: "Theme: light" }));
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    await user.click(within(header).getByRole("button", { name: "Theme: dark" }));
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+  });
+});
+
+describe("footer", () => {
+  it("renders the about line, the sources link, How it works, Sign in and the simulated note on the landing page", async () => {
+    mockApi({});
+    renderAt("/", { ...createDevBackend(), load: async () => null });
+    const footer = screen.getByRole("contentinfo");
+    expect(within(footer).getByText("Built by Alventur Solutions for the Meralco Idol Hackathon 2026.")).toBeTruthy();
+    expect(within(footer).getByRole("link", { name: "Data sources" }).getAttribute("href")).toBe("/sources");
+    expect(within(footer).getByRole("link", { name: "How it works" })).toBeTruthy();
+    expect(await within(footer).findByText("Items marked Simulated data use simulated readings.")).toBeTruthy();
+    expect(await within(footer).findByRole("button", { name: "Sign in" })).toBeTruthy();
+    expect(within(footer).queryByRole("link", { name: "Outages" })).toBeNull();
+    expect(within(footer).getByRole("button", { name: /^Theme: / })).toBeTruthy();
+  });
+
+  it("gives engineers Risk map instead of Sign in, and hides the simulated note when the data is real", async () => {
+    mockApi({ "/api/v1/transformers": LIST.map((t) => ({ ...t, is_simulated: false, risk: { ...t.risk, is_simulated: false } })) });
+    renderAt("/engineer");
+    await screen.findByText("T-2");
+    const footer = screen.getByRole("contentinfo");
+    expect(await within(footer).findByRole("link", { name: "Risk map" })).toBeTruthy();
+    expect(within(footer).queryByRole("button", { name: "Sign in" })).toBeNull();
+    expect(within(footer).queryByText(/simulated/)).toBeNull();
+  });
+});
+
+describe("not found page", () => {
+  const as = (groups: "engineers"[]): AuthBackend => ({
+    ...createDevBackend(),
+    load: async () => ({ ...devUser, groups }),
+  });
+  const linksIn = (main: HTMLElement) =>
+    within(main)
+      .getAllByRole("link")
+      .map((link) => [link.textContent, link.getAttribute("data-variant")]);
+
+  it("offers Home to visitors as the one primary button", async () => {
+    mockApi({});
+    renderAt("/no-such-page", { ...createDevBackend(), load: async () => null });
+    const main = screen.getByRole("main");
+    expect(await within(main).findByText("This link may be old or mistyped.")).toBeTruthy();
+    expect(linksIn(main)).toEqual([["Home", "default"]]);
+    expect(document.title).toBe("Page not found · SILIP");
+  });
+
+  it("leads engineers to the risk map", async () => {
+    mockApi({});
+    renderAt("/no-such-page", as(["engineers"]));
+    const main = screen.getByRole("main");
+    expect(await within(main).findByRole("link", { name: "Risk map" })).toBeTruthy();
+    expect(linksIn(main)).toEqual([
+      ["Risk map", "default"],
+      ["Home", "outline"],
+    ]);
+  });
+
+});
+
+describe("data sources page", () => {
+  it("lists the sources from the spec", () => {
+    mockApi({});
+    renderAt("/sources");
+    expect(screen.getByRole("heading", { level: 1, name: "Data sources" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "powerphilippines.com/?p=23852 (opens in a new tab)" })).toBeTruthy();
+    expect(screen.getByText("Daily Tribune, 23 Sep 2026")).toBeTruthy();
+    expect(document.title).toBe("Data sources · SILIP");
   });
 });
 
@@ -328,32 +516,6 @@ describe("return path", () => {
       window.sessionStorage.setItem("silip.returnTo", unsafe);
       expect(takeReturnPath()).toBe("/");
     }
-  });
-});
-
-describe("household usage", () => {
-  it("labels simulated data and marks partial days", async () => {
-    const points = [
-      { ts: "2026-11-10T10:00:00", kw: 2 },
-      { ts: "2026-11-10T10:15:00", kw: 2 },
-    ];
-    mockApi({ "/api/v1/me/usage": { total_kwh: 1, points, is_simulated: true } });
-    renderAt("/me/usage");
-    expect(await screen.findByText("partial day")).toBeTruthy();
-    expect(screen.getByText("Simulated data")).toBeTruthy();
-  });
-});
-
-describe("dailyKwh", () => {
-  it("sums 15-minute kW readings into kWh per day, oldest first", () => {
-    const days = dailyKwh([
-      { ts: "2026-11-11T10:00:00", kw: 2 },
-      { ts: "2026-11-10T10:00:00", kw: 4 },
-      { ts: "2026-11-11T10:15:00", kw: 2 },
-    ]);
-    expect(days.map((d) => d.kwh)).toEqual([1, 1]);
-    expect(days[0].day.getDate()).toBe(10);
-    expect(days.every((d) => !d.complete)).toBe(true);
   });
 });
 
@@ -403,5 +565,6 @@ describe("live demo page", () => {
     expect(screen.getByText("House 3 added a large new load (likely EV)")).toBeTruthy();
     expect(screen.getByText(/House 4: records say T1, voltage says T2 \(confidence 87%\)/)).toBeTruthy();
     expect(screen.getByText(/built from 4 of 4 homes by SIN/)).toBeTruthy();
+    expect(document.head.querySelector('meta[name="robots"]')?.getAttribute("content")).toBe("noindex");
   });
 });

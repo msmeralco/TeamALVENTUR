@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
+import { useEffect } from "react";
 import { api, unwrap, type Schemas } from "../../shared/api/client";
 import { PageHead, TierBadge, cn, formatPct } from "../../shared/ui";
 import { Card } from "../../shared/ui/components/card";
@@ -104,9 +105,21 @@ function Fingerprints({ snapshot }: { snapshot: Snapshot }) {
   );
 }
 
+/** The demo is unlisted: nothing links here, and search engines are asked not to index it while it is open. */
+function useNoIndex() {
+  useEffect(() => {
+    const meta = document.createElement("meta");
+    meta.name = "robots";
+    meta.content = "noindex";
+    document.head.append(meta);
+    return () => meta.remove();
+  }, []);
+}
+
 /** Public live demo: the bench rig's mock homes summed by SIN into two transformers. */
 export function DemoPage() {
   useDocumentTitle("Live demo");
+  useNoIndex();
   const query = useQuery({
     queryKey: ["bench"],
     queryFn: async () => unwrap(await api.GET("/api/v1/bench")),

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+from pathlib import Path
 from typing import Annotated, Literal
 
 from fastapi import Depends
@@ -13,6 +14,7 @@ from pydantic_settings import SettingsConfigDict
 from silip_ml.core.config import MlSettings
 
 DataSourceName = Literal["simulated", "neon", "clamp", "smart_meter"]
+WeatherSourceName = Literal["simulated", "open_meteo"]
 
 
 class ConfigError(RuntimeError):
@@ -38,6 +40,11 @@ class ApiSettings(MlSettings):
     cognito_region: str = "ap-southeast-1"
     cognito_user_pool_id: str | None = None
     cognito_client_id: str | None = None
+    # Hourly weather: simulated forecasts from data/sim, or Open-Meteo fetched server-side.
+    weather_source: WeatherSourceName = "simulated"
+    open_meteo_base_url: str = "https://api.open-meteo.com/v1/forecast"
+    # Delivered (not simulated) inputs: data/evcs_locations.csv and data/ev_adoption.csv.
+    ev_data_dir: Path = Path("data")
 
     @model_validator(mode="after")
     def _refuse_disabled_auth_in_lambda(self) -> ApiSettings:

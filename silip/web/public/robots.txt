@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /engineer
+Disallow: /me
+Disallow: /auth

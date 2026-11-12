@@ -124,7 +124,7 @@ function FilterChip({ pressed, onClick, children }: { pressed: boolean; onClick:
       onClick={onClick}
       className={cn(
         "inline-flex min-h-11 items-center gap-2 rounded-full border bg-card px-3.5 text-sm font-semibold transition-colors duration-150 hover:bg-accent sm:min-h-9",
-        pressed && "border-foreground bg-accent",
+        pressed && "border-foreground bg-selected text-selected-foreground hover:bg-selected",
       )}
     >
       {children}
@@ -450,6 +450,7 @@ export function RiskMapPage() {
 
       <Button
         hidden={loadFailed}
+        variant="outline"
         className="absolute bottom-4 left-1/2 z-20 min-h-11 -translate-x-1/2 rounded-full shadow-lg lg:hidden"
         onClick={() => setPhoneView(phoneView === "list" ? "map" : "list")}
       >

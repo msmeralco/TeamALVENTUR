@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 export type ThemeChoice = "light" | "dark" | "system";
 
@@ -26,9 +26,23 @@ function systemIsDark(): boolean {
   return typeof window.matchMedia === "function" && window.matchMedia(DARK_QUERY).matches;
 }
 
+// One shared choice, so the header, footer and account menu toggles stay in step.
+let current: ThemeChoice | null = null;
+const listeners = new Set<() => void>();
+
+function getChoice(): ThemeChoice {
+  current ??= readChoice();
+  return current;
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
 /** The viewer's Light / Dark / System choice and the theme actually shown. */
 export function useTheme() {
-  const [choice, setChoiceState] = useState<ThemeChoice>(readChoice);
+  const choice = useSyncExternalStore(subscribe, getChoice);
   const [systemDark, setSystemDark] = useState(systemIsDark);
 
   useEffect(() => {
@@ -41,13 +55,14 @@ export function useTheme() {
 
   const setChoice = useCallback((next: ThemeChoice) => {
     applyChoice(next);
-    setChoiceState(next);
+    current = next;
     try {
       if (next === "system") window.localStorage.removeItem(STORAGE_KEY);
       else window.localStorage.setItem(STORAGE_KEY, next);
     } catch {
       // Storage blocked (private mode): the choice still applies for this visit.
     }
+    listeners.forEach((listener) => listener());
   }, []);
 
   const resolved: "light" | "dark" = choice === "system" ? (systemDark ? "dark" : "light") : choice;

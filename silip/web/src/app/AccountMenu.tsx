@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "../shared/ui/components/dropdown-menu";
 import { useTheme, type ThemeChoice } from "../shared/ui/theme";
+import { ThemeToggle } from "../shared/ui/ThemeToggle";
 
 const GROUP_NAME: Record<string, string> = { engineers: "Engineer", households: "Household" };
 const THEMES: { value: ThemeChoice; label: string }[] = [
@@ -79,7 +80,7 @@ function SignOutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
   );
 }
 
-/** Signed in: name, group, theme and sign-out behind the username. Signed out: a Sign in button. */
+/** Signed in: name, group, theme and sign-out behind the username. Signed out: a theme toggle and Sign in. */
 export function AccountMenu() {
   const { user, signIn } = useAuth();
   const { choice, setChoice } = useTheme();
@@ -87,9 +88,12 @@ export function AccountMenu() {
 
   if (user === null) {
     return (
-      <Button variant="outline" className="min-h-11 rounded-full sm:min-h-9" onClick={() => void signIn()}>
-        Sign in
-      </Button>
+      <>
+        <ThemeToggle />
+        <Button variant="outline" className="min-h-11 rounded-full sm:min-h-9 pointer-coarse:min-h-11" onClick={() => void signIn()}>
+          Sign in
+        </Button>
+      </>
     );
   }
   return (

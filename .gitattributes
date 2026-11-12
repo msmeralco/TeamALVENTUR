@@ -1,0 +1,3 @@
+# Trained model files must keep their exact bytes: LightGBM crashes on CRLF-converted model.txt.
+silip/models/** -text
+silip/tests/fixtures/** -text

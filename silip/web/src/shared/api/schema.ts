@@ -178,46 +178,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/bench": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Bench
-         * @description Public: the bench rig's mock homes and both transformers, from the last 3 minutes.
-         */
-        get: operations["bench_api_v1_bench_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/bench/{transformer_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Bench Transformer
-         * @description Public: one bench transformer. Refuses every transformer that is not on the bench.
-         */
-        get: operations["bench_transformer_api_v1_bench__transformer_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/devices": {
         parameters: {
             query?: never;
@@ -316,6 +276,46 @@ export interface paths {
         put?: never;
         /** Receive Reading */
         post: operations["receive_reading_api_v1_devices__clamp_id__readings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bench": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Bench
+         * @description Public: the bench rig's mock homes and both transformers, from the last 3 minutes.
+         */
+        get: operations["bench_api_v1_bench_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bench/{transformer_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Bench Transformer
+         * @description Public: one bench transformer. Refuses every transformer that is not on the bench.
+         */
+        get: operations["bench_transformer_api_v1_bench__transformer_id__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1297,57 +1297,6 @@ export interface operations {
             };
         };
     };
-    bench_api_v1_bench_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BenchSnapshot"];
-                };
-            };
-        };
-    };
-    bench_transformer_api_v1_bench__transformer_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                transformer_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BenchSnapshot"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     devices_api_v1_devices_get: {
         parameters: {
             query?: never;
@@ -1574,6 +1523,57 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bench_api_v1_bench_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BenchSnapshot"];
+                };
+            };
+        };
+    };
+    bench_transformer_api_v1_bench__transformer_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transformer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BenchSnapshot"];
+                };
             };
             /** @description Validation Error */
             422: {

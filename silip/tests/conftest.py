@@ -1,20 +1,20 @@
-"""Shared fixtures: one small simulated dataset per test session."""
+"""Shared fixtures: the small simulated dataset that notebooks/00_generate_mock_data.ipynb writes.
+
+Regenerate with `SIM_SCALE=test` (see notebooks/README.md). Every row is simulated; SINs are hashes.
+"""
 
 from pathlib import Path
 
 import pytest
 
 from silip_ml.readings.dataset import Dataset, load_dataset
-from silip_ml.readings.simulate import simulate, write
 
-TEST_SALT = "test-salt"
+FIXTURE_SIM = Path(__file__).parent / "fixtures" / "sim"
 
 
 @pytest.fixture(scope="session")
-def sim_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    out = tmp_path_factory.mktemp("sim")
-    write(simulate(transformers=6, days=16, seed=3, salt=TEST_SALT), out)
-    return out
+def sim_dir() -> Path:
+    return FIXTURE_SIM
 
 
 @pytest.fixture(scope="session")

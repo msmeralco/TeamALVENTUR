@@ -1,12 +1,21 @@
 # SILIP. Recipes avoid shell-specific syntax so they run from Git Bash, PowerShell or cmd.
-.PHONY: setup sim test lint fmt backtest api web schemas db tf-validate iot-test
+.PHONY: setup sim notebooks test lint fmt backtest api web schemas db tf-validate iot-test
 
 setup:
 	uv sync
 	cd web && npm ci
 
+# Mock data comes from notebooks/00 only. SIM_SCALE=test|dev|large|xlarge (make sim SIM_SCALE=test).
+SIM_SCALE ?= dev
+export SIM_SCALE
+NBCONVERT = uv run --group notebooks jupyter nbconvert --to notebook --execute --ExecutePreprocessor.timeout=1800
+
 sim:
-	uv run python -m silip_ml.readings.simulate --transformers 50 --days 30 --out data/sim
+	$(NBCONVERT) --output-dir data/sim --output 00_generate_mock_data.executed notebooks/00_generate_mock_data.ipynb
+
+# Re-run every notebook in order and keep outputs (training, evaluation, export to models/).
+notebooks:
+	$(NBCONVERT) --inplace notebooks/00_generate_mock_data.ipynb notebooks/01_data_overview.ipynb notebooks/02_eda.ipynb notebooks/03_features_and_preprocessing.ipynb notebooks/04_train_load_forecast.ipynb notebooks/05_train_risk_model.ipynb notebooks/06_evaluate_and_export.ipynb
 
 test:
 	uv run pytest

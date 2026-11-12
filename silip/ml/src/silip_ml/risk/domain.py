@@ -9,7 +9,8 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
 
-from silip_ml.readings.domain import STEPS_PER_HOUR, load_pct
+from silip_ml.features import longest_run
+from silip_ml.readings.domain import STEPS_PER_HOUR
 
 Tier = Literal["OK", "Watch", "Critical"]
 Row = Mapping[Hashable, Any]  # one record from DataFrame.to_dict("records")
@@ -36,54 +37,24 @@ class RiskOutput(BaseModel):
 
 
 class RiskScorer(Protocol):
-    """Turns a load forecast into a tier, reasons and confidence per transformer."""
+    """Turns a load forecast into a tier, reasons and confidence per transformer.
+
+    `fit` is a no-op kept for callers written for trained-on-request models; remove it once no
+    caller uses it. Trained scorers load an exported artifact.
+    """
 
     def fit(self, load: pd.DataFrame, transformers: pd.DataFrame) -> Self: ...
 
     def score(self, forecast: pd.DataFrame, transformers: pd.DataFrame) -> list[RiskOutput]: ...
 
 
-def longest_run(over: np.ndarray) -> int:
-    """Length of the longest run of True values."""
-    best = run = 0
-    for flag in over:
-        run = run + 1 if flag else 0
-        best = max(best, run)
-    return best
-
-
 def is_trip(pct: np.ndarray) -> bool:
     """Ground-truth failure: load above `TRIP_LOAD_PCT` for `TRIP_MIN_STEPS` in a row."""
-    return longest_run(pct > TRIP_LOAD_PCT) >= TRIP_MIN_STEPS
-
-
-def window_features(
-    frame: pd.DataFrame, kw_column: str, transformers: pd.DataFrame
-) -> pd.DataFrame:
-    """One row per transformer: peak load, hours above 100%, coverage, and the peak time."""
-    columns = ["transformer_id", "rated_kva", "coverage_pct", "is_simulated"]
-    joined = frame.drop(columns=["is_simulated"], errors="ignore").merge(
-        transformers[columns], on="transformer_id"
-    )
-    joined["pct"] = load_pct(joined[kw_column].to_numpy(), joined["rated_kva"].to_numpy())
-    rows = []
-    for transformer_id, group in joined.sort_values("ts").groupby("transformer_id"):
-        pct = group["pct"].to_numpy()
-        rows.append(
-            {
-                "transformer_id": transformer_id,
-                "peak_load_pct": float(pct.max()),
-                "peak_ts": group["ts"].iloc[int(pct.argmax())],
-                "hours_over_100": longest_run(pct > CRITICAL_LOAD_PCT) / STEPS_PER_HOUR,
-                "coverage_pct": float(group["coverage_pct"].iloc[0]),
-                "is_simulated": bool(group["is_simulated"].iloc[0]),
-            }
-        )
-    return pd.DataFrame(rows)
+    return bool(longest_run(pct > TRIP_LOAD_PCT)[0] >= TRIP_MIN_STEPS)
 
 
 def reasons_for(row: Row) -> list[str]:
-    """Plain-language reasons, most important first. `row` is one `window_features` record."""
+    """Plain-language reasons, most important first. `row` is one `risk_features` record."""
     reasons = [f"Peak forecast {row['peak_load_pct']:.0%} of rating at {row['peak_ts']:%H:%M}"]
     if row["hours_over_100"] > 0:
         reasons.append(f"Above 100% of rating for {row['hours_over_100']:.1f} h in a row")
@@ -92,7 +63,7 @@ def reasons_for(row: Row) -> list[str]:
 
 
 def risk_output(row: Row, tier: Tier) -> RiskOutput:
-    """Build the output for one `window_features` record. Confidence equals metering coverage."""
+    """Build the output for one `risk_features` record. Confidence equals metering coverage."""
     return RiskOutput(
         transformer_id=row["transformer_id"],
         tier=tier,

@@ -23,6 +23,7 @@ def test_scorer_contract(dataset, name):
 
 
 def test_trip_needs_three_hours_above_110_percent():
-    assert longest_run(np.array([True, True, False, True])) == 2
+    assert longest_run(np.array([True, True, False, True]))[0] == 2
+    assert longest_run(np.array([[True, False], [True, True]])).tolist() == [1, 2]
     assert is_trip(np.full(12, 1.2))
     assert not is_trip(np.full(11, 1.2))

@@ -1,4 +1,4 @@
-"""Load the simulated CSVs written by `silip_ml.readings.simulate`."""
+"""Load the simulated CSVs written by `notebooks/00_generate_mock_data.ipynb`."""
 
 from __future__ import annotations
 

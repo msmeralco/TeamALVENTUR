@@ -45,3 +45,25 @@ def test_auth_disabled_is_refused_in_lambda(monkeypatch):
     monkeypatch.setenv("AWS_LAMBDA_FUNCTION_NAME", "silip-api")
     with pytest.raises(ConfigError):
         ApiSettings(auth_disabled=True)
+
+
+def test_token_in_the_silip_header_is_accepted(client):
+    # Behind CloudFront the Authorization header carries CloudFront's SigV4 signature (OAC),
+    # so the web sends the Cognito token in X-Silip-Authorization instead.
+    sigv4 = "AWS4-HMAC-SHA256 Credential=x/20261112/ap-southeast-1/lambda/aws4_request"
+    headers = {"X-Silip-Authorization": "Bearer engineer-token", "Authorization": sigv4}
+    response = client.get("/api/v1/me", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["groups"] == ["engineers"]
+
+
+def test_a_sigv4_authorization_header_alone_is_401(client):
+    sigv4 = "AWS4-HMAC-SHA256 Credential=x/20261112/ap-southeast-1/lambda/aws4_request"
+    assert client.get("/api/v1/me", headers={"Authorization": sigv4}).status_code == 401
+
+
+def test_a_bad_token_in_the_silip_header_is_401(client):
+    assert (
+        client.get("/api/v1/me", headers={"X-Silip-Authorization": "Bearer forged"}).status_code
+        == 401
+    )

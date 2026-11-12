@@ -1,0 +1,48 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;width:1920px;height:1080px;overflow:hidden}svg{display:block}</style></head>
+<body><svg id="s" width="1920" height="1080" xmlns="http://www.w3.org/2000/svg"></svg>
+<script>
+const dark = location.hash === '#dark';
+const C = dark
+ ? {bg:'#141517', grid:'#1d1f22', line:'#2c2f34', node:'#3a3e44', house:'#2a2d31', hot:'#e0a43a', halo:'rgba(224,164,58,.14)'}
+ : {bg:'#fafaf7', grid:'#f0efe9', line:'#dddcd4', node:'#b9b8b0', house:'#e2e1da', hot:'#c9821a', halo:'rgba(201,130,26,.12)'};
+document.body.style.background = C.bg;
+let seed = 7; const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const s = document.getElementById('s'); let out = `<rect width="1920" height="1080" fill="${C.bg}"/>`;
+for (let x = 0; x <= 1920; x += 48) out += `<line x1="${x}" y1="0" x2="${x}" y2="1080" stroke="${C.grid}" stroke-width="1"/>`;
+for (let y = 0; y <= 1080; y += 48) out += `<line x1="0" y1="${y}" x2="1920" y2="${y}" stroke="${C.grid}" stroke-width="1"/>`;
+// feeders: orthogonal polylines sweeping in from the right
+const nodes = [];
+const fade = x => Math.max(0, Math.min(1, (x - 820) / 520));
+for (let f = 0; f < 7; f++) {
+  let x = 1920 + 40, y = 120 + f * 140 + Math.round(r() * 40);
+  const pts = [[x, y]];
+  while (x > 760) {
+    x -= 96 + Math.round(r() * 3) * 48;
+    pts.push([x, y]);
+    if (r() < 0.45) { y += (r() < .5 ? -1 : 1) * 48 * (1 + Math.round(r())); y = Math.max(72, Math.min(1008, y)); pts.push([x, y]); }
+    if (r() < 0.7) nodes.push([x, y]);
+  }
+  for (let i = 1; i < pts.length; i++) {
+    const [a, b] = [pts[i - 1], pts[i]];
+    const o = fade(Math.min(a[0], b[0]));
+    if (o > 0) out += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${C.line}" stroke-width="2" stroke-linecap="round" opacity="${o}"/>`;
+  }
+}
+// transformers + their households
+let hot = nodes.filter(n => n[0] > 1300 && n[0] < 1600 && n[1] > 380 && n[1] < 700)[0] || nodes[0];
+for (const [x, y] of nodes) {
+  const o = fade(x); if (o <= 0) continue;
+  const n = 3 + Math.floor(r() * 4);
+  for (let k = 0; k < n; k++) {
+    const a = r() * Math.PI * 2, d = 22 + r() * 18;
+    const hx = x + Math.cos(a) * d, hy = y + Math.sin(a) * d;
+    out += `<line x1="${x}" y1="${y}" x2="${hx}" y2="${hy}" stroke="${C.line}" stroke-width="1" opacity="${o * .8}"/>`;
+    out += `<circle cx="${hx}" cy="${hy}" r="3" fill="${C.house}" opacity="${o}"/>`;
+  }
+  const isHot = x === hot[0] && y === hot[1];
+  if (isHot) out += `<circle cx="${x}" cy="${y}" r="34" fill="${C.halo}"/><circle cx="${x}" cy="${y}" r="20" fill="none" stroke="${C.hot}" stroke-width="1.5" opacity=".5"/>`;
+  out += `<rect x="${x - 7}" y="${y - 7}" width="14" height="14" rx="3" fill="${isHot ? C.hot : C.bg}" stroke="${isHot ? C.hot : C.node}" stroke-width="2" opacity="${isHot ? 1 : o}"/>`;
+}
+s.innerHTML = out;
+</script></body></html>

@@ -7,6 +7,7 @@ from typing import Self
 import pandas as pd
 
 from silip_ml.core.registry import register
+from silip_ml.features import risk_features
 from silip_ml.readings.domain import STEPS_PER_HOUR
 from silip_ml.risk.domain import (
     CRITICAL_MIN_STEPS,
@@ -15,7 +16,6 @@ from silip_ml.risk.domain import (
     Row,
     Tier,
     risk_output,
-    window_features,
 )
 
 
@@ -33,5 +33,5 @@ class RuleScorer:
         return self
 
     def score(self, forecast: pd.DataFrame, transformers: pd.DataFrame) -> list[RiskOutput]:
-        features = window_features(forecast, "kw_pred", transformers)
+        features = risk_features(forecast, "kw_pred", transformers)
         return [risk_output(row, tier_for(row)) for row in features.to_dict("records")]

@@ -18,6 +18,7 @@ class MlSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     data_dir: Path = Path("data/sim")
+    models_dir: Path = Path("models")  # exported by notebooks/06_evaluate_and_export.ipynb
     sin_salt: str = Field(
         default=DEV_SIN_SALT, validation_alias=AliasChoices("SILIP_SIN_SALT", "SIN_SALT")
     )

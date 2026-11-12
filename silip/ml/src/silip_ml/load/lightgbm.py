@@ -1,55 +1,51 @@
-"""LightGBM on day-ago and week-ago lags plus time of day. One model for all transformers."""
+"""LightGBM load forecast, trained in notebooks/04 and exported to models/forecaster/lightgbm/.
+
+One model for all transformers; every feature is at least one day old, so one call forecasts the
+next 24 h for every transformer.
+"""
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Self
 
-import lightgbm as lgb
 import numpy as np
 import pandas as pd
 
+from silip_ml.core.artifacts import Artifact, load_artifact
+from silip_ml.core.config import get_ml_settings
 from silip_ml.core.registry import register
-from silip_ml.load.domain import STEP, forecast_frame, history_by_transformer
-from silip_ml.readings.domain import STEPS_PER_DAY, STEPS_PER_WEEK
+from silip_ml.features import load_features
+from silip_ml.load.domain import forecast_frame, history_grid
+from silip_ml.readings.domain import STEPS_PER_WEEK
 
-MAX_HORIZON_STEPS = STEPS_PER_DAY  # the day-ago lag must already be observed
-
-
-def _features(ts: pd.DatetimeIndex, lag_day: np.ndarray, lag_week: np.ndarray) -> np.ndarray:
-    hour = ts.hour + ts.minute / 60
-    return np.column_stack([lag_day, lag_week, hour, ts.day_of_week])
+TASK, NAME = "forecaster", "lightgbm"
 
 
-@register("forecaster", "lightgbm")
+@register(TASK, NAME)
 class LightGBMForecaster:
-    """Gradient-boosted trees; kept only if the backtest beats `seasonal_naive`."""
+    """Loads the exported booster; kept only if the backtest beats `seasonal_naive`."""
 
-    def __init__(self, n_estimators: int = 200, learning_rate: float = 0.05) -> None:
-        self._model = lgb.LGBMRegressor(
-            n_estimators=n_estimators, learning_rate=learning_rate, min_child_samples=5, verbose=-1
-        )
+    def __init__(self, models_dir: Path | None = None) -> None:
+        self._models_dir = models_dir or get_ml_settings().models_dir
+
+    @property
+    def artifact(self) -> Artifact:
+        return load_artifact(Path(self._models_dir), TASK, NAME)
 
     def fit(self, load: pd.DataFrame) -> Self:
-        features, targets = [], []
-        for _, ts, kw in history_by_transformer(load, min_steps=STEPS_PER_WEEK + 1):
-            i = np.arange(STEPS_PER_WEEK, len(kw))
-            features.append(_features(ts[i], kw[i - STEPS_PER_DAY], kw[i - STEPS_PER_WEEK]))
-            targets.append(kw[i])
-        self._model.fit(np.vstack(features), np.concatenate(targets))
-        return self
+        return self  # trained in the notebooks; kept for callers that still call fit
 
     def predict(self, history: pd.DataFrame, horizon_steps: int) -> pd.DataFrame:
-        if horizon_steps > MAX_HORIZON_STEPS:
-            raise ValueError(f"horizon_steps must be <= {MAX_HORIZON_STEPS}")
-        frames = []
-        for transformer_id, ts, kw in history_by_transformer(history):
-            k = np.arange(horizon_steps)
-            future_ts = ts[-1] + (k + 1) * STEP
-            n = len(kw)
-            x = _features(
-                pd.DatetimeIndex(future_ts), kw[n - STEPS_PER_DAY + k], kw[n - STEPS_PER_WEEK + k]
-            )
-            frames.append(
-                forecast_frame(transformer_id, ts[-1], np.asarray(self._model.predict(x)))
-            )
-        return pd.concat(frames, ignore_index=True)
+        artifact = self.artifact
+        max_horizon = int(artifact.metadata["max_horizon_steps"])
+        if horizon_steps > max_horizon:
+            raise ValueError(f"horizon_steps must be <= {max_horizon}")
+        grid = history_grid(history, min_steps=STEPS_PER_WEEK)
+        rows = grid.steps + np.arange(horizon_steps)
+        params = artifact.metadata["feature_params"]
+        x = load_features(grid, rows, artifact.features, params["holidays"])
+        kw_pred = np.asarray(
+            artifact.booster.predict(x), dtype=np.float64
+        )  # one call, all transformers
+        return forecast_frame(grid, kw_pred, horizon_steps)

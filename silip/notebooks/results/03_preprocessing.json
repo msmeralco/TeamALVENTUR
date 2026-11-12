@@ -1,0 +1,137 @@
+{
+  "folds": [
+    "2026-04-29",
+    "2026-05-06",
+    "2026-05-13"
+  ],
+  "results": [
+    {
+      "question": "baseline",
+      "option": "seasonal naive (same slot last week)",
+      "fold 1": 9.48,
+      "fold 2": 9.708,
+      "fold 3": 6.723,
+      "mean MAE (kW)": 8.637,
+      "usable at scoring time": "yes"
+    },
+    {
+      "question": "features",
+      "option": "lags only",
+      "fold 1": 8.417,
+      "fold 2": 6.86,
+      "fold 3": 5.59,
+      "mean MAE (kW)": 6.956,
+      "usable at scoring time": "yes"
+    },
+    {
+      "question": "features",
+      "option": "lags + calendar (chosen)",
+      "fold 1": 6.644,
+      "fold 2": 5.498,
+      "fold 3": 3.933,
+      "mean MAE (kW)": 5.359,
+      "usable at scoring time": "yes"
+    },
+    {
+      "question": "features",
+      "option": "chosen + same-slot means (3 and 7 days)",
+      "fold 1": 7.2,
+      "fold 2": 6.09,
+      "fold 3": 3.827,
+      "mean MAE (kW)": 5.706,
+      "usable at scoring time": "yes"
+    },
+    {
+      "question": "features",
+      "option": "chosen + rolling 1-day mean",
+      "fold 1": 6.865,
+      "fold 2": 5.533,
+      "fold 3": 3.732,
+      "mean MAE (kW)": 5.377,
+      "usable at scoring time": "yes"
+    },
+    {
+      "question": "features",
+      "option": "chosen + heat index of the forecast day",
+      "fold 1": 4.599,
+      "fold 2": 4.218,
+      "fold 3": 3.252,
+      "mean MAE (kW)": 4.023,
+      "usable at scoring time": "no: needs a weather forecast feed"
+    },
+    {
+      "question": "gaps",
+      "option": "keep as missing (chosen)",
+      "fold 1": 6.644,
+      "fold 2": 5.498,
+      "fold 3": 3.933,
+      "mean MAE (kW)": 5.359,
+      "usable at scoring time": "yes"
+    },
+    {
+      "question": "gaps",
+      "option": "fill forward",
+      "fold 1": 6.94,
+      "fold 2": 5.403,
+      "fold 3": 3.839,
+      "mean MAE (kW)": 5.394,
+      "usable at scoring time": "yes"
+    },
+    {
+      "question": "gaps",
+      "option": "drop rows with a missing input",
+      "fold 1": 6.628,
+      "fold 2": 5.754,
+      "fold 3": 3.817,
+      "mean MAE (kW)": 5.4,
+      "usable at scoring time": "yes"
+    },
+    {
+      "question": "outliers",
+      "option": "no clipping (chosen)",
+      "fold 1": 6.644,
+      "fold 2": 5.498,
+      "fold 3": 3.933,
+      "mean MAE (kW)": 5.359,
+      "usable at scoring time": "yes"
+    },
+    {
+      "question": "outliers",
+      "option": "clip target at each transformer's 99.9th percentile",
+      "fold 1": 6.644,
+      "fold 2": 5.641,
+      "fold 3": 3.89,
+      "mean MAE (kW)": 5.392,
+      "usable at scoring time": "yes"
+    },
+    {
+      "question": "solar",
+      "option": "clip negative target to 0",
+      "fold 1": 6.621,
+      "fold 2": 5.559,
+      "fold 3": 3.905,
+      "mean MAE (kW)": 5.361,
+      "usable at scoring time": "yes"
+    }
+  ],
+  "chosen_features": [
+    "lag_1d",
+    "lag_2d",
+    "lag_7d",
+    "hour",
+    "day_of_week",
+    "is_weekend",
+    "is_holiday"
+  ],
+  "feature_params": {
+    "lag_days": [
+      1,
+      2,
+      7
+    ],
+    "same_slot_mean_days": [
+      3,
+      7
+    ]
+  }
+}

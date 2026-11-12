@@ -12,7 +12,7 @@ The outage view is public. The engineer risk map and outage detail need an engin
 - Callback URLs: `http://localhost:5173/auth/callback` and `https://<web_domain>/auth/callback`. Sign-out URLs: the same origins with `/`.
 
 ## API auth
-- The client sends `Authorization: Bearer <Cognito access token>`.
+- The web client sends `X-Silip-Authorization: Bearer <Cognito access token>`. CloudFront signs `/api/*` requests to the Lambda function URL with SigV4 (origin access control), which replaces any viewer `Authorization` header. The API also accepts `Authorization: Bearer` when called directly (local dev, tests).
 - The API verifies RS256 against the pool JWKS (cached), `iss` = pool URL, `token_use` = `access`, `client_id` = `COGNITO_CLIENT_ID`, `exp`/`nbf` with 60 s leeway.
 - Missing or invalid token: `401 {"detail": "Sign in required"}` + `WWW-Authenticate: Bearer`.
 - Valid token, wrong group: `403` (`Engineer access required` or `Household access required`).
@@ -28,6 +28,7 @@ The outage view is public. The engineer risk map and outage detail need an engin
 |---|---|
 | `GET /api/health` | public |
 | `GET /api/v1/outages?status=open` | public (area rounded to ~110 m, no household data) |
+| `GET /api/v1/bench`, `GET /api/v1/bench/{transformer_id}` | public, live demo only: the bench rig's mock households (`BENCH-*` transformers). The SQL names the bench transformers, and any other ID gets 404. Never a real household. |
 | `GET /api/v1/me` | any signed-in user |
 | `GET /api/v1/transformers?bbox=`, `GET /api/v1/transformers/{id}` | `engineers` |
 | `GET /api/v1/outages/{id}` | `engineers` |

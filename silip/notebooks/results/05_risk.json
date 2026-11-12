@@ -1,0 +1,41 @@
+{
+  "chosen": "lightgbm",
+  "variant": "unweighted, smaller trees",
+  "params": {
+    "n_estimators": 200,
+    "learning_rate": 0.05,
+    "num_leaves": 7,
+    "min_child_samples": 40
+  },
+  "features": [
+    "peak_load_pct",
+    "mean_load_pct",
+    "hours_over_100",
+    "hours_over_110",
+    "hours_over_90",
+    "coverage_pct",
+    "rated_kva"
+  ],
+  "thresholds": {
+    "critical": 0.08,
+    "watch": 0.04
+  },
+  "false_alarm_budget_per_tx_month": 5.914285714285715,
+  "first_training_day": "2026-04-15 00:00:00+08:00",
+  "validation": {
+    "rules": {
+      "recall": 0.9121,
+      "false_alarms_per_tx_month": 5.9143,
+      "trips": 91.0,
+      "windows": 350.0,
+      "recall at >= 12 h lead": 0.9121
+    },
+    "lightgbm": {
+      "recall": 0.9231,
+      "false_alarms_per_tx_month": 5.8286,
+      "trips": 91.0,
+      "windows": 350.0,
+      "recall at >= 12 h lead": 0.9231
+    }
+  }
+}

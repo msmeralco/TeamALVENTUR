@@ -3,7 +3,7 @@
 Estimates each Meralco transformer's load and risk by summing opt-in household clamp readings by Service ID Number (SIN). Flags overloads, EV load and outages for engineers. Outputs: engineer risk map, outage view, household usage view. Spec: `docs/SPEC.md`.
 
 ## Commands (repo root)
-- `make setup` (uv sync + npm ci) · `make sim` · `make test` · `make lint` · `make backtest` · `make api` · `make web` · `make schemas`
+- `make setup` (uv sync + npm ci) · `make sim` (runs `notebooks/00`; `SIM_SCALE=test|dev|large|xlarge`) · `make notebooks` (re-run 00 to 06: train, evaluate, export to `models/`) · `make test` · `make lint` · `make backtest` · `make api` · `make web` · `make schemas`
 - One backtest: `uv run python -m silip_ml.backtest --domain risk --strategy lightgbm` (domains: load, risk, locate, eta)
 - Infra: `make tf-validate`; deploy only via `/deploy`. Schema: `make db` (Neon URLs from `../env/env.dev`). Firmware: `make iot-test` (needs PlatformIO)
 

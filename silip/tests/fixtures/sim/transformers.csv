@@ -1,0 +1,9 @@
+transformer_id,rated_kva,homes,coverage_pct,lat,lon,osm_node_id,loading_class,ev_site,ev_homes,solar_homes,has_jumper,has_check_meter,lead_up,is_simulated
+T-100,50.0,27,0.4444444444444444,14.364681,121.0171927,4641946026,tight,False,0,1,False,True,False,True
+T-101,75.0,35,0.6,14.3943239,121.0448965,5188689710,normal,False,0,4,False,True,False,True
+T-102,50.0,21,0.2857142857142857,14.3664362,121.042189,4357510415,normal,True,0,0,True,False,False,True
+T-103,75.0,45,0.7555555555555555,14.6381181,121.0097895,6167095834,tight,True,9,4,False,False,False,True
+T-104,100.0,38,0.5263157894736842,14.3803604,121.0453378,4483297769,light,False,0,0,False,False,False,True
+T-105,100.0,43,0.813953488372093,14.3676409,121.0421621,4524538857,normal,False,0,2,False,False,False,True
+T-106,75.0,40,0.575,14.3668704,121.0514038,4557286503,normal,False,0,2,True,True,True,True
+T-107,100.0,30,0.3,14.6361328,121.0107927,6167095867,light,False,0,2,False,False,False,True

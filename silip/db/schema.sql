@@ -255,3 +255,43 @@ ALTER TABLE score_run ADD COLUMN IF NOT EXISTS weather_status text;
 -- The tables above were created after the bulk grant, so grant them explicitly (SELECT, INSERT).
 GRANT SELECT, INSERT ON weather_hourly, ev_charger, ev_adoption, transformer_ev_exposure
     TO silip_app;
+
+-- DOE station detail (data/evcs_stations_detail.csv, data/evcs_plugs.csv), joined to ev_charger on
+-- station_id. Public site facts only: the DOE contact, e-mail, street view, equipment serial and
+-- free-text fields are never loaded. Null on stations loaded without the detail files.
+ALTER TABLE ev_charger ADD COLUMN IF NOT EXISTS doe_station_number text;
+ALTER TABLE ev_charger ADD COLUMN IF NOT EXISTS address text;
+ALTER TABLE ev_charger ADD COLUMN IF NOT EXISTS classification text;  -- CUCS charging, BSS swap
+ALTER TABLE ev_charger ADD COLUMN IF NOT EXISTS n_chargepoints integer;
+ALTER TABLE ev_charger ADD COLUMN IF NOT EXISTS n_ac integer;
+ALTER TABLE ev_charger ADD COLUMN IF NOT EXISTS n_dc integer;
+ALTER TABLE ev_charger ADD COLUMN IF NOT EXISTS n_plugs integer;
+ALTER TABLE ev_charger ADD COLUMN IF NOT EXISTS max_capacity_kw real;  -- largest plug with a known kW
+ALTER TABLE ev_charger ADD COLUMN IF NOT EXISTS price_min_php_kwh real;
+ALTER TABLE ev_charger ADD COLUMN IF NOT EXISTS price_max_php_kwh real;
+ALTER TABLE ev_charger ADD COLUMN IF NOT EXISTS hours text;
+-- The loader fills the detail of stations already loaded (INSERT ... ON CONFLICT DO UPDATE of
+-- exactly these columns); everything else on ev_charger stays insert-only.
+GRANT UPDATE (doe_station_number, address, classification, n_chargepoints, n_ac, n_dc, n_plugs,
+    max_capacity_kw, price_min_php_kwh, price_max_php_kwh, hours) ON ev_charger TO silip_app;
+
+-- One row per DOE plug. plug_id is the DOE label plus its occurrence in the station
+-- ("Type 2 - Plug 1 #2"); price_php_kwh only for per-kWh pricing.
+CREATE TABLE IF NOT EXISTS ev_plug (
+    station_id     text NOT NULL REFERENCES ev_charger,
+    plug_id        text NOT NULL,
+    mode           text,
+    protocol       text,
+    capacity_kw    real,
+    status         text,  -- operational | out_of_service
+    price_php_kwh  real,
+    source_sha256  text NOT NULL,
+    loaded_at      timestamptz NOT NULL,
+    is_simulated   boolean NOT NULL DEFAULT false,
+    PRIMARY KEY (station_id, plug_id)
+);
+
+ALTER TABLE transformer_ev_exposure ADD COLUMN IF NOT EXISTS dc_stations_within integer;
+ALTER TABLE transformer_ev_exposure ADD COLUMN IF NOT EXISTS max_capacity_kw_within real;
+
+GRANT SELECT, INSERT ON ev_plug TO silip_app;

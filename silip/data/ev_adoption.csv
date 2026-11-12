@@ -1,0 +1,16 @@
+period,geography_level,geography,metric,vehicle_class,value,unit,source_url,retrieved_at,is_simulated
+2023,national,Philippines,ev_registrations,ev,1359,vehicles,https://www.sunstar.com.ph/cebu/ph-vehicle-registrations-rise-in-2024-ev-hybrid-uptake-accelerates,2026-11-13,false
+2023,national,Philippines,ev_registrations,hybrid,6155,vehicles,https://www.sunstar.com.ph/cebu/ph-vehicle-registrations-rise-in-2024-ev-hybrid-uptake-accelerates,2026-11-13,false
+2024,national,Philippines,ev_registrations,ev,6697,vehicles,https://www.sunstar.com.ph/cebu/ph-vehicle-registrations-rise-in-2024-ev-hybrid-uptake-accelerates,2026-11-13,false
+2024,national,Philippines,ev_registrations,hybrid,17590,vehicles,https://www.sunstar.com.ph/cebu/ph-vehicle-registrations-rise-in-2024-ev-hybrid-uptake-accelerates,2026-11-13,false
+2024,national,Philippines,ev_share_of_sales,xev_all_sellers,5.5,percent,https://www.carguide.ph/2026/01/new-car-sales-remained-flat-in-2025-but.html,2026-11-13,false
+2025,national,Philippines,ev_sales,xev_all_sellers,58905,units,https://www.carguide.ph/2026/01/new-car-sales-remained-flat-in-2025-but.html,2026-11-13,false
+2025,national,Philippines,ev_share_of_sales,xev_all_sellers,12,percent,https://www.carguide.ph/2026/01/new-car-sales-remained-flat-in-2025-but.html,2026-11-13,false
+2025,national,Philippines,ev_sales,xev,32489,units,https://www.carguide.ph/2026/01/new-car-sales-remained-flat-in-2025-but.html,2026-11-13,false
+2025,national,Philippines,ev_sales,hev,25737,units,https://mb.com.ph/2026/01/26/160-electrified-cars-sold-every-day-in-philippines-last-year,2026-11-13,false
+2025,national,Philippines,ev_sales,bev,4613,units,https://mb.com.ph/2026/01/26/160-electrified-cars-sold-every-day-in-philippines-last-year,2026-11-13,false
+2025,national,Philippines,ev_sales,phev,2139,units,https://mb.com.ph/2026/01/26/160-electrified-cars-sold-every-day-in-philippines-last-year,2026-11-13,false
+2026-05,national,Philippines,ev_sales,bev,1843,units,https://www.philstar.com/business/business-as-usual/2026/06/26/2537788/total-car-sales-slow-xevs-accelerate,2026-11-13,false
+2026-05,national,Philippines,ev_sales,hev,2910,units,https://www.philstar.com/business/business-as-usual/2026/06/26/2537788/total-car-sales-slow-xevs-accelerate,2026-11-13,false
+2026-05,national,Philippines,ev_sales,phev,1274,units,https://www.philstar.com/business/business-as-usual/2026/06/26/2537788/total-car-sales-slow-xevs-accelerate,2026-11-13,false
+2026-05,national,Philippines,ev_sales,xev,6027,units,https://www.philstar.com/business/business-as-usual/2026/06/26/2537788/total-car-sales-slow-xevs-accelerate,2026-11-13,false

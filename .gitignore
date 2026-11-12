@@ -56,3 +56,8 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# DOE EVCS portal detail (raw scrape, contains contact fields): never commit
+silip/data/evcs_plugs.csv
+silip/data/evcs_stations_detail.csv
+silip/data/evcs_stations_full.json

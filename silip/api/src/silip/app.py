@@ -13,6 +13,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from mangum import Mangum
 
+from silip.clamps.api import router as clamps_router
 from silip.household.api import router as household_router
 from silip.outages.api import router as outages_router
 from silip.shared.auth.api import router as auth_router
@@ -34,7 +35,13 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-for router in (auth_router, transformers_router, outages_router, household_router):
+for router in (
+    auth_router,
+    transformers_router,
+    outages_router,
+    household_router,
+    clamps_router,
+):
     app.include_router(router)
 
 handler = Mangum(app, lifespan="off")

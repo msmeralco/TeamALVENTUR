@@ -330,10 +330,180 @@
           }
         ]
       }
+    },
+    "/api/v1/clamps": {
+      "get": {
+        "tags": [
+          "clamps"
+        ],
+        "summary": "List Clamps",
+        "description": "Each clamp's device details and online/offline status. No household identity or usage.",
+        "operationId": "list_clamps_api_v1_clamps_get",
+        "security": [
+          {
+            "CognitoAccessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bbox",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "min_lon,min_lat,max_lon,max_lat",
+              "title": "Bbox"
+            },
+            "description": "min_lon,min_lat,max_lon,max_lat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClampMap"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign in required"
+          },
+          "403": {
+            "description": "Signed in, but not in the required group"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "ClampMap": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "offline_after_min": {
+            "type": "integer",
+            "title": "Offline After Min"
+          },
+          "clamps": {
+            "items": {
+              "$ref": "#/components/schemas/ClampPoint"
+            },
+            "type": "array",
+            "title": "Clamps"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of",
+          "offline_after_min",
+          "clamps",
+          "is_simulated"
+        ],
+        "title": "ClampMap",
+        "description": "Every clamp in view, with status judged against `as_of` (the latest report of any clamp)."
+      },
+      "ClampPoint": {
+        "properties": {
+          "clamp_id": {
+            "type": "string",
+            "title": "Clamp Id"
+          },
+          "transformer_id": {
+            "type": "string",
+            "title": "Transformer Id"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "ct_model": {
+            "type": "string",
+            "title": "Ct Model"
+          },
+          "installed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Installed At"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "online",
+              "offline"
+            ],
+            "title": "Status"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clamp_id",
+          "transformer_id",
+          "lat",
+          "lon",
+          "ct_model",
+          "installed_at",
+          "last_seen_at",
+          "status",
+          "is_simulated"
+        ],
+        "title": "ClampPoint",
+        "description": "One installed clamp, placed at its household's building. Carries no household identity."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {

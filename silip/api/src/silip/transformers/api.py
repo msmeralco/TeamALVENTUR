@@ -10,10 +10,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from silip.shared.auth.api import AUTH_RESPONSES, Engineer
 from silip.shared.config import Settings
 from silip.shared.deps import Source
+from silip.shared.geo import BoundingBox
 from silip.shared.readings.domain import DataSource
 from silip.transformers import service
 from silip.transformers.domain import (
-    BoundingBox,
     TransformerCard,
     TransformerNotFoundError,
     TransformerRisk,

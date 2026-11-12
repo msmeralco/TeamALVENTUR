@@ -8,9 +8,9 @@ from typing import Any
 
 import pandas as pd
 
+from silip.shared.geo import BoundingBox
 from silip.shared.readings.domain import DataSource
 from silip.transformers.domain import (
-    BoundingBox,
     LoadPoint,
     TransformerCard,
     TransformerNotFoundError,

@@ -16,20 +16,20 @@
   ],
   "forecaster": "lightgbm_weather",
   "thresholds": {
-    "critical": 0.05,
-    "watch": 0.03
+    "critical": 0.07,
+    "watch": 0.04
   },
   "reasons": "top 3 positive pred_contrib values, sentences in silip_ml.risk.domain.REASON_TEMPLATES",
   "kept": false,
-  "kept_status": "final: evaluator, seed 7 and seed 8 (2026-11-13)",
-  "kept_reason": "passes on seed 7 (recall at >= 12 h 1.00, 4.87 false alarms vs rules 8.24) but fails on seed 8: recall at >= 12 h 0.571 vs rules 0.643, false alarms 4.79 vs rules 2.10. Seed 8 trains on 42 trips over 6 days; heat_index_max_c (35% of gain) and ev_evening_step_kw push forecast overloads of up to 188% to OK. Verdict differs between seeds, so not kept.",
-  "false_alarm_budget_per_tx_month": 6.974789915966387,
+  "kept_status": "final: ml-engineer after notebook 06, seed 7 and seed 8 with the forecast error calibrated to measured Open-Meteo skill (2026-11-13), see reports/backtest.md",
+  "kept_reason": "fails acceptance on both seeds. Seed 7: recall at >= 12 h 0.96 vs lightgbm 1.00 (false alarms 2.52 vs rules 8.24 pass). Seed 8: recall 0.714 vs rules 0.643 passes, false alarms 3.45 vs rules 2.10 fail; seed-8 training has few trips (42 on 6 days).",
+  "false_alarm_budget_per_tx_month": 8.067226890756302,
   "label": "trip rule on true load: above 110% of usable rating for 3 h in a row (silip-domain)",
   "params": {
     "n_estimators": 200,
     "learning_rate": 0.05,
-    "num_leaves": 15,
-    "min_child_samples": 20
+    "num_leaves": 7,
+    "min_child_samples": 40
   },
   "training_window": {
     "start": "2026-04-15 00:00:00+08:00",
@@ -42,22 +42,22 @@
     "note": "simulated EV homes are unrelated to DOE station locations: expect about zero gain"
   },
   "gain_share": {
-    "peak_load_pct": 0.1223,
-    "mean_load_pct": 0.0702,
-    "hours_over_100": 0.3171,
-    "hours_over_110": 0.1,
-    "hours_over_90": 0.0187,
-    "coverage_pct": 0.0342,
-    "rated_kva": 0.0358,
-    "heat_index_max_c": 0.1877,
-    "ev_evening_step_kw": 0.0529,
-    "ev_stations_within": 0.012,
-    "reporting_pct": 0.049
+    "peak_load_pct": 0.0807,
+    "mean_load_pct": 0.0745,
+    "hours_over_100": 0.3482,
+    "hours_over_110": 0.1361,
+    "hours_over_90": 0.0871,
+    "coverage_pct": 0.0423,
+    "rated_kva": 0.0275,
+    "heat_index_max_c": 0.1317,
+    "ev_evening_step_kw": 0.0302,
+    "ev_stations_within": 0.0064,
+    "reporting_pct": 0.0353
   },
   "metrics": {
-    "holdout_recall": 1.0,
-    "holdout_recall_12h": 1.0,
-    "holdout_false_alarms_per_tx_month": 4.873949579831933,
+    "holdout_recall": 0.96,
+    "holdout_recall_12h": 0.96,
+    "holdout_false_alarms_per_tx_month": 2.521008403361345,
     "comparison": {
       "rules on lightgbm forecasts": {
         "recall": 0.96,
@@ -74,18 +74,18 @@
         "recall at >= 12 h lead": 1.0
       },
       "rules on lightgbm_weather forecasts": {
+        "recall": 0.88,
+        "false_alarms_per_tx_month": 5.6303,
+        "trips": 25.0,
+        "windows": 357.0,
+        "recall at >= 12 h lead": 0.88
+      },
+      "lightgbm_weather_ev on lightgbm_weather forecasts": {
         "recall": 0.96,
-        "false_alarms_per_tx_month": 6.5546,
+        "false_alarms_per_tx_month": 2.521,
         "trips": 25.0,
         "windows": 357.0,
         "recall at >= 12 h lead": 0.96
-      },
-      "lightgbm_weather_ev on lightgbm_weather forecasts": {
-        "recall": 1.0,
-        "false_alarms_per_tx_month": 4.8739,
-        "trips": 25.0,
-        "windows": 357.0,
-        "recall at >= 12 h lead": 1.0
       }
     },
     "trips": 25

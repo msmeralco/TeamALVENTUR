@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -24,11 +26,15 @@ import androidx.compose.material.icons.outlined.CardGiftcard
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.TipsAndUpdates
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -42,6 +48,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.alventur.silipapp.notifications.AwayMonitor
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -49,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -64,6 +74,7 @@ import com.alventur.silipapp.education.ChallengeAnswer
 import com.alventur.silipapp.education.Lesson
 import com.alventur.silipapp.education.LessonCatalog
 import com.alventur.silipapp.education.LessonQuizCatalog
+import com.alventur.silipapp.ui.theme.SilipTheme
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 
@@ -74,7 +85,8 @@ private enum class Destination(
     Home("Home", Icons.Outlined.Home),
     Usage("Usage", Icons.Outlined.Bolt),
     Learn("Learn", Icons.AutoMirrored.Outlined.MenuBook),
-    Rewards("Rewards", Icons.Outlined.CardGiftcard),
+    Rewards("Grid events", Icons.Outlined.CardGiftcard),
+    Settings("Settings", Icons.Outlined.Settings),
     DailyChallenge("Daily challenge", Icons.Outlined.Lightbulb)
 }
 
@@ -83,13 +95,20 @@ fun SilipApp(
     householdApi: HouseholdApi
 ) {
     val context = LocalContext.current
-    val devicePreferences = remember(context) {
+    val scope = rememberCoroutineScope()
+    val settingsPreferences = remember(context) {
         context.getSharedPreferences("silip_demo_device", Context.MODE_PRIVATE)
     }
     var deviceId by rememberSaveable {
-        mutableStateOf(devicePreferences.getString("clamp_id", "silip-esp32-test") ?: "silip-esp32-test")
+        mutableStateOf(settingsPreferences.getString("clamp_id", "silip-esp32-test") ?: "silip-esp32-test")
     }
     var connectedDeviceId by rememberSaveable { mutableStateOf(deviceId) }
+    var userName by rememberSaveable {
+        mutableStateOf(settingsPreferences.getString("user_name", "") ?: "")
+    }
+    var themeMode by rememberSaveable {
+        mutableStateOf(settingsPreferences.getString("theme_mode", "system") ?: "system")
+    }
     var householdState by remember {
         mutableStateOf<HouseholdDashboardState>(HouseholdDashboardState.Loading)
     }
@@ -117,6 +136,7 @@ fun SilipApp(
         }
     }
     var selectedName by rememberSaveable { mutableStateOf(Destination.Home.name) }
+    var beforeSettings by rememberSaveable { mutableStateOf(Destination.Home.name) }
     var learningXp by rememberSaveable {
         mutableIntStateOf(learningPrefs.getInt("xp", 0).coerceAtLeast(0))
     }
@@ -133,104 +153,165 @@ fun SilipApp(
         mutableStateOf(LessonCatalog.starterLessons.first().id)
     }
     val selected = Destination.valueOf(selectedName)
-    val topLevel = if (selected == Destination.DailyChallenge) Destination.Learn else selected
-    val scheme = MaterialTheme.colorScheme
-
-    BackHandler(enabled = selected == Destination.DailyChallenge) {
-        selectedName = Destination.Learn.name
+    val topLevel = when (selected) {
+        Destination.DailyChallenge -> Destination.Learn
+        else -> selected
     }
 
-    Scaffold(
-        containerColor = scheme.background,
-        bottomBar = {
-            NavigationBar(
-                containerColor = scheme.surface,
-                tonalElevation = 0.dp
-            ) {
-                listOf(Destination.Home, Destination.Usage, Destination.Learn, Destination.Rewards).forEach { destination ->
-                    NavigationBarItem(
-                        selected = topLevel == destination,
-                        onClick = { selectedName = destination.name },
-                        icon = {
-                            Icon(
-                                imageVector = destination.icon,
-                                contentDescription = null
+    BackHandler(enabled = selected == Destination.DailyChallenge || selected == Destination.Settings) {
+        selectedName = when (selected) {
+            Destination.Settings -> beforeSettings
+            else -> Destination.Learn.name
+        }
+    }
+
+    val darkTheme = when (themeMode) {
+        "light" -> false
+        "dark" -> true
+        else -> isSystemInDarkTheme()
+    }
+
+    SilipTheme(
+        darkTheme = darkTheme,
+        originalPalette = selected == Destination.Learn || selected == Destination.DailyChallenge
+    ) {
+        val scheme = MaterialTheme.colorScheme
+        Scaffold(
+            containerColor = scheme.background,
+            topBar = {
+                Surface(color = scheme.background) {
+                    Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 20.dp, end = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text("silip", style = MaterialTheme.typography.titleLarge,
+                            color = scheme.primary, modifier = Modifier.weight(1f))
+                        IconButton(onClick = {
+                            if (selected != Destination.Settings) beforeSettings = selectedName
+                            selectedName = if (selected == Destination.Settings) beforeSettings else Destination.Settings.name
+                        }) {
+                            Icon(Icons.Outlined.Settings, contentDescription = if (selected == Destination.Settings) "Return to previous screen" else "Open settings")
+                        }
+                    }
+                }
+            },
+            bottomBar = {
+                NavigationBar(
+                    containerColor = scheme.surface,
+                    tonalElevation = 0.dp
+                ) {
+                    listOf(
+                        Destination.Home,
+                        Destination.Usage,
+                        Destination.Learn,
+                        Destination.Rewards
+                    ).forEach { destination ->
+                        NavigationBarItem(
+                            selected = topLevel == destination,
+                            onClick = { selectedName = destination.name },
+                            icon = {
+                                Icon(
+                                    imageVector = destination.icon,
+                                    contentDescription = null
+                                )
+                            },
+                            label = { Text(destination.label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = scheme.onPrimaryContainer,
+                                selectedTextColor = scheme.primary,
+                                indicatorColor = scheme.primaryContainer,
+                                unselectedIconColor = scheme.onSurfaceVariant,
+                                unselectedTextColor = scheme.onSurfaceVariant
                             )
-                        },
-                        label = { Text(destination.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = scheme.onPrimaryContainer,
-                            selectedTextColor = scheme.primary,
-                            indicatorColor = scheme.primaryContainer,
-                            unselectedIconColor = scheme.onSurfaceVariant,
-                            unselectedTextColor = scheme.onSurfaceVariant
                         )
-                    )
+                    }
                 }
             }
-        }
-    ) { contentPadding ->
-        when (selected) {
-            Destination.Home -> HomeScreen(
-                contentPadding = contentPadding,
-                householdState = householdState,
-                deviceId = deviceId,
-                onDeviceIdChange = { deviceId = it },
-                onConnectDevice = {
-                    val normalizedId = deviceId.trim()
-                    if (normalizedId.isNotEmpty()) {
-                        deviceId = normalizedId
-                        connectedDeviceId = normalizedId
-                        devicePreferences.edit().putString("clamp_id", normalizedId).apply()
-                        refreshCount += 1
+        ) { contentPadding ->
+            when (selected) {
+                Destination.Home -> HomeScreen(
+                    contentPadding = contentPadding,
+                    householdState = householdState,
+                    userName = userName,
+                    nextLesson = LessonCatalog.starterLessons[completedLessons.coerceAtMost(LessonCatalog.starterLessons.lastIndex)],
+                    onOpenUsage = { selectedName = Destination.Usage.name },
+                    onRefreshHousehold = { refreshCount += 1 },
+                    onOpenChallenge = {
+                        val nextIndex = completedLessons.coerceAtMost(LessonCatalog.starterLessons.lastIndex)
+                        selectedLessonId = LessonCatalog.starterLessons[nextIndex].id
+                        selectedName = Destination.DailyChallenge.name
                     }
-                },
-                onRefreshHousehold = { refreshCount += 1 },
-                onOpenChallenge = {
-                    val nextIndex = completedLessons.coerceAtMost(LessonCatalog.starterLessons.lastIndex)
-                    selectedLessonId = LessonCatalog.starterLessons[nextIndex].id
-                    selectedName = Destination.DailyChallenge.name
-                }
-            )
-            Destination.Usage -> UsageScreen(
-                contentPadding = contentPadding,
-                householdState = householdState,
-                deviceId = connectedDeviceId,
-                onRefreshHousehold = { refreshCount += 1 }
-            )
-            Destination.Learn -> LearnScreen(
-                contentPadding = contentPadding,
-                streakDays = streakDays,
-                learningXp = learningXp,
-                completedLessons = completedLessons,
-                onStartLesson = { lesson ->
-                    selectedLessonId = lesson.id
-                    selectedName = Destination.DailyChallenge.name
-                }
-            )
-            Destination.Rewards -> RewardsScreen(contentPadding)
-            Destination.DailyChallenge -> DailyChallengeScreen(
-                contentPadding = contentPadding,
-                lesson = LessonCatalog.starterLessons.firstOrNull { it.id == selectedLessonId }
-                    ?: LessonCatalog.starterLessons.first(),
-                onBack = { selectedName = Destination.Learn.name },
-                onLessonCompleted = { lesson ->
-                    val lessonIndex = LessonCatalog.starterLessons.indexOfFirst { it.id == lesson.id }
-                    if (lessonIndex >= completedLessons) {
-                        val nextCompletedLessons = lessonIndex + 1
-                        val nextXp = learningXp + lesson.points
-                        val nextStreakDays = maxOf(streakDays, 1)
-                        completedLessons = nextCompletedLessons
-                        learningXp = nextXp
-                        streakDays = nextStreakDays
-                        learningPrefs.edit()
-                            .putInt("completed_lessons", nextCompletedLessons)
-                            .putInt("xp", nextXp)
-                            .putInt("streak_days", nextStreakDays)
-                            .apply()
+                )
+                Destination.Usage -> UsageScreen(
+                    contentPadding = contentPadding,
+                    householdState = householdState,
+                    onRefreshHousehold = { refreshCount += 1 }
+                )
+                Destination.Learn -> LearnScreen(
+                    contentPadding = contentPadding,
+                    streakDays = streakDays,
+                    learningXp = learningXp,
+                    completedLessons = completedLessons,
+                    onStartLesson = { lesson ->
+                        selectedLessonId = lesson.id
+                        selectedName = Destination.DailyChallenge.name
                     }
-                }
-            )
+                )
+                Destination.Rewards -> RewardsScreen(contentPadding)
+                Destination.Settings -> SettingsScreen(
+                    contentPadding = contentPadding,
+                    userName = userName,
+                    onUserNameChange = { userName = it },
+                    deviceId = deviceId,
+                    onDeviceIdChange = { deviceId = it },
+                    connectedDeviceId = connectedDeviceId,
+                    connectionState = householdState,
+                    themeMode = themeMode,
+                    onThemeModeChange = { newThemeMode ->
+                        themeMode = newThemeMode
+                        settingsPreferences.edit().putString("theme_mode", newThemeMode).apply()
+                    },
+                    onSaveAndConnect = {
+                        val normalizedId = deviceId.trim()
+                        if (normalizedId.isNotEmpty()) {
+                            val normalizedName = userName.trim()
+                            userName = normalizedName
+                            if (normalizedId != connectedDeviceId) {
+                                AwayMonitor.prefs(context).edit().putBoolean("auto", false).remove("lat").remove("lon").apply()
+                                AwayMonitor.setAway(context, false)
+                                scope.launch { AwayMonitor.disable(context) }
+                            }
+                            deviceId = normalizedId
+                            connectedDeviceId = normalizedId
+                            settingsPreferences.edit()
+                                .putString("clamp_id", normalizedId)
+                                .putString("user_name", normalizedName)
+                                .apply()
+                            refreshCount += 1
+                        }
+                    }
+                )
+                Destination.DailyChallenge -> DailyChallengeScreen(
+                    contentPadding = contentPadding,
+                    lesson = LessonCatalog.starterLessons.firstOrNull { it.id == selectedLessonId }
+                        ?: LessonCatalog.starterLessons.first(),
+                    onBack = { selectedName = Destination.Learn.name },
+                    onLessonCompleted = { lesson ->
+                        val lessonIndex = LessonCatalog.starterLessons.indexOfFirst { it.id == lesson.id }
+                        if (lessonIndex >= completedLessons) {
+                            val nextCompletedLessons = lessonIndex + 1
+                            val nextXp = learningXp + lesson.points
+                            val nextStreakDays = maxOf(streakDays, 1)
+                            completedLessons = nextCompletedLessons
+                            learningXp = nextXp
+                            streakDays = nextStreakDays
+                            learningPrefs.edit()
+                                .putInt("completed_lessons", nextCompletedLessons)
+                                .putInt("xp", nextXp)
+                                .putInt("streak_days", nextStreakDays)
+                                .apply()
+                        }
+                    }
+                )
+            }
         }
     }
 }
@@ -239,39 +320,17 @@ fun SilipApp(
 private fun HomeScreen(
     contentPadding: PaddingValues,
     householdState: HouseholdDashboardState,
-    deviceId: String,
-    onDeviceIdChange: (String) -> Unit,
-    onConnectDevice: () -> Unit,
+    userName: String,
+    nextLesson: Lesson,
+    onOpenUsage: () -> Unit,
     onRefreshHousehold: () -> Unit,
     onOpenChallenge: () -> Unit
 ) {
     AdaptivePage(contentPadding) {
-        item {
-            PageHeader(
-                eyebrow = "HOME",
-                title = "Welcome home.",
-                subtitle = "Your household, at a glance.",
-                pose = AliPose.Welcome
-            )
-        }
-        item {
-            HouseholdDataCard(
-                state = householdState,
-                deviceId = deviceId,
-                onDeviceIdChange = onDeviceIdChange,
-                showDeviceInput = true,
-                onConnect = onConnectDevice,
-                onRefresh = onRefreshHousehold,
-            )
-        }
-        item {
-            SectionHeading(
-                title = "Home safety",
-                subtitle = "Sensor sees total load."
-            )
-        }
-        item { SafetyPreviewCard() }
-        item { QuickLessonCard(onClick = onOpenChallenge) }
+        item { HomeCompanionSummary(householdState, userName, onOpenUsage, onRefreshHousehold) }
+        item { AwayAlertsCard() }
+        item { SectionHeading("A small lesson for today") }
+        item { NextLessonCard(nextLesson, onOpenChallenge) }
     }
 }
 
@@ -279,100 +338,57 @@ private fun HomeScreen(
 private fun UsageScreen(
     contentPadding: PaddingValues,
     householdState: HouseholdDashboardState,
-    deviceId: String,
     onRefreshHousehold: () -> Unit
 ) {
     AdaptivePage(contentPadding) {
-        item {
-            PageHeader(
-                eyebrow = "USAGE",
-                title = "See what you use.",
-                subtitle = "Whole-home readings from your registered device.",
-                pose = AliPose.HouseholdCheck
-            )
-        }
-        item {
-            HouseholdDataCard(
-                state = householdState,
-                deviceId = deviceId,
-                onDeviceIdChange = {},
-                showDeviceInput = false,
-                onConnect = onRefreshHousehold,
-                onRefresh = onRefreshHousehold,
-            )
-        }
+        item { SectionHeading("Usage", "Understand when your energy adds up.") }
         if (householdState is HouseholdDashboardState.Loaded) {
-            item { HouseholdUsageTrendCard(points = householdState.device.points) }
+            item { UsageExplorer(householdState.device, onRefreshHousehold) }
+            item { ForecastAndInsights(householdState.device) }
+            item { SectionHeading("Cost & calculation") }
+            item { PriceEstimateCard(householdState.device) }
+            item { ReadingDetails(householdState.device) }
+        } else {
+            item { HouseholdSnapshot(householdState, onRefreshHousehold) }
         }
-        item {
-            SectionHeading(
-                title = "Energy clues",
-                subtitle = "Preview concepts · not live yet"
-            )
-        }
-        item {
-            InsightPreviewCard(
-                title = "Phantom load detective",
-                label = "Example",
-                description = "Spot standby use overnight. Sample estimate only.",
-                icon = Icons.Outlined.Lightbulb,
-                mascotPose = AliPose.Practice
-            )
-        }
-        item {
-            InsightPreviewCard(
-                title = "Appliance health",
-                label = "In development",
-                description = "Total load only. No appliance diagnosis yet.",
-                icon = Icons.Outlined.Bolt,
-                mascotPose = AliPose.HouseholdCheck
-            )
-        }
+        item { SectionHeading("Get to know your numbers") }
+        item { UsageMeaningCard() }
     }
 }
 
 @Composable
-private fun BillForecastCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Projected month-end bill",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                PreviewBadge(label = "Example")
-            }
-            Text(
-                text = "₱3,480",
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold
-                ),
-                color = MaterialTheme.colorScheme.onSurface
+private fun SettingsScreen(
+    contentPadding: PaddingValues,
+    userName: String,
+    onUserNameChange: (String) -> Unit,
+    deviceId: String,
+    onDeviceIdChange: (String) -> Unit,
+    connectedDeviceId: String,
+    connectionState: HouseholdDashboardState,
+    themeMode: String,
+    onThemeModeChange: (String) -> Unit,
+    onSaveAndConnect: () -> Unit
+) {
+    AdaptivePage(contentPadding) {
+        item {
+            PageHeader(
+                eyebrow = "SETTINGS",
+                title = "Make it yours.",
+                subtitle = "Set your name and connect your home device.",
+                pose = AliPose.Welcome
             )
-            Text(
-                text = "Sample projection · actual bills may vary",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "₱520 under the sample budget",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary
+        }
+        item {
+            HouseholdSettingsCard(
+                userName = userName,
+                onUserNameChange = onUserNameChange,
+                deviceId = deviceId,
+                onDeviceIdChange = onDeviceIdChange,
+                connectedDeviceId = connectedDeviceId,
+                connectionState = connectionState,
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange,
+                onSaveAndConnect = onSaveAndConnect
             )
         }
     }
@@ -516,40 +532,8 @@ private fun DailyChallengeScreen(
 @Composable
 private fun RewardsScreen(contentPadding: PaddingValues) {
     AdaptivePage(contentPadding) {
-        item {
-            PageHeader(
-                eyebrow = "GRID PARTNERSHIP",
-                title = "Help your neighborhood.",
-                subtitle = "Join a future peak event.",
-                pose = AliPose.Success
-            )
-        }
-        item { GridResponseCard() }
-        item { GridParticipationSteps() }
-        item {
-            SectionHeading(
-                title = "You’re in control",
-                subtitle = "Events stay optional."
-            )
-        }
-        item {
-            InsightPreviewCard(
-                title = "Your choice, every time",
-                label = "Planned",
-                description = "Review each event. Joining stays optional.",
-                icon = Icons.Outlined.TipsAndUpdates,
-                mascotPose = AliPose.Caution
-            )
-        }
-        item {
-            InsightPreviewCard(
-                title = "Neighborhood leagues",
-                label = "Planned",
-                description = "Opt-in streaks and rewards · coming later",
-                icon = Icons.Outlined.EmojiEvents,
-                mascotPose = AliPose.Success
-            )
-        }
+        item { SectionHeading("Better together", "Explore how a grid event could work.") }
+        item { GridEventVisual() }
     }
 }
 
@@ -561,7 +545,7 @@ private fun AdaptivePage(
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val horizontalGutter = if (maxWidth >= 600.dp) 32.dp else 20.dp
-        if (backgroundRes != null && !isSystemInDarkTheme()) {
+        if (backgroundRes != null && MaterialTheme.colorScheme.background.luminance() > 0.5f) {
             Image(
                 painter = painterResource(backgroundRes),
                 contentDescription = null,

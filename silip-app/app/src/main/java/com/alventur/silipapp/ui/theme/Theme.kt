@@ -6,6 +6,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -29,7 +30,7 @@ private val LightColors = lightColorScheme(
     onErrorContainer = Charcoal,
     background = Paper,
     onBackground = Charcoal,
-    surface = Paper,
+    surface = Color.White,
     onSurface = Charcoal,
     surfaceVariant = Sage,
     onSurfaceVariant = Charcoal,
@@ -64,6 +65,26 @@ private val DarkColors = darkColorScheme(
     outline = NightOutline,
     outlineVariant = NightOutline,
     surfaceTint = Sage
+)
+
+// Learn retains its original palette and illustrations.
+private val OriginalLightColors = LightColors.copy(
+    primary = Color(0xFF254E21), onPrimary = Color(0xFFF2EFE3),
+    primaryContainer = Color(0xFFC3D2C5),
+    secondary = Color(0xFF254E21), onSecondary = Color(0xFFF2EFE3),
+    secondaryContainer = Color(0xFFC3D2C5), onTertiary = Color(0xFFF2EFE3),
+    onError = Color(0xFFF2EFE3), background = Color(0xFFF2EFE3),
+    surface = Color(0xFFF2EFE3), surfaceVariant = Color(0xFFC3D2C5),
+    outline = Color(0xFF58815F), outlineVariant = Color(0xFF58815F),
+    surfaceTint = Color(0xFF254E21)
+)
+private val OriginalDarkColors = DarkColors.copy(
+    primary = Color(0xFFC3D2C5), primaryContainer = Color(0xFF254E21),
+    onPrimaryContainer = Color(0xFFF2EFE3), secondary = Color(0xFFC3D2C5),
+    onSecondaryContainer = Color(0xFFF2EFE3), onTertiaryContainer = Color(0xFFF2EFE3),
+    onErrorContainer = Color(0xFFF2EFE3), onBackground = Color(0xFFF2EFE3),
+    onSurface = Color(0xFFF2EFE3), onSurfaceVariant = Color(0xFFC3D2C5),
+    surfaceTint = Color(0xFFC3D2C5)
 )
 
 private val SilipTypography = Typography(
@@ -119,10 +140,16 @@ private val SilipTypography = Typography(
 @Composable
 fun SilipTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    originalPalette: Boolean = false,
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
+        colorScheme = when {
+            originalPalette && darkTheme -> OriginalDarkColors
+            originalPalette -> OriginalLightColors
+            darkTheme -> DarkColors
+            else -> LightColors
+        },
         typography = SilipTypography,
         content = content
     )

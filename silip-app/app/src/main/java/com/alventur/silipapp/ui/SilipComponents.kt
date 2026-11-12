@@ -33,6 +33,7 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.TipsAndUpdates
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -40,10 +41,13 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -98,7 +102,8 @@ internal fun AliMascotIllustration(
     modifier: Modifier = Modifier,
     motion: AliMotion = AliMotion.Still
 ) {
-    val animatedModifier = when (motion) {
+    val effectiveMotion = if (android.animation.ValueAnimator.areAnimatorsEnabled()) motion else AliMotion.Still
+    val animatedModifier = when (effectiveMotion) {
         AliMotion.Still -> modifier
         AliMotion.Idle -> {
             val transition = rememberInfiniteTransition(label = "ali-idle")
@@ -331,10 +336,6 @@ internal fun EnergyReceiptCard() {
 @Composable
 internal fun HouseholdDataCard(
     state: HouseholdDashboardState,
-    deviceId: String,
-    onDeviceIdChange: (String) -> Unit,
-    showDeviceInput: Boolean,
-    onConnect: () -> Unit,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -353,23 +354,6 @@ internal fun HouseholdDataCard(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            if (showDeviceInput) {
-                OutlinedTextField(
-                    value = deviceId,
-                    onValueChange = onDeviceIdChange,
-                    label = { Text("Device ID") },
-                    supportingText = { Text("PoC demo device: silip-esp32-test") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Button(
-                    onClick = onConnect,
-                    enabled = deviceId.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Connect device")
-                }
-            }
             when (state) {
                 HouseholdDashboardState.Loading -> {
                     Row(
@@ -386,10 +370,8 @@ internal fun HouseholdDataCard(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (!showDeviceInput) {
-                        OutlinedButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
-                            Text("Try again")
-                        }
+                    OutlinedButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth()) {
+                        Text("Try again")
                     }
                 }
                 is HouseholdDashboardState.Error -> {
@@ -459,6 +441,161 @@ internal fun HouseholdDataCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+internal fun HouseholdSettingsCard(
+    userName: String,
+    onUserNameChange: (String) -> Unit,
+    deviceId: String,
+    onDeviceIdChange: (String) -> Unit,
+    connectedDeviceId: String,
+    connectionState: HouseholdDashboardState,
+    themeMode: String,
+    onThemeModeChange: (String) -> Unit,
+    onSaveAndConnect: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val showSaveConfirmation = remember { mutableStateOf(false) }
+    val statusColor = when (connectionState) {
+        is HouseholdDashboardState.NotFound, is HouseholdDashboardState.Error -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val statusText = when (connectionState) {
+        HouseholdDashboardState.Loading -> "Checking device connection…"
+        is HouseholdDashboardState.NotFound -> "No readings found for ${connectionState.clampId}. Check the ID."
+        is HouseholdDashboardState.Error -> connectionState.message
+        is HouseholdDashboardState.Loaded -> buildString {
+            append("Connected · Transformer ${connectionState.device.transformerId}")
+            if (connectionState.device.isSimulated) append(" · simulated data")
+        }
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Profile",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            OutlinedTextField(
+                value = userName,
+                onValueChange = onUserNameChange,
+                label = { Text("Your name") },
+                supportingText = { Text("Used to personalize your welcome screen.") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                text = "Appearance",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Theme",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            listOf(
+                "system" to ("Use device setting" to "Follows your phone's light or dark setting."),
+                "light" to ("Light" to "Use the light color theme."),
+                "dark" to ("Dark" to "Use the dark color theme.")
+            ).forEach { (value, option) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { onThemeModeChange(value) }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = themeMode == value,
+                        onClick = { onThemeModeChange(value) }
+                    )
+                    Column(
+                        modifier = Modifier.padding(start = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(option.first, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            option.second,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            Text(
+                text = "Device connection",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            OutlinedTextField(
+                value = deviceId,
+                onValueChange = onDeviceIdChange,
+                label = { Text("Registered device ID") },
+                supportingText = { Text("Use the ID assigned to your sensor in the SILIP dashboard.") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (connectedDeviceId.isNotBlank()) {
+                Text(
+                    text = "Current device · $connectedDeviceId",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = statusText,
+                style = MaterialTheme.typography.bodySmall,
+                color = statusColor
+            )
+            Button(
+                onClick = { showSaveConfirmation.value = true },
+                enabled = deviceId.isNotBlank(),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Save and connect")
+            }
+        }
+    }
+
+    if (showSaveConfirmation.value) {
+        AlertDialog(
+            onDismissRequest = { showSaveConfirmation.value = false },
+            title = { Text("Save these settings?") },
+            text = {
+                Text(
+                    "Name: ${userName.trim().ifBlank { "Not set" }}\n" +
+                        "Device ID: ${deviceId.trim()}"
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSaveConfirmation.value = false
+                        onSaveAndConnect()
+                    }
+                ) {
+                    Text("Save and connect")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveConfirmation.value = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -716,7 +853,7 @@ internal fun HouseholdUsageTrendCard(points: List<UsagePoint>) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text("Earlier", style = MaterialTheme.typography.labelSmall)
-                    Text("Now", style = MaterialTheme.typography.labelSmall)
+                    Text("Latest stored", style = MaterialTheme.typography.labelSmall)
                 }
                 Text(
                     text = "Peak in this chart · ${peakKw.energyFormat()} kW",
@@ -886,7 +1023,7 @@ internal fun QuickLessonCard(onClick: () -> Unit) {
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "Open daily challenge",
+                contentDescription = null,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }

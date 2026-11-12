@@ -4,10 +4,10 @@ import androidx.compose.ui.graphics.Color
 
 // Core brand palette supplied for the SILIP redesign.
 internal val Charcoal = Color(0xFF262626)
-internal val Sage = Color(0xFFC3D2C5)
-internal val Paper = Color(0xFFF2EFE3)
-internal val Moss = Color(0xFF58815F)
-internal val Forest = Color(0xFF254E21)
+internal val Sage = Color(0xFFE5F2D8)
+internal val Paper = Color(0xFFFAFCF7)
+internal val Moss = Color(0xFF6D8567)
+internal val Forest = Color(0xFF32651E)
 
 // Reserved for caution states, matching Ali's orange lightbulb.
 internal val AlertOrange = Color(0xFF9C4A0B)

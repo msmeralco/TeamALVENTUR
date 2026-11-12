@@ -46,6 +46,12 @@ variable "data_source" {
   }
 }
 
+variable "mobile_poc_device_ids" {
+  type        = set(string)
+  description = "Public mobile PoC IDs. Leave empty outside the demo environment."
+  default     = []
+}
+
 variable "strategies" {
   type        = map(string)
   description = "Model strategy env vars, e.g. { FORECASTER = \"lightgbm\" }."

@@ -4,7 +4,7 @@ output "web_domain" {
 }
 
 output "web_url" {
-  description = "Public URL of the web app (and /api)."
+  description = "Public URL of the web app, API, and mobile PoC API."
   value       = "https://${module.web.domain}"
 }
 

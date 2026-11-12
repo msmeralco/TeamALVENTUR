@@ -4,8 +4,13 @@ output "web_domain" {
 }
 
 output "web_url" {
-  description = "Public URL of the web app (and /api)."
+  description = "Public URL of the web app, API, and mobile PoC API."
   value       = "https://${module.web.domain}"
+}
+
+output "mobile_demo_api_url" {
+  description = "Public PoC endpoint for the allowlisted mobile demo device."
+  value       = "https://${module.web.domain}/mobile-api/v1/devices/silip-esp32-test/usage"
 }
 
 output "web_bucket" {

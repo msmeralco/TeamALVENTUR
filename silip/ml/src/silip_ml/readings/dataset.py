@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import pandas as pd
@@ -14,7 +14,16 @@ FILES = {
     "signals": "outage_signals.csv",
     "households": "household_load_15m.csv",
 }
-_TIME_COLUMNS = {"load": ["ts"], "outages": ["start_ts"], "signals": ["ts"], "households": ["ts"]}
+# Weather tables are optional, so sims made before them still load (as empty frames).
+OPTIONAL_FILES = {"weather": "weather_forecast_hourly.csv", "conditions": "weather_15m.csv"}
+_TIME_COLUMNS = {
+    "load": ["ts"],
+    "outages": ["start_ts"],
+    "signals": ["ts"],
+    "households": ["ts"],
+    "weather": ["issued_at", "ts"],
+    "conditions": ["ts"],
+}
 
 
 @dataclass(frozen=True)
@@ -26,6 +35,12 @@ class Dataset:
     outages: pd.DataFrame
     signals: pd.DataFrame
     households: pd.DataFrame
+    # Hourly archive and day-ahead forecasts (`issued_at, ts, cell_id, ..., kind`). Read only rows
+    # issued at or before the scoring time.
+    weather: pd.DataFrame = field(default_factory=pd.DataFrame)
+    # The simulator's true weather per 15 minutes (`weather` = clear|hot_spell|rain|typhoon); for
+    # grouping backtest days only, never a model input.
+    conditions: pd.DataFrame = field(default_factory=pd.DataFrame)
 
 
 def load_dataset(data_dir: Path) -> Dataset:
@@ -35,9 +50,11 @@ def load_dataset(data_dir: Path) -> Dataset:
         FileNotFoundError: if a file is missing (run `make sim` first).
     """
     tables: dict[str, pd.DataFrame] = {}
-    for name, filename in FILES.items():
+    for name, filename in (FILES | OPTIONAL_FILES).items():
         path = Path(data_dir) / filename
         if not path.exists():
+            if name in OPTIONAL_FILES:
+                continue
             raise FileNotFoundError(f"{path} not found; run `make sim` first")
         frame = pd.read_csv(path)
         for column in _TIME_COLUMNS.get(name, []):

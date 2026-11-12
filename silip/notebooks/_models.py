@@ -8,20 +8,25 @@ import lightgbm as lgb
 import numpy as np
 import pandas as pd
 from _data import ROOT
-from _features import LOAD_FEATURES, load_features, risk_features, to_grid
+from _features import LOAD_FEATURES, add_weather_features, load_features, risk_features, risk_features_weather_ev, to_grid
 
 RESULTS_DIR = ROOT / "notebooks" / "results"
 SEED = 7
 DAYS_PER_MONTH = 30
 
 
-def load_table(load: pd.DataFrame, holidays: list[str]) -> pd.DataFrame:
-    """Features plus the target `transformer_kw` for every (transformer, interval) on the grid."""
+def load_table(load: pd.DataFrame, holidays: list[str], weather: pd.DataFrame | None = None, transformers: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Features plus the target `transformer_kw` for every (transformer, interval) on the grid.
+
+    With `weather` (hourly forecasts) and `transformers` (locations), adds `WEATHER_FEATURES` as
+    each day's 00:00 run would see them.
+    """
     grid = to_grid(load)
     table = load_features(grid, holidays)
     target = grid.stack(future_stack=True).rename("transformer_kw").reset_index()
     target.columns = ["ts", "transformer_id", "transformer_kw"]
-    return table.merge(target, on=["transformer_id", "ts"])
+    table = table.merge(target, on=["transformer_id", "ts"])
+    return table if weather is None else add_weather_features(table, weather, transformers)
 
 
 def fit_load_model(train: pd.DataFrame, params: dict, features: list[str] = LOAD_FEATURES) -> lgb.LGBMRegressor:
@@ -59,7 +64,7 @@ def read_result(name: str) -> dict:
     return json.loads((RESULTS_DIR / f"{name}.json").read_text(encoding="utf-8"))
 
 
-def rolling_day_ahead(table: pd.DataFrame, params: dict, first_day: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
+def rolling_day_ahead(table: pd.DataFrame, params: dict, first_day: pd.Timestamp, end: pd.Timestamp, features: list[str] = LOAD_FEATURES) -> pd.DataFrame:
     """Day-ahead forecasts for every day in [first_day, end), refitting each week on all earlier days.
 
     These are the forecasts the risk model trains on: out of sample, like the ones it scores.
@@ -67,14 +72,24 @@ def rolling_day_ahead(table: pd.DataFrame, params: dict, first_day: pd.Timestamp
     frames, origin = [], first_day
     while origin < end:
         stop = min(origin + pd.Timedelta(days=7), end)
-        model = fit_load_model(table[table["ts"] < origin], params)
-        frames.append(day_ahead(model, table[(table["ts"] >= origin) & (table["ts"] < stop)]))
+        model = fit_load_model(table[table["ts"] < origin], params, features)
+        frames.append(day_ahead(model, table[(table["ts"] >= origin) & (table["ts"] < stop)], features))
         origin = stop
     return pd.concat(frames, ignore_index=True)
 
 
-def risk_examples(forecasts: pd.DataFrame, transformers: pd.DataFrame, labels: pd.DataFrame) -> pd.DataFrame:
-    """One row per (transformer, day): features of that day's 24 h forecast, plus the trip label."""
+def risk_examples(forecasts: pd.DataFrame, transformers: pd.DataFrame, labels: pd.DataFrame, weather: pd.DataFrame | None = None, load: pd.DataFrame | None = None) -> pd.DataFrame:
+    """One row per (transformer, day): features of that day's 24 h forecast, plus the trip label.
+
+    With `weather` and `load`, adds the weather and EV features (`risk_features_weather_ev`), each
+    from forecasts issued by that day's 00:00 and the load before it.
+    """
     days = forecasts["ts"].dt.normalize()
-    frames = [risk_features(f, transformers).assign(day=day) for day, f in forecasts.groupby(days)]
+    if weather is None:
+        frames = [risk_features(f, transformers).assign(day=day) for day, f in forecasts.groupby(days)]
+    else:
+        frames = [
+            risk_features_weather_ev(f, transformers, weather[weather["issued_at"] <= day], load[load["ts"] < day]).assign(day=day)
+            for day, f in forecasts.groupby(days)
+        ]
     return pd.concat(frames, ignore_index=True).merge(labels, on=["transformer_id", "day"])

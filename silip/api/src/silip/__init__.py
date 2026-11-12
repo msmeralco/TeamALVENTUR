@@ -1,1 +1,1 @@
-"""SILIP API: engineer risk map, outage view and household usage view."""
+"""SILIP API: engineer decision dashboard, risk map and devices."""

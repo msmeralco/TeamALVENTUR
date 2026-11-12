@@ -13,7 +13,6 @@ import psycopg
 
 from silip_ml.readings.dataset import Dataset, load_dataset
 
-USAGE_DAYS = 7
 CLAMP_COLUMNS = [
     "clamp_id",
     "transformer_id",
@@ -28,7 +27,7 @@ LOCAL_TZ = "Asia/Manila"  # the simulator's zone; services format peak times in 
 
 
 class SimulatedSource:
-    """Reads `data/sim`. Every account maps to the one demo household the simulator details."""
+    """Reads `data/sim`."""
 
     def __init__(self, data_dir: Path) -> None:
         self._data_dir = data_dir
@@ -54,12 +53,6 @@ class SimulatedSource:
     def outage_signals(self) -> pd.DataFrame:
         return self._data.signals
 
-    def household_usage(self, sin_hash: str) -> pd.DataFrame:
-        usage = self._data.households
-        mine = usage[usage["sin_hash"] == sin_hash]
-        since = mine["ts"].max() - pd.Timedelta(days=USAGE_DAYS)
-        return mine.loc[mine["ts"] > since, ["ts", "power_kw", "is_simulated"]]
-
     @cached_property
     def _clamps(self) -> pd.DataFrame:
         # load_dataset (ml/) does not read clamps.csv; sims made before clamps existed lack it.
@@ -78,10 +71,6 @@ class SimulatedSource:
 
     def clamps(self) -> pd.DataFrame:
         return self._clamps
-
-    def sin_hash_for_account(self, subject: str) -> str | None:
-        households = self._data.households
-        return None if households.empty else str(households["sin_hash"].iloc[0])
 
 
 BUCKET: LiteralString = "date_bin('15 minutes', ts, TIMESTAMPTZ '2000-01-01')"
@@ -164,19 +153,6 @@ class _NeonSource:
     def outage_signals(self) -> pd.DataFrame:
         return self._frame("SELECT outage_id, kind, ts, lat, lon FROM outage_signal")
 
-    def household_usage(self, sin_hash: str) -> pd.DataFrame:
-        sql: LiteralString = (
-            "WITH per_home AS ("  # noqa: S608  (class constant, no user input)
-            + self.PER_HOME_KW
-            + ") SELECT date_bin('15 minutes', ts, TIMESTAMPTZ '2000-01-01') AS ts,"
-            " avg(kw)::float8 AS power_kw, bool_or(is_simulated) AS is_simulated FROM per_home"
-            " WHERE sin_hash = %(sin_hash)s"
-            # Week before the household's latest reading (like SimulatedSource), not now().
-            " AND ts > (SELECT max(ts) FROM per_home WHERE sin_hash = %(sin_hash)s)"
-            " - make_interval(days => %(days)s) GROUP BY 1 ORDER BY ts"
-        )
-        return self._frame(sql, {"sin_hash": sin_hash, "days": USAGE_DAYS})
-
     def clamps(self) -> pd.DataFrame:
         # Joined server-side so sin_hash never leaves the database; the map needs a place.
         return self._frame(
@@ -185,13 +161,6 @@ class _NeonSource:
             " FROM clamp c JOIN household h USING (sin_hash)"
             " WHERE h.lat IS NOT NULL AND h.lon IS NOT NULL ORDER BY c.clamp_id"
         )
-
-    def sin_hash_for_account(self, subject: str) -> str | None:
-        found = self._frame(
-            "SELECT sin_hash FROM household_account WHERE cognito_sub = %(subject)s",
-            {"subject": subject},
-        )
-        return None if found.empty else str(found["sin_hash"].iloc[0])
 
 
 class ClampSource(_NeonSource):

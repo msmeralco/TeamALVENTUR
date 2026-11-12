@@ -1,8 +1,11 @@
 from tests.api.helpers import auth
 
 
-def test_outage_list_is_public_and_coarse(client, dataset):
-    body = client.get("/api/v1/outages?status=restored").json()
+def test_outage_list_is_engineer_only_and_coarse(client, dataset):
+    assert client.get("/api/v1/outages?status=restored").status_code == 401
+    forbidden = client.get("/api/v1/outages", headers=auth("household-token"))
+    assert forbidden.status_code == 403
+    body = client.get("/api/v1/outages?status=restored", headers=auth("engineer-token")).json()
     assert len(body) > 0
     for outage in body:
         assert outage["is_simulated"]

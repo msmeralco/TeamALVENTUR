@@ -1,1 +1,1 @@
-"""Outage view: public list and engineer detail."""
+"""Outage view for engineers: list and detail."""

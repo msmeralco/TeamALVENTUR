@@ -15,7 +15,6 @@ from silip.shared.db import connect
 from silip.shared.readings.adapters import NeonSource, SimulatedSource
 from silip.shared.readings.domain import DataSource
 
-USAGE_DAYS = 7
 NEON_URL_SET = bool(os.environ.get("DATABASE_URL") or os.environ.get("DATABASE_POOLER_URL"))
 
 COLUMNS = {
@@ -38,15 +37,9 @@ TIMES = {"ts", "start_ts", "installed_at", "last_seen_at"}
 WITH_FLAG = ["transformers", "load", "outages", "clamps"]
 
 
-def _neon() -> tuple[DataSource, str]:
+def _neon() -> DataSource:
     settings = ApiSettings()
-    source = NeonSource(lambda: connect(settings))
-    with connect(settings) as connection:
-        row = connection.execute(
-            "SELECT sin_hash FROM household_load ORDER BY sin_hash LIMIT 1"
-        ).fetchone()
-    assert row is not None, "household_load is empty; run python -m silip.shared.load_sim"
-    return source, str(row[0])
+    return NeonSource(lambda: connect(settings))
 
 
 @pytest.fixture(
@@ -61,19 +54,15 @@ def _neon() -> tuple[DataSource, str]:
         ),
     ]
 )
-def source_and_home(request, sim_dir, dataset) -> tuple[DataSource, str]:
-    builders: dict[str, Callable[[], tuple[DataSource, str]]] = {
-        "simulated": lambda: (
-            SimulatedSource(sim_dir),
-            str(dataset.households["sin_hash"].iloc[0]),
-        ),
+def source(request, sim_dir) -> DataSource:
+    builders: dict[str, Callable[[], DataSource]] = {
+        "simulated": lambda: SimulatedSource(sim_dir),
         "neon": _neon,
     }
     return builders[request.param]()
 
 
-def test_tables_have_the_contract_columns_and_types(source_and_home):
-    source, _ = source_and_home
+def test_tables_have_the_contract_columns_and_types(source):
     for table, columns in COLUMNS.items():
         frame: pd.DataFrame = getattr(source, table)()
         assert not frame.empty, table
@@ -91,30 +80,18 @@ def test_tables_have_the_contract_columns_and_types(source_and_home):
         assert pd.api.types.is_bool_dtype(getattr(source, table)()["is_simulated"]), table
 
 
-def test_every_transformer_has_load(source_and_home):
-    source, _ = source_and_home
+def test_every_transformer_has_load(source):
     with_load = set(source.load()["transformer_id"])
     assert set(source.transformers()["transformer_id"]) <= with_load
 
 
-def test_usage_is_the_last_week_of_the_household(source_and_home):
-    source, sin_hash = source_and_home
-    usage = source.household_usage(sin_hash)
-    assert list(usage.columns) == ["ts", "power_kw", "is_simulated"]
-    assert 0 < len(usage) <= USAGE_DAYS * 96
-    assert usage["ts"].max() - usage["ts"].min() < pd.Timedelta(days=USAGE_DAYS)
-    assert pd.api.types.is_bool_dtype(usage["is_simulated"])
-
-
-def test_clamps_carry_no_household_identity(source_and_home):
-    source, _ = source_and_home
+def test_clamps_carry_no_household_identity(source):
     clamps = source.clamps()
     assert "sin_hash" not in clamps.columns
     assert set(clamps["transformer_id"]) <= set(source.transformers()["transformer_id"])
 
 
-def test_load_since_keeps_later_rows_and_latest_is_the_data_clock(source_and_home):
-    source, _ = source_and_home
+def test_load_since_keeps_later_rows_and_latest_is_the_data_clock(source):
     load = source.load()
     latest = source.latest_load_ts()
     assert latest is not None and latest == load["ts"].max()

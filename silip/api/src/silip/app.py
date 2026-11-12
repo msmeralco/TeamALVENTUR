@@ -16,7 +16,6 @@ from mangum import Mangum
 from silip.bench.api import router as bench_router
 from silip.clamps.api import router as clamps_router
 from silip.devices.api import router as devices_router
-from silip.household.api import router as household_router
 from silip.ingest.api import router as ingest_router
 from silip.outages.api import router as outages_router
 from silip.shared.auth.api import router as auth_router
@@ -29,7 +28,7 @@ get_settings()
 app = FastAPI(
     title="SILIP API",
     version="0.1.0",
-    description="Transformer risk, outages and household usage. Decision support only.",
+    description="Transformer risk and outages for engineers. Decision support only.",
 )
 
 
@@ -42,7 +41,6 @@ for router in (
     auth_router,
     transformers_router,
     outages_router,
-    household_router,
     clamps_router,
     devices_router,
     ingest_router,

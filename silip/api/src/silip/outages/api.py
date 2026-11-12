@@ -1,4 +1,4 @@
-"""Outage routes: the list is public (area only); the detail is engineer-only."""
+"""Outage routes, engineer-only (ADR 0005)."""
 
 from __future__ import annotations
 
@@ -13,11 +13,11 @@ from silip.shared.deps import Source
 router = APIRouter(prefix="/api/v1/outages", tags=["outages"])
 
 
-@router.get("", response_model=list[OutageSummary])
+@router.get("", response_model=list[OutageSummary], responses=AUTH_RESPONSES)
 def list_outages(
-    source: Source, settings: Settings, status: Status | None = "open"
+    source: Source, settings: Settings, _: Engineer, status: Status | None = "open"
 ) -> list[OutageSummary]:
-    """Public: outages by area with a restoration range. No household or exact pin data."""
+    """Outages by area with a restoration range. No household or exact pin data."""
     return service.list_outages(source, settings.outage_locator, settings.eta_estimator, status)
 
 

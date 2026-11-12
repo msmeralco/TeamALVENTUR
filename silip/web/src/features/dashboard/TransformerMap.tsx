@@ -29,6 +29,7 @@ import {
   type Tier,
 } from "./pinIcons";
 import { serviceAreas } from "./serviceAreas";
+import { transformerLinks, type Links } from "./links";
 
 type Item = Schemas["TransformerRisk"];
 type Clamp = Schemas["ClampPoint"];
@@ -53,6 +54,7 @@ const CLAMPS = "clamps";
 const AREAS = "service-areas";
 const CHARGERS = "ev-chargers";
 const CHARGER_RINGS = "ev-charger-rings";
+const LINKS = "selected-links";
 const LAYER = {
   areaFill: "service-area-fill",
   areaVolume: "service-area-volume",
@@ -68,6 +70,9 @@ const LAYER = {
   coverageOutline: "coverage-outline",
   chargers: "ev-charger-points",
   chargerRings: "ev-charger-rings",
+  linkClamp: "link-clamp",
+  linkClampOffline: "link-clamp-offline",
+  linkEv: "link-ev",
 } as const;
 
 const OVERLAY_LAYERS: Record<Overlay, string[]> = {
@@ -264,6 +269,7 @@ function addLayers(
   theme: Theme,
   activeId: string | null,
   selectedId: string | null,
+  links: Links,
 ) {
   // CSS variables are read here, not at import time, so each style load follows the current theme.
   const tier = tierColor(["get", "tier"]);
@@ -327,6 +333,41 @@ function addLayers(
     minzoom: AREA_MIN_ZOOM,
     layout: { visibility: "none" },
     paint: { "line-color": cssVar("--muted-foreground"), "line-width": ["case", isActive, 3, 0.75] },
+  });
+  // The selected transformer's links: thin brand lines to its clamps (dashed, muted when offline), and dotted
+  // lines in the charger color from chargers within reach (heavier for DC). Under the chargers and pins.
+  map.addSource(LINKS, { type: "geojson", data: links.geojson });
+  map.addLayer({
+    id: LAYER.linkClamp,
+    type: "line",
+    source: LINKS,
+    filter: ["all", ["==", ["get", "kind"], "clamp"], ["!", ["get", "offline"]]],
+    paint: { "line-color": cssVar("--brand"), "line-width": 1.25, "line-opacity": 0.9 },
+  });
+  map.addLayer({
+    id: LAYER.linkClampOffline,
+    type: "line",
+    source: LINKS,
+    filter: ["all", ["==", ["get", "kind"], "clamp"], ["get", "offline"]],
+    paint: {
+      "line-color": cssVar("--muted-foreground"),
+      "line-width": 1.25,
+      "line-opacity": 0.7,
+      "line-dasharray": [2, 2],
+    },
+  });
+  map.addLayer({
+    id: LAYER.linkEv,
+    type: "line",
+    source: LINKS,
+    filter: ["==", ["get", "kind"], "ev"],
+    layout: { "line-cap": "round" },
+    paint: {
+      "line-color": cssVar("--foreground"),
+      "line-width": ["case", ["get", "dc"], 2.5, 1.5],
+      "line-opacity": 0.75,
+      "line-dasharray": [0.5, 2.5],
+    },
   });
   map.addSource(CHARGER_RINGS, { type: "geojson", data: ringsGeoJson(chargers, ringRadiusM) });
   map.addSource(CHARGERS, { type: "geojson", data: chargersGeoJson(chargers) });
@@ -627,14 +668,22 @@ export function ChargerPopover({
 function PinPopover({
   item,
   clamps,
+  links,
+  reachKm,
   onClose,
   onOpen,
 }: {
   item: Item;
   clamps: ClampCount | undefined;
+  links: Links;
+  /** Null until the charger list loads. */
+  reachKm: number | null;
   onClose: () => void;
   onOpen: () => void;
 }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  // Escape closes it, which also clears the link lines; focus stays where it was.
+  usePopoverFocus(closeRef, item.transformer_id, onClose, false);
   return (
     <div
       role="dialog"
@@ -650,6 +699,7 @@ function PinPopover({
           size="icon"
           className="ml-auto size-11 rounded-full sm:size-9"
           aria-label="Close"
+          ref={closeRef}
           onClick={onClose}
         >
           <X aria-hidden="true" />
@@ -668,6 +718,11 @@ function PinPopover({
             </span>
           </>
         )}
+      </p>
+      <p className="text-sm tabular-nums">
+        {links.clamps} {links.clamps === 1 ? "clamp" : "clamps"} linked
+        {reachKm !== null &&
+          ` · ${links.chargers} EV ${links.chargers === 1 ? "charger" : "chargers"} within ${reachKm} km (${links.dc} DC)`}
       </p>
       <Button className="min-h-11 justify-self-start rounded-full sm:min-h-9" onClick={onOpen}>
         Open {item.transformer_id}
@@ -739,6 +794,10 @@ export function TransformerMap({
     return first === undefined ? undefined : { center: [first.lon, first.lat] as [number, number], zoom: START_ZOOM };
   });
   const selected = items.find((i) => i.transformer_id === selectedId);
+  const links = useMemo(
+    () => transformerLinks(selected, clamps, chargers, ringRadiusM),
+    [selected, clamps, chargers, ringRadiusM],
+  );
   const [clampId, setClampId] = useState<string | null>(null);
   // A charger opens on hover (mouse) or tap; a tapped one stays open after the pointer leaves.
   const [charger, setCharger] = useState<{ id: string; pinned: boolean } | null>(null);
@@ -786,6 +845,7 @@ export function TransformerMap({
     coverageBands,
     chargers,
     ringRadiusM,
+    links,
   });
   latest.current = {
     items,
@@ -803,7 +863,13 @@ export function TransformerMap({
     coverageBands,
     chargers,
     ringRadiusM,
+    links,
   };
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (isAlive(map)) map.getSource<GeoJSONSource>(LINKS)?.setData(links.geojson);
+  }, [links]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -975,6 +1041,7 @@ export function TransformerMap({
           theme,
           now.activeId,
           now.selectedId,
+          now.links,
         );
         applyOverlay(map, now.overlay);
         setActive(map, now.activeId, true);
@@ -1018,6 +1085,15 @@ export function TransformerMap({
             </Button>
           </p>
         )}
+        {selected !== undefined && (
+          <p className="flex flex-wrap items-center gap-x-2 rounded-xl bg-card/90 px-2.5 py-0.5 text-xs text-muted-foreground">
+            <span aria-hidden="true" className="w-4 border-t-2 border-brand" />
+            Lines: its clamps (dashed = offline)
+            <span aria-hidden="true">·</span>
+            <span aria-hidden="true" className="w-4 border-t-2 border-dotted border-foreground" />
+            EV chargers within {ringRadiusM > 0 ? `${ringRadiusM / 1000} km` : "reach"}
+          </p>
+        )}
         {clamps.length > 0 && (
           <p className="flex items-center gap-2 rounded-full bg-card/90 px-2.5 py-0.5 text-xs text-muted-foreground">
             <span aria-hidden="true" className="size-2 rounded-full bg-muted-foreground" /> Clamp online
@@ -1030,6 +1106,8 @@ export function TransformerMap({
         <PinPopover
           item={selected}
           clamps={clampCounts.get(selected.transformer_id)}
+          links={links}
+          reachKm={ringRadiusM > 0 ? ringRadiusM / 1000 : null}
           onClose={() => onSelect(null)}
           onOpen={() => onOpen(selected.transformer_id)}
         />

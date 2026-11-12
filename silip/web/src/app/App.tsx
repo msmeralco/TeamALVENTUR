@@ -1,11 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-<<<<<<< HEAD
 import { DemoPage } from "../features/demo/DemoPage";
-=======
 import { DevicesPage } from "../features/devices/DevicesPage";
->>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
 import { UsagePage } from "../features/household/UsagePage";
 import { OutagesPage } from "../features/outages/OutagesPage";
 import { RiskMapPage } from "../features/risk-map/RiskMapPage";
@@ -194,9 +191,7 @@ function Shell() {
                 </RequireRole>
               }
             />
-<<<<<<< HEAD
             <Route path="/demo" element={<DemoPage />} />
-=======
             <Route
               path="/engineer/devices"
               element={
@@ -205,7 +200,6 @@ function Shell() {
                 </RequireRole>
               }
             />
->>>>>>> ed43b922be733def222dbebd2873dd6eb2c73a0a
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

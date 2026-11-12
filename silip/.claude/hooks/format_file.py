@@ -42,9 +42,14 @@ def main() -> int:
         command = formatter_command(Path(file_path).resolve()) if file_path else None
         if command:
             # No shell: argv is a resolved formatter path plus the edited file.
-            result = subprocess.run(command, capture_output=True, text=True, timeout=50, check=False)  # noqa: S603
+            result = subprocess.run(
+                command, capture_output=True, text=True, timeout=50, check=False
+            )  # noqa: S603
             if result.returncode != 0:
-                print(f"format_file: {Path(command[0]).name} failed:\n{result.stderr}", file=sys.stderr)
+                print(
+                    f"format_file: {Path(command[0]).name} failed:\n{result.stderr}",
+                    file=sys.stderr,
+                )
     except Exception as error:  # a formatting hook must never block an edit
         print(f"format_file: skipped ({error})", file=sys.stderr)
     return 0

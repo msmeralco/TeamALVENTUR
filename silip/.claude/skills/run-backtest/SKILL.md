@@ -7,8 +7,8 @@ Read first: the `silip-domain` skill (formulas and metrics).
 
 # Running
 - All domains, baselines vs configured strategies: `make backtest`.
-- One domain: `uv run python -m silip_ml.core.backtest --domain risk --strategy lightgbm`.
-- Domains and baselines: `load` → `seasonal_naive`, `risk` → `rules`, `outages.locate` → `nearest_report`, `outages.eta` → `median_by_cause`.
+- One domain: `uv run python -m silip_ml.backtest --domain risk --strategy lightgbm`. Report: `reports/backtest.md`.
+- Domains and baselines: `load` → `seasonal_naive`, `risk` → `rules`, `locate` → `nearest_report`, `eta` → `median_by_cause`.
 - Split by time: the last 7 days are held out. Never shuffle.
 - Data comes from `make sim` (fixed seed). Change the seed only to test stability, and say so.
 
@@ -21,7 +21,7 @@ Read first: the `silip-domain` skill (formulas and metrics).
 # Report format (paste into PRs and docs)
 | Metric | Baseline | Strategy | n |
 |---|---|---|---|
-| Risk recall at ≥12 h lead | | | failures |
+| Risk recall, next 24 h scored at 00:00 (target: at ≥12 h lead) | | | trips |
 | False alarms per transformer-month | | | transformer-months |
 | Load MAE (kW) | | | intervals |
 | Outage locate error, median (m) | | | outages |

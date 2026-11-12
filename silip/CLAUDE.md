@@ -4,8 +4,8 @@ Estimates each Meralco transformer's load and risk by summing opt-in household c
 
 ## Commands (repo root)
 - `make setup` (uv sync + npm ci) · `make sim` · `make test` · `make lint` · `make backtest` · `make api` · `make web` · `make schemas`
-- One backtest: `uv run python -m silip_ml.core.backtest --domain risk --strategy lightgbm`
-- Infra: `terraform -chdir=infra/envs/dev init -backend=false && terraform -chdir=infra/envs/dev validate`; deploy only via `/deploy`
+- One backtest: `uv run python -m silip_ml.backtest --domain risk --strategy lightgbm` (domains: load, risk, locate, eta)
+- Infra: `make tf-validate`; deploy only via `/deploy`. Schema: `make db` (Neon URLs from `../env/env.dev`). Firmware: `make iot-test` (needs PlatformIO)
 
 ## How to work
 - State assumptions before coding. Ask only if a wrong guess is expensive.

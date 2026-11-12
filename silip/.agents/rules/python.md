@@ -24,7 +24,7 @@ On top of [engineering-standards.md](engineering-standards.md).
 - Wiring (which adapter, which strategy) happens only in FastAPI dependencies.
 
 ## ml/ layout
-`silip_ml/<domain>/domain.py` holds the port. Each strategy is one file registered with `@register("<task>", "<name>")`. `metrics.py` holds the backtest metric. `silip_ml/core/` holds config, registry, privacy and backtest.
+`silip_ml/<domain>/domain.py` holds the port. Each strategy is one file registered with `@register("<task>", "<name>")`. `metrics.py` holds the backtest metric. `silip_ml/core/` holds config, registry and privacy; `silip_ml/backtest.py` compares strategies.
 
 ## Style
 - Type hints on every public function. No `Any` without a comment saying why.

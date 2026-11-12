@@ -1,0 +1,91 @@
+[project]
+name = "silip-workspace"
+version = "0.1.0"
+description = "SILIP monorepo: ml/ and api/ as one uv workspace"
+requires-python = ">=3.12"
+dependencies = ["silip-ml", "silip-api"]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.6",
+  "pyright>=1.1.380",
+  "import-linter>=2.1",
+  "httpx>=0.27",
+  "pandas-stubs>=3.1.0.261029",
+]
+notebooks = ["jupyterlab>=4.2"]
+
+[tool.uv]
+package = false
+default-groups = ["dev"]
+
+[tool.uv.workspace]
+members = ["ml", "api"]
+
+[tool.uv.sources]
+silip-ml = { workspace = true }
+silip-api = { workspace = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --import-mode=importlib"
+pythonpath = ["."]
+markers = ["integration: needs DATABASE_URL (skipped without it)"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["notebooks", "web", "iot", "infra"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "SIM"]
+ignore = [
+  "S101",  # assert is how pytest checks
+  "E501",  # the formatter owns line length; long SQL and strings stay readable
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["silip", "silip_ml", "tests"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S"]
+".claude/hooks/**" = ["S"]
+
+[tool.pyright]
+include = ["ml/src", "api/src", "tests"]
+typeCheckingMode = "standard"
+pythonVersion = "3.12"
+reportMissingTypeStubs = false
+
+[tool.importlinter]
+root_packages = ["silip", "silip_ml"]
+
+[[tool.importlinter.contracts]]
+name = "ml never imports the API"
+type = "forbidden"
+source_modules = ["silip_ml"]
+forbidden_modules = ["silip"]
+
+[[tool.importlinter.contracts]]
+name = "ml core imports no domain"
+type = "forbidden"
+source_modules = ["silip_ml.core"]
+forbidden_modules = ["silip_ml.readings", "silip_ml.load", "silip_ml.risk", "silip_ml.outages", "silip_ml.backtest"]
+
+[[tool.importlinter.contracts]]
+name = "API feature layers: api > adapters > service > domain"
+type = "layers"
+layers = ["(api)", "(adapters)", "service", "domain"]  # () = optional; ingest has handler.py instead of api.py
+containers = ["silip.transformers", "silip.outages", "silip.household", "silip.ingest", "silip.shared.auth"]
+
+[[tool.importlinter.contracts]]
+name = "Shared imports no feature"
+type = "forbidden"
+source_modules = ["silip.shared"]
+forbidden_modules = ["silip.transformers", "silip.outages", "silip.household", "silip.ingest", "silip.app"]
+
+[[tool.importlinter.contracts]]
+name = "Features are independent"
+type = "independence"
+modules = ["silip.transformers", "silip.outages", "silip.household", "silip.ingest"]

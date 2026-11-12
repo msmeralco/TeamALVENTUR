@@ -23,7 +23,7 @@ Simulated CSVs (all rows carry `is_simulated=True`):
 
 # Neon (Postgres)
 Schema in `db/schema.sql` (additive changes only). Key tables: `transformer`, `household(sin_hash, transformer_id, has_clamp)`, `reading(sin_hash, transformer_id, ts, power_kw, ...)`, `outage`, `outage_signal`. Every table has `is_simulated`.
-- Connect with `DATABASE_URL` (pooled endpoint, `sslmode=require`). Read only in `silip.shared.db`.
+- Locally the URLs come from `../env/env.dev` (git-ignored): `DATABASE_POOLER_URL` for the app, `DATABASE_DIRECT_URL` for schema changes. In Lambda, from Secrets Manager. Read only in `silip.shared.db`.
 - Parameterized queries only. Never select per-household rows into an engineer response.
 - TimescaleDB on Neon: [VERIFY] which features are available; the schema works as plain Postgres.
 

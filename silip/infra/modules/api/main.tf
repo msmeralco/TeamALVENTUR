@@ -1,12 +1,17 @@
-# API and ingest Lambdas from one container image, the database secret, and least-privilege roles.
+# API, ingest and scoring Lambdas from one container image, the database secret, and least-privilege roles.
 # The function URL uses AWS_IAM auth; only CloudFront (OAC, web module) may call it.
+# Scoring is one more entry in local.functions, not a new module: it shares the image, secret, env
+# and per-function role/log-group pattern, so a module would only duplicate that wiring.
 
 data "aws_region" "current" {}
 
 locals {
   functions = {
-    api    = { command = "silip.app.handler", memory = var.api_memory_mb, timeout = 30 }
-    ingest = { command = "silip.ingest.handler.handle", memory = 256, timeout = 10 }
+    api    = { command = "silip.app.handler", memory = var.api_memory_mb, timeout = 30, reserved = null }
+    ingest = { command = "silip.ingest.handler.handle", memory = 256, timeout = 10, reserved = null }
+    # Writes risk scores to Neon on a schedule; reserved concurrency 1 so runs never overlap.
+    # Timeout is the Lambda max; measured 34 s at 2,000 transformers with lightgbm.
+    score = { command = "silip.scoring.handler.handle", memory = var.scoring_memory_mb, timeout = 900, reserved = 1 }
   }
 }
 
@@ -81,6 +86,9 @@ resource "aws_lambda_function" "function" {
   memory_size   = each.value.memory
   timeout       = each.value.timeout
 
+  # null leaves api and ingest unreserved.
+  reserved_concurrent_executions = each.value.reserved
+
   image_config {
     command = [each.value.command]
   }
@@ -101,4 +109,32 @@ resource "aws_lambda_function" "function" {
 resource "aws_lambda_function_url" "api" {
   function_name      = aws_lambda_function.function["api"].function_name
   authorization_type = "AWS_IAM"
+}
+
+# Every var.scoring_schedule, EventBridge invokes the score Lambda; the API only reads stored scores.
+resource "aws_cloudwatch_event_rule" "score" {
+  name                = "${var.name}-score"
+  description         = "Invoke the SILIP scoring Lambda"
+  schedule_expression = var.scoring_schedule
+}
+
+resource "aws_cloudwatch_event_target" "score" {
+  rule = aws_cloudwatch_event_rule.score.name
+  arn  = aws_lambda_function.function["score"].arn
+}
+
+# A tick that cannot start (previous run still going, reserved concurrency 1) or a run that fails
+# is dropped, not retried: the next tick scores the newest data anyway.
+resource "aws_lambda_function_event_invoke_config" "score" {
+  function_name                = aws_lambda_function.function["score"].function_name
+  maximum_retry_attempts       = 0
+  maximum_event_age_in_seconds = 900
+}
+
+resource "aws_lambda_permission" "score_schedule" {
+  statement_id  = "AllowEventBridgeSchedule"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.function["score"].function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.score.arn
 }

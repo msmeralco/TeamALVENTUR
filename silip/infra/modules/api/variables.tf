@@ -20,8 +20,20 @@ variable "architecture" {
 
 variable "api_memory_mb" {
   type        = number
-  description = "API Lambda memory. Model fitting runs on cold start."
+  description = "API Lambda memory. In DB mode the API only reads stored risk scores (the score Lambda fits models)."
   default     = 1024
+}
+
+variable "scoring_memory_mb" {
+  type        = number
+  description = "Score Lambda memory. Measured peak 642 MB for 2,000 transformers x 14 days locally."
+  default     = 2048
+}
+
+variable "scoring_schedule" {
+  type        = string
+  description = "EventBridge schedule for the score Lambda; matches the 15-min clamp interval in iot/include/config.h."
+  default     = "rate(15 minutes)"
 }
 
 variable "data_source" {

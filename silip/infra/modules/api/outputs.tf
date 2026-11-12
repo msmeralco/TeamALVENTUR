@@ -27,3 +27,13 @@ output "ingest_function_arn" {
   description = "Ingest Lambda ARN."
   value       = aws_lambda_function.function["ingest"].arn
 }
+
+output "score_function_name" {
+  description = "Scoring Lambda name, invoked on a schedule to write risk scores to Neon."
+  value       = aws_lambda_function.function["score"].function_name
+}
+
+output "score_rule_name" {
+  description = "EventBridge rule that invokes the scoring Lambda."
+  value       = aws_cloudwatch_event_rule.score.name
+}

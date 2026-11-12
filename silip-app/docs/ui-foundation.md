@@ -82,3 +82,35 @@ This pass changes presentation and navigation. Ownership verification, tariff-ba
 Home is Ali's companion dashboard: greeting, compact seven-day estimated cost, sensor freshness, a route to the usage breakdown, away reminders, and the next lesson. It contains no historical chart or rate-editing form. Usage starts with the data explorer: seven days or the latest 24 stored hours, energy/cost selection, calendar-date or four-hour group bars, and exact selected values. Earlier/Later buttons provide an alternative to tapping narrow chart bars. Forecasts, saving insights, rate calculation and technical details follow the explorer.
 
 This prioritizes one next action on Home and analysis on Usage, applying selective attention and progressive disclosure. The first viewport must look different when switching tabs: Ali and a green summary on Home; a white analytical chart and period controls on Usage. The previous Learn layout and palette remain intact. Both destinations keep simulated-data and stale-sensor labels visible, and chart windows use the data's own clock.
+
+## Delight redesign: flows, truth labels and motion (13 November 2026)
+
+### New flows
+
+| Flow | Where | Notes |
+| --- | --- | --- |
+| Onboarding | `ui/onboarding/OnboardingFlow.kt` | Splash, three value cards (pager with a stretching dot indicator), chip personalization with Ali's replies, connect clamp or Rosa's demo home with an install diagram, permission priming, celebration. "Skip" saves answers so far, fills the rest with defaults and opens the demo home on first run. "Replay intro" in Settings keeps all progress and does not award XP twice. |
+| Home | `ui/home/HomeScreen.kt` | Previous Home content plus an Eco-Streak and quiz card. Opens the safety alert sheet when Settings sends the sample alert. |
+| Safety alert | `ui/alerts/SafetyAlertSheet.kt` | Bottom sheet: "I checked, all good", "Call someone at home" (opens the dialer with no number; nothing is stored), "Remind me in 10 min". Ali turns green with "Thanks for checking." |
+| Daily quiz | `ui/learn/DailyQuiz.kt` | One question per Manila day from the lesson quizzes. Answering counts today for the streak. |
+| Leaderboard | `ui/learn/Leaderboard.kt` | Demo neighborhood of 8 neighbors plus "You" (your on-device XP). |
+| Grid events | `ui/grid/GridEventScreen.kt` | Demo April-night Grid Alert: transformer load drops as households join, shown as a percentage and a word. |
+
+The bottom bar keeps Home, Usage, Learn and Grid events. The selected icon fills and springs up and its label turns bold. Settings stays in the top bar.
+
+### Truth labels
+
+- The clamp measures whole-home current. The safety alert says: "A steady 1.1 kW load has been on for 40 min while you're away (away mode on). Did someone leave something plugged in, like an iron?" Never "heat signature" or an appliance claim.
+- Peso figures are estimates: kW × the dated Meralco rate in `energy/EnergyAnalysis.kt`, or the user's bill rate (`burnRatePhpPerHour`). Label them "estimate".
+- The monthly budget is a goal (10% below the last-bill answer), not a forecast.
+- Demo content carries a visible label from `DemoLabels`: "Simulated" for Rosa's readings and the sample alert, "Demo neighborhood" for the leaderboard, "Pilot preview" for grid events and rewards. No payment, consent or event service exists.
+- The install explainer says the clamp is fitted after the meter by a licensed electrician and never touches Meralco's meter, seal or service drop.
+- No alert never means safe. An offline clamp says so.
+
+### Motion rules
+
+- Tokens live in `ui/design/Motion.kt`: 150 ms short, 250 ms standard, 300 ms entering, 700 ms counters. Routine UI changes stay at or under 300 ms.
+- Springs are for playful moments only: Ali, the streak pop, XP, the nav icon and the pager indicator.
+- One orchestrated moment per screen. Onboarding's splash fly-in and the celebration confetti are the peaks.
+- `rememberReduceMotion()` reads Android's animator duration scale. When it is 0, Ali is drawn still, glows and flickers stop, confetti is skipped and state changes snap.
+- Ali is decorative to TalkBack. Animated numbers announce only their final value. Color always comes with words.

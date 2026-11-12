@@ -58,10 +58,13 @@ export function HeroMap() {
             {...{ fetchpriority: "high" }}
             decoding="async"
             alt=""
-            className="size-full object-cover opacity-50"
+            className="hero-still size-full object-cover opacity-50"
           />
-          {/* Desaturates the map when its opacity rises: a gray layer in saturation blend mode. */}
-          <div data-hero-mono className="absolute inset-0 bg-stage opacity-0 mix-blend-saturation" />
+          {/* Desaturates the map when its opacity rises: a gray layer in saturation blend mode. Reduced motion shows the end state. */}
+          <div
+            data-hero-mono
+            className="absolute inset-0 bg-stage opacity-0 mix-blend-saturation motion-reduce:opacity-100"
+          />
           <svg
             viewBox="0 0 2880 1800"
             preserveAspectRatio="xMidYMid slice"

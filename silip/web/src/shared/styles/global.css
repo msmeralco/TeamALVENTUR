@@ -69,6 +69,10 @@
   --text-xl--line-height: 1.3;
   --text-3xl: 2rem;
   --text-3xl--line-height: 1.15;
+  /* Landing only: the hero headline (docs/design-system.md, Landing motion). Nowhere else. */
+  --text-display: clamp(2.5rem, 4vw + 0.75rem, 4.5rem);
+  --text-display--line-height: 1.02;
+  --text-display--letter-spacing: -0.025em;
 }
 
 @layer base {
@@ -143,6 +147,10 @@
 }
 .hero-drift {
   animation: hero-drift 40s ease-in-out infinite alternate;
+}
+/* The still starts as a calm city: muted, so the Critical area is not yet the loudest thing. */
+.hero-still {
+  filter: saturate(var(--hero-map-saturate)) brightness(var(--hero-map-brightness));
 }
 .hud-ring {
   animation: hud-ring 1.8s ease-out infinite;

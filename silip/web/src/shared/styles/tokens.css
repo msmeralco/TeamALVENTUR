@@ -49,6 +49,9 @@
   --stage: #1b1c1b;
   --stage-foreground: #f2efe3;
   --stage-grid: #3d3e3b;
+  /* The hero still at rest, before the scroll beat removes the rest of its color. */
+  --hero-map-saturate: 0.35;
+  --hero-map-brightness: 0.8;
   /* The giant wordmark at the foot of the landing page: sage, quiet on the footer card. */
   --wordmark: #c3d2c5;
 }

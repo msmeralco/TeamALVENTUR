@@ -28,9 +28,11 @@ function HowItWorks() {
       data-stage
       data-how
       aria-labelledby="how-it-works-title"
-      className="scroll-mt-16 bg-stage text-foreground"
+      // Wide screens: tucked under the hero's empty lower edge, with the steps near the top, so the
+      // steps come into view as the map's HUD leaves.
+      className="scroll-mt-16 bg-stage text-foreground lg:-mt-24"
     >
-      <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-20 sm:px-6 lg:min-h-[calc(100svh-4rem)] lg:grid-cols-2 lg:gap-16">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-20 sm:px-6 lg:min-h-[calc(100svh-4rem)] lg:grid-cols-2 lg:items-start lg:gap-16 lg:pt-28">
         <div className="grid gap-8">
           <h2 id="how-it-works-title" className="text-xl">
             How it works
@@ -267,11 +269,11 @@ function Hero() {
           </p>
         </div>
         <div className="grid items-end gap-5 sm:gap-8 lg:grid-cols-[1fr_26rem] lg:gap-16">
-          <div data-hero-lift className="grid max-w-xl gap-3 sm:gap-4">
-            <h1 id="hero-title" className="text-3xl tracking-tight text-balance">
+          <div data-hero-lift className="grid max-w-3xl gap-3 sm:gap-5">
+            <h1 id="hero-title" className="text-display text-balance">
               See the load on the transformer that feeds your street.
             </h1>
-            <p className="text-pretty">
+            <p className="max-w-xl text-pretty">
               SILIP estimates it from homes that opt in. Grid engineers see which transformers may overload.
               Residents can check for outages right here.
             </p>

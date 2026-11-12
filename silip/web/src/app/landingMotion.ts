@@ -13,7 +13,8 @@ const MOTION = "(prefers-reduced-motion: no-preference)";
 // Pinned beats only on wide screens with a mouse; touch and narrow screens reveal in place.
 const PIN = `${MOTION} and (min-width: 64rem) and (pointer: fine)`;
 const SCRAMBLE_CHARS = "abcdefghijklmnopqrstuvwxyz";
-const SCRAMBLE_MS = 700;
+// Short, so the random letters are gone almost as soon as they appear.
+const SCRAMBLE_MS = 360;
 
 /** Pins sit just under the sticky header, not behind it. */
 function pinStart(): string {
@@ -72,7 +73,7 @@ function heroTimeline(hero: HTMLElement, pinned: boolean) {
       trigger: hero,
       start: pinned ? pinStart : "top top",
       // Unpinned, the beat ends while the map is still on screen.
-      end: pinned ? "+=150%" : "bottom 60%",
+      end: pinned ? "+=110%" : "bottom 60%",
       pin: pinned,
       scrub: 0.6,
       onUpdate: (self) => {
@@ -91,7 +92,7 @@ function heroTimeline(hero: HTMLElement, pinned: boolean) {
     .to(q("[data-hud-line]"), { strokeDashoffset: 0, duration: 0.3, stagger: 0.05 }, 0.45)
     .to(q("[data-hud-dot]"), { scale: 1, duration: 0.1, stagger: 0.05 }, 0.6)
     .to(q("[data-hud-pulse], [data-hud-tag], [data-hud-label]"), { opacity: 1, duration: 0.15, stagger: 0.05 }, 0.65)
-    .to({}, { duration: 0.15 });
+    .to({}, { duration: 0.05 });
   return () => blocks.forEach((b) => b.remove());
 }
 

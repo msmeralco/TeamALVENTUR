@@ -1,3 +1,10 @@
+from types import SimpleNamespace
+
+import pandas as pd
+import pytest
+
+from silip.transformers.domain import TransformerDataUnavailableError
+from silip.transformers.service import compute_risk, risk_map, transformer_card
 from tests.api.helpers import auth
 
 
@@ -32,3 +39,20 @@ def test_card_has_history_and_forecast(client, dataset):
     assert (
         client.get("/api/v1/transformers/T-NOPE", headers=auth("engineer-token")).status_code == 404
     )
+
+
+def test_transformer_without_a_week_of_readings_is_omitted_until_forecastable(dataset):
+    transformers = dataset.transformers.copy()
+    added = transformers.iloc[0].copy()
+    added["transformer_id"] = "T-150"
+    transformers = pd.concat([transformers, added.to_frame().T], ignore_index=True)
+    one_reading = dataset.load.iloc[[0]].copy()
+    one_reading["transformer_id"] = "T-150"
+    load = pd.concat([dataset.load, one_reading], ignore_index=True)
+    source = SimpleNamespace(transformers=lambda: transformers, load=lambda: load)
+
+    snapshot = compute_risk(source, "seasonal_naive", "rules")
+
+    assert "T-150" not in {item.transformer_id for item in risk_map(snapshot, None)}
+    with pytest.raises(TransformerDataUnavailableError):
+        transformer_card(snapshot, "T-150")

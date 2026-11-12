@@ -45,3 +45,17 @@ def test_auth_disabled_is_refused_in_lambda(monkeypatch):
     monkeypatch.setenv("AWS_LAMBDA_FUNCTION_NAME", "silip-api")
     with pytest.raises(ConfigError):
         ApiSettings(auth_disabled=True)
+
+
+def test_forwarded_bearer_token_survives_origin_signing(client):
+    result = client.get(
+        "/api/v1/me",
+        headers={
+            "Authorization": "AWS4-HMAC-SHA256 origin-signature",
+            "X-Silip-Authorization": "Bearer engineer-token",
+        },
+    )
+    assert result.status_code == 200
+    assert "engineers" in result.json()["groups"]
+    bad = client.get("/api/v1/me", headers={"X-Silip-Authorization": "Bearer invalid-token"})
+    assert bad.status_code == 401

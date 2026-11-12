@@ -13,6 +13,10 @@ class TransformerNotFoundError(LookupError):
     """No transformer with that ID."""
 
 
+class TransformerDataUnavailableError(LookupError):
+    """The transformer does not have enough readings for a reliable forecast yet."""
+
+
 class TransformerRisk(BaseModel):
     """One pin on the engineer risk map."""
 

@@ -77,15 +77,15 @@ forbidden_modules = ["silip_ml.readings", "silip_ml.load", "silip_ml.risk", "sil
 name = "API feature layers: api > adapters > service > domain"
 type = "layers"
 layers = ["(api)", "(adapters)", "service", "domain"]  # () = optional; ingest has handler.py instead of api.py
-containers = ["silip.transformers", "silip.outages", "silip.household", "silip.ingest", "silip.clamps", "silip.shared.auth"]
+containers = ["silip.transformers", "silip.outages", "silip.household", "silip.ingest", "silip.clamps", "silip.devices", "silip.shared.auth"]
 
 [[tool.importlinter.contracts]]
 name = "Shared imports no feature"
 type = "forbidden"
 source_modules = ["silip.shared"]
-forbidden_modules = ["silip.transformers", "silip.outages", "silip.household", "silip.ingest", "silip.clamps", "silip.app"]
+forbidden_modules = ["silip.transformers", "silip.outages", "silip.household", "silip.ingest", "silip.clamps", "silip.devices", "silip.app"]
 
 [[tool.importlinter.contracts]]
 name = "Features are independent"
 type = "independence"
-modules = ["silip.transformers", "silip.outages", "silip.household", "silip.ingest", "silip.clamps"]
+modules = ["silip.transformers", "silip.outages", "silip.household", "silip.ingest", "silip.clamps", "silip.devices"]

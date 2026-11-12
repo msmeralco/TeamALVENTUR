@@ -1,19 +1,74 @@
 {
+  "$defs": {
+    "Motion": {
+      "additionalProperties": false,
+      "properties": {
+        "sensor": {
+          "const": "MPU6050",
+          "title": "Sensor",
+          "type": "string"
+        },
+        "accel_m_s2": {
+          "$ref": "#/$defs/MotionAxes"
+        },
+        "gyro_dps": {
+          "$ref": "#/$defs/MotionAxes"
+        },
+        "state": {
+          "enum": [
+            "stable",
+            "wiggling"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "tamper_assessment": {
+          "enum": [
+            "normal",
+            "suspected_tampering"
+          ],
+          "title": "Tamper Assessment",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sensor",
+        "accel_m_s2",
+        "gyro_dps",
+        "state",
+        "tamper_assessment"
+      ],
+      "title": "Motion",
+      "type": "object"
+    },
+    "MotionAxes": {
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        },
+        "z": {
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "title": "MotionAxes",
+      "type": "object"
+    }
+  },
   "additionalProperties": false,
-  "description": "One clamp node message (topic `READING_TOPIC`). Matches docs/SPEC.md#hardware.",
+  "description": "Stored reading with a server-assigned household and transformer.",
   "properties": {
-    "sin_hash": {
-      "description": "Salted SHA-256 of the SIN",
-      "pattern": "^[0-9a-f]{64}$",
-      "title": "Sin Hash",
-      "type": "string"
-    },
-    "transformer_id": {
-      "maxLength": 32,
-      "minLength": 1,
-      "title": "Transformer Id",
-      "type": "string"
-    },
     "ts": {
       "format": "date-time",
       "title": "Ts",
@@ -47,6 +102,17 @@
       "title": "Energy Kwh Interval",
       "type": "number"
     },
+    "motion": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Motion"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "event": {
       "anyOf": [
         {
@@ -64,17 +130,29 @@
       "default": false,
       "title": "Is Simulated",
       "type": "boolean"
+    },
+    "sin_hash": {
+      "description": "Salted household reference",
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Sin Hash",
+      "type": "string"
+    },
+    "transformer_id": {
+      "maxLength": 32,
+      "minLength": 1,
+      "title": "Transformer Id",
+      "type": "string"
     }
   },
   "required": [
-    "sin_hash",
-    "transformer_id",
     "ts",
     "voltage_v",
     "current_a",
     "power_kw",
     "power_factor",
-    "energy_kwh_interval"
+    "energy_kwh_interval",
+    "sin_hash",
+    "transformer_id"
   ],
   "title": "Reading",
   "type": "object"

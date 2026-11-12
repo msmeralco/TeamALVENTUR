@@ -14,7 +14,9 @@ from fastapi import FastAPI
 from mangum import Mangum
 
 from silip.clamps.api import router as clamps_router
+from silip.devices.api import router as devices_router
 from silip.household.api import router as household_router
+from silip.ingest.api import router as ingest_router
 from silip.outages.api import router as outages_router
 from silip.shared.auth.api import router as auth_router
 from silip.shared.config import get_settings
@@ -41,6 +43,8 @@ for router in (
     outages_router,
     household_router,
     clamps_router,
+    devices_router,
+    ingest_router,
 ):
     app.include_router(router)
 

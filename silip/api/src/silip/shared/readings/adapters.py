@@ -108,9 +108,12 @@ class _NeonSource:
         sql: LiteralString = (
             "WITH per_home AS ("  # noqa: S608  (class constant, no user input)
             + self.PER_HOME_KW
-            + ") SELECT transformer_id, date_bin('15 minutes', ts, TIMESTAMPTZ '2000-01-01') AS ts,"
-            " SUM(kw) AS transformer_kw, bool_or(is_simulated) AS is_simulated"
-            " FROM per_home GROUP BY 1, 2 ORDER BY 1, 2"
+            + "), intervals AS (SELECT transformer_id, sin_hash,"
+            " date_bin('15 minutes', ts, TIMESTAMPTZ '2000-01-01') AS ts,"
+            " avg(kw) AS kw, bool_or(is_simulated) AS is_simulated"
+            " FROM per_home GROUP BY 1, 2, 3)"
+            " SELECT transformer_id, ts, SUM(kw) AS transformer_kw,"
+            " bool_or(is_simulated) AS is_simulated FROM intervals GROUP BY 1, 2 ORDER BY 1, 2"
         )
         return self._frame(sql)
 
@@ -127,11 +130,12 @@ class _NeonSource:
         sql: LiteralString = (
             "WITH per_home AS ("  # noqa: S608  (class constant, no user input)
             + self.PER_HOME_KW
-            + ") SELECT ts, kw::float8 AS power_kw, is_simulated FROM per_home"
+            + ") SELECT date_bin('15 minutes', ts, TIMESTAMPTZ '2000-01-01') AS ts,"
+            " avg(kw)::float8 AS power_kw, bool_or(is_simulated) AS is_simulated FROM per_home"
             " WHERE sin_hash = %(sin_hash)s"
             # Week before the household's latest reading (like SimulatedSource), not now().
             " AND ts > (SELECT max(ts) FROM per_home WHERE sin_hash = %(sin_hash)s)"
-            " - make_interval(days => %(days)s) ORDER BY ts"
+            " - make_interval(days => %(days)s) GROUP BY 1 ORDER BY ts"
         )
         return self._frame(sql, {"sin_hash": sin_hash, "days": USAGE_DAYS})
 

@@ -41,7 +41,11 @@ def clamp_map(source: DataSource, bbox: BoundingBox | None) -> ClampMap:
     """Every clamp inside `bbox` (all when None), sorted by transformer then clamp."""
     offline_after_min = int(OFFLINE_AFTER.total_seconds() // 60)
     clamps = source.clamps()
-    as_of = clamps["last_seen_at"].max() if not clamps.empty else None
+    as_of = None if clamps.empty else pd.Timestamp.now(tz="UTC")
+    if not clamps.empty and clamps["is_simulated"].all():
+        latest = clamps["last_seen_at"].max()
+        if pd.notna(latest):
+            as_of = latest
     if as_of is None or pd.isna(as_of):
         return ClampMap(
             as_of=None, offline_after_min=offline_after_min, clamps=[], is_simulated=False

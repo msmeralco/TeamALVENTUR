@@ -34,9 +34,20 @@ export const api = createClient<paths>({
 });
 
 api.use({
-  onRequest({ request }) {
+  async onRequest({ request }) {
     const token = getAccessToken();
-    if (token !== null) request.headers.set("Authorization", `Bearer ${token}`);
+    if (token !== null) {
+      request.headers.set("Authorization", `Bearer ${token}`);
+      // CloudFront signs Authorization for the private Lambda origin.
+      request.headers.set("X-Silip-Authorization", `Bearer ${token}`);
+    }
+    if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
+      const digest = await crypto.subtle.digest("SHA-256", await request.clone().arrayBuffer());
+      request.headers.set(
+        "x-amz-content-sha256",
+        Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join(""),
+      );
+    }
     return request;
   },
   onResponse({ response }) {

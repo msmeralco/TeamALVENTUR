@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS household_load (
 -- transformer when no building is mapped. Shown as a device point, never with usage.
 ALTER TABLE household ADD COLUMN IF NOT EXISTS lat double precision;
 ALTER TABLE household ADD COLUMN IF NOT EXISTS lon double precision;
+ALTER TABLE household ADD COLUMN IF NOT EXISTS location_label text;
 ALTER TABLE household ADD COLUMN IF NOT EXISTS osm_way_id bigint;
 
 -- One retrofit clamp per opted-in household (one SIN, one transformer). clamp_id is the node's
@@ -119,3 +120,12 @@ GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA public TO silip_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT ON TABLES TO silip_app;
 -- load_sim fills household places on rows loaded before these columns existed (null only).
 GRANT UPDATE (lat, lon, osm_way_id) ON household TO silip_app;
+
+-- Motion is a reported signal for review, never proof of theft.
+ALTER TABLE reading ADD COLUMN IF NOT EXISTS motion jsonb;
+GRANT UPDATE (has_clamp, transformer_id, lat, lon, location_label) ON household TO silip_app;
+GRANT UPDATE (last_seen_at) ON clamp TO silip_app;
+
+-- Dashboard-issued device keys are stored only as hashes.
+ALTER TABLE clamp ADD COLUMN IF NOT EXISTS device_key_hash text;
+GRANT UPDATE (device_key_hash) ON clamp TO silip_app;

@@ -60,9 +60,57 @@ export function UsagePage() {
     queryKey: ["me", "usage"],
     queryFn: async () => unwrap(await api.GET("/api/v1/me/usage")),
   });
+  const device = useQuery({
+    queryKey: ["me", "device"],
+    queryFn: async () => unwrap(await api.GET("/api/v1/me/device")),
+    refetchInterval: 15_000,
+    retry: false,
+  });
+  const latest = device.data?.readings[0];
   return (
     <section>
       <PageHead title="Your usage" lede="Last 7 days, from the clamp in your home. Only you can see this." />
+      <Card className="mb-6 p-6 shadow-none">
+        <h2 className="text-lg font-semibold">Your household clamp</h2>
+        {device.isPending && <p role="status">Loading device…</p>}
+        {device.isError && (
+          <p>
+            Device details unavailable. <button onClick={() => void device.refetch()}>Try again</button>
+          </p>
+        )}
+        {device.data && (
+          <>
+            <p>
+              {device.data.clamp_id} · Transformer {device.data.transformer_id}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {device.data.ct_model} · Installation: {device.data.lat ?? "Unknown"}, {device.data.lon ?? "Unknown"}
+            </p>
+            <SimulatedLabel show={device.data.is_simulated} />
+            {latest ? (
+              <>
+                <p className="text-sm">Latest: {new Date(latest.ts).toLocaleString()}</p>
+                <p>
+                  {latest.voltage_v.toFixed(1)} V · {latest.current_a.toFixed(2)} A · {latest.power_kw.toFixed(2)} kW ·
+                  PF {latest.power_factor.toFixed(2)}
+                </p>
+                <SimulatedLabel show={latest.is_simulated} />
+                {latest.motion && (
+                  <p>
+                    Movement: {latest.motion.state}.{" "}
+                    {latest.motion.tamper_assessment === "suspected_tampering"
+                      ? "Movement flagged for inspection; this does not establish tampering."
+                      : "No disturbance reported."}
+                  </p>
+                )}
+                {latest.event === "last_gasp" && <p>Node reported impending power loss.</p>}
+              </>
+            ) : (
+              <p>Awaiting the first reading.</p>
+            )}
+          </>
+        )}
+      </Card>
       <QueryView
         {...query}
         isEmpty={(usage) => usage.points.length === 0}

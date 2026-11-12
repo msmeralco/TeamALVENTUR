@@ -1,5 +1,5 @@
 #pragma once
-// How a reading leaves the node. MQTT now; a LoRa transport implements the same interface later.
+// How a reading leaves the node. HTTPS now; a LoRa transport implements the same interface later.
 
 class Transport {
  public:

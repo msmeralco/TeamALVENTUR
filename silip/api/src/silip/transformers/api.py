@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from time import monotonic
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -15,6 +16,7 @@ from silip.shared.readings.domain import DataSource
 from silip.transformers import service
 from silip.transformers.domain import (
     TransformerCard,
+    TransformerDataUnavailableError,
     TransformerNotFoundError,
     TransformerRisk,
 )
@@ -23,13 +25,15 @@ router = APIRouter(prefix="/api/v1/transformers", tags=["transformers"])
 
 
 @lru_cache(maxsize=4)
-def _snapshot(source: DataSource, forecaster: str, risk_scorer: str) -> service.RiskSnapshot:
+def _snapshot(
+    source: DataSource, forecaster: str, risk_scorer: str, refresh_window: int
+) -> service.RiskSnapshot:
     # One scoring run per process and strategy pair; data refreshes on the next cold start.
     return service.compute_risk(source, forecaster, risk_scorer)
 
 
 def risk_snapshot(source: Source, settings: Settings) -> service.RiskSnapshot:
-    return _snapshot(source, settings.forecaster, settings.risk_scorer)
+    return _snapshot(source, settings.forecaster, settings.risk_scorer, int(monotonic() // 60))
 
 
 Snapshot = Annotated[service.RiskSnapshot, Depends(risk_snapshot)]
@@ -54,5 +58,7 @@ def get_transformer(transformer_id: str, snapshot: Snapshot, _: Engineer) -> Tra
     """One transformer: risk, last 48 h of load and the 24 h forecast."""
     try:
         return service.transformer_card(snapshot, transformer_id)
+    except TransformerDataUnavailableError as error:
+        raise HTTPException(409, "Not enough readings to forecast this transformer yet") from error
     except TransformerNotFoundError as error:
         raise HTTPException(status_code=404, detail="Transformer not found") from error

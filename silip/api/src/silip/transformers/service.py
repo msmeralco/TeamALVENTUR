@@ -13,11 +13,12 @@ from silip.shared.readings.domain import DataSource
 from silip.transformers.domain import (
     LoadPoint,
     TransformerCard,
+    TransformerDataUnavailableError,
     TransformerNotFoundError,
     TransformerRisk,
 )
 from silip_ml.core.registry import create
-from silip_ml.readings.domain import STEPS_PER_DAY, load_pct
+from silip_ml.readings.domain import STEPS_PER_DAY, STEPS_PER_WEEK, load_pct
 from silip_ml.risk.domain import RiskOutput
 
 CARD_HISTORY = pd.Timedelta(hours=48)
@@ -36,10 +37,21 @@ class RiskSnapshot:
 def compute_risk(source: DataSource, forecaster: str, risk_scorer: str) -> RiskSnapshot:
     """Forecast the next 24 h and score it. Strategies are chosen by name (config)."""
     transformers, load = source.transformers(), source.load()
-    forecast = create("forecaster", forecaster).fit(load).predict(load, STEPS_PER_DAY)
-    outputs = (
-        create("risk_scorer", risk_scorer).fit(load, transformers).score(forecast, transformers)
-    )
+    counts = load.groupby("transformer_id").size()
+    ready_ids = counts[counts >= STEPS_PER_WEEK].index
+    ready_load = load[load["transformer_id"].isin(ready_ids)]
+    if ready_load.empty:
+        forecast = pd.DataFrame(columns=["transformer_id", "ts", "kw_pred"])
+        outputs = []
+    else:
+        forecast = (
+            create("forecaster", forecaster).fit(ready_load).predict(ready_load, STEPS_PER_DAY)
+        )
+        outputs = (
+            create("risk_scorer", risk_scorer)
+            .fit(ready_load, transformers)
+            .score(forecast, transformers)
+        )
     return RiskSnapshot(transformers, load, forecast, {o.transformer_id: o for o in outputs})
 
 
@@ -60,7 +72,8 @@ def risk_map(snapshot: RiskSnapshot, bbox: BoundingBox | None) -> list[Transform
     rows = [
         _risk_row(snapshot, row)
         for row in snapshot.transformers.to_dict("records")
-        if bbox is None or bbox.contains(row["lat"], row["lon"])
+        if row["transformer_id"] in snapshot.risk
+        and (bbox is None or bbox.contains(row["lat"], row["lon"]))
     ]
     return sorted(rows, key=lambda r: (order[r.risk.tier], -r.risk.peak_load_pct))
 
@@ -70,6 +83,8 @@ def transformer_card(snapshot: RiskSnapshot, transformer_id: str) -> Transformer
     match = snapshot.transformers[snapshot.transformers["transformer_id"] == transformer_id]
     if match.empty:
         raise TransformerNotFoundError(transformer_id)
+    if transformer_id not in snapshot.risk:
+        raise TransformerDataUnavailableError(transformer_id)
     row = match.to_dict("records")[0]
     history = snapshot.load[snapshot.load["transformer_id"] == transformer_id]
     as_of = history["ts"].max()

@@ -141,6 +141,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/device": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My Device */
+        get: operations["my_device_api_v1_me_device_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/clamps": {
         parameters: {
             query?: never;
@@ -161,10 +178,130 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Devices */
+        get: operations["devices_api_v1_devices_get"];
+        put?: never;
+        /** Register */
+        post: operations["register_api_v1_devices_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/transformers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Transformers */
+        get: operations["transformers_api_v1_devices_transformers_get"];
+        put?: never;
+        /** Add Transformer */
+        post: operations["add_transformer_api_v1_devices_transformers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/transformers/{transformer_id}/telemetry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Telemetry */
+        get: operations["telemetry_api_v1_devices_transformers__transformer_id__telemetry_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{clamp_id}/installation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Assign */
+        put: operations["assign_api_v1_devices__clamp_id__installation_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{clamp_id}/key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace Key */
+        post: operations["replace_key_api_v1_devices__clamp_id__key_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/{clamp_id}/readings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Receive Reading */
+        post: operations["receive_reading_api_v1_devices__clamp_id__readings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AggregatePoint */
+        AggregatePoint: {
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /** Measured Kw */
+            measured_kw: number;
+            /** Energy Kwh */
+            energy_kwh: number;
+            /** Homes Reporting */
+            homes_reporting: number;
+            /** Is Simulated */
+            is_simulated: boolean;
+        };
         /**
          * ClampMap
          * @description Every clamp in view, with status judged against `as_of` (the latest report of any clamp).
@@ -209,10 +346,189 @@ export interface components {
             /** Is Simulated */
             is_simulated: boolean;
         };
+        /** Device */
+        Device: {
+            /** Clamp Id */
+            clamp_id: string;
+            /** Transformer Id */
+            transformer_id: string;
+            /** Lat */
+            lat: number | null;
+            /** Lon */
+            lon: number | null;
+            /** Location Label */
+            location_label?: string | null;
+            /** Ct Model */
+            ct_model: string;
+            /**
+             * Installed At
+             * Format: date-time
+             */
+            installed_at: string;
+            /** Last Seen At */
+            last_seen_at: string | null;
+            /** Status */
+            status: string;
+            /** Is Simulated */
+            is_simulated: boolean;
+            /**
+             * Device Key Set
+             * @default false
+             */
+            device_key_set: boolean;
+        };
+        /** DeviceKey */
+        DeviceKey: {
+            /** Device Key */
+            device_key: string;
+        };
+        /**
+         * DeviceReading
+         * @description HTTP device report. Legacy identifiers are accepted but assignment is server-owned.
+         */
+        DeviceReading: {
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /** Voltage V */
+            voltage_v: number;
+            /**
+             * Current A
+             * @description SCT-013-000 range is 0 to 100 A
+             */
+            current_a: number;
+            /**
+             * Power Kw
+             * @description Negative when rooftop solar exports
+             */
+            power_kw: number;
+            /** Power Factor */
+            power_factor: number;
+            /** Energy Kwh Interval */
+            energy_kwh_interval: number;
+            motion?: components["schemas"]["Motion"] | null;
+            /** Event */
+            event?: "last_gasp" | null;
+            /**
+             * Is Simulated
+             * @default false
+             */
+            is_simulated: boolean;
+            /** Sin Hash */
+            sin_hash?: string | null;
+            /** Transformer Id */
+            transformer_id?: string | null;
+        };
+        /** DeviceRegistration */
+        DeviceRegistration: {
+            /** Clamp Id */
+            clamp_id?: string;
+            /** Sin Hash */
+            sin_hash?: string;
+            /** Transformer Id */
+            transformer_id: string;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Location Label */
+            location_label?: string | null;
+            /**
+             * Ct Model
+             * @default SCT-013-000
+             */
+            ct_model: string;
+            /**
+             * Is Simulated
+             * @default false
+             */
+            is_simulated: boolean;
+            /** Consent Confirmed */
+            consent_confirmed: boolean;
+        };
+        /** DeviceSetup */
+        DeviceSetup: {
+            /** Clamp Id */
+            clamp_id: string;
+            /** Transformer Id */
+            transformer_id: string;
+            /** Lat */
+            lat: number | null;
+            /** Lon */
+            lon: number | null;
+            /** Location Label */
+            location_label?: string | null;
+            /** Ct Model */
+            ct_model: string;
+            /**
+             * Installed At
+             * Format: date-time
+             */
+            installed_at: string;
+            /** Last Seen At */
+            last_seen_at: string | null;
+            /** Status */
+            status: string;
+            /** Is Simulated */
+            is_simulated: boolean;
+            /**
+             * Device Key Set
+             * @default false
+             */
+            device_key_set: boolean;
+            /** Device Key */
+            device_key: string;
+        };
+        /** ElectricalReading */
+        ElectricalReading: {
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /** Voltage V */
+            voltage_v: number;
+            /** Current A */
+            current_a: number;
+            /** Power Kw */
+            power_kw: number;
+            /** Power Factor */
+            power_factor: number;
+            /** Energy Kwh Interval */
+            energy_kwh_interval: number;
+            motion: components["schemas"]["Motion"] | null;
+            /** Event */
+            event: string | null;
+            /** Is Simulated */
+            is_simulated: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HouseholdDevice */
+        HouseholdDevice: {
+            /** Clamp Id */
+            clamp_id: string;
+            /** Transformer Id */
+            transformer_id: string;
+            /** Lat */
+            lat: number | null;
+            /** Lon */
+            lon: number | null;
+            /** Location Label */
+            location_label?: string | null;
+            /** Ct Model */
+            ct_model: string;
+            /** Last Seen At */
+            last_seen_at: string | null;
+            /** Is Simulated */
+            is_simulated: boolean;
+            /** Readings */
+            readings: components["schemas"]["ElectricalReading"][];
         };
         /**
          * HouseholdUsage
@@ -225,6 +541,17 @@ export interface components {
             points: components["schemas"]["UsagePoint"][];
             /** Is Simulated */
             is_simulated: boolean;
+        };
+        /** Installation */
+        Installation: {
+            /** Transformer Id */
+            transformer_id: string;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Location Label */
+            location_label?: string | null;
         };
         /**
          * LoadPoint
@@ -254,6 +581,35 @@ export interface components {
             email: string | null;
             /** Groups */
             groups: string[];
+        };
+        /** Motion */
+        Motion: {
+            /**
+             * Sensor
+             * @constant
+             */
+            sensor: "MPU6050";
+            accel_m_s2: components["schemas"]["MotionAxes"];
+            gyro_dps: components["schemas"]["MotionAxes"];
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "stable" | "wiggling";
+            /**
+             * Tamper Assessment
+             * @enum {string}
+             */
+            tamper_assessment: "normal" | "suspected_tampering";
+        };
+        /** MotionAxes */
+        MotionAxes: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Z */
+            z: number;
         };
         /**
          * OutageDetail
@@ -379,6 +735,43 @@ export interface components {
             /** Load */
             load: components["schemas"]["LoadPoint"][];
         };
+        /** TransformerOption */
+        TransformerOption: {
+            /** Transformer Id */
+            transformer_id: string;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Is Simulated */
+            is_simulated: boolean;
+        };
+        /** TransformerRegistration */
+        TransformerRegistration: {
+            /** Transformer Id */
+            transformer_id: string;
+            /** Rated Kva */
+            rated_kva: number;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /**
+             * Homes
+             * @default 0
+             */
+            homes: number;
+            /**
+             * Coverage Pct
+             * @default 0
+             */
+            coverage_pct: number;
+            /**
+             * Is Simulated
+             * @default false
+             */
+            is_simulated: boolean;
+        };
         /**
          * TransformerRisk
          * @description One pin on the engineer risk map.
@@ -395,6 +788,15 @@ export interface components {
             risk: components["schemas"]["RiskOutput"];
             /** Is Simulated */
             is_simulated: boolean;
+        };
+        /** TransformerTelemetry */
+        TransformerTelemetry: {
+            /** Transformer Id */
+            transformer_id: string;
+            /** Registered Homes */
+            registered_homes: number;
+            /** Points */
+            points: components["schemas"]["AggregatePoint"][];
         };
         /** UsagePoint */
         UsagePoint: {
@@ -453,7 +855,9 @@ export interface operations {
     me_api_v1_me_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Silip-Authorization"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -482,6 +886,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     list_transformers_api_v1_transformers_get: {
@@ -490,7 +903,9 @@ export interface operations {
                 /** @description min_lon,min_lat,max_lon,max_lat */
                 bbox?: string | null;
             };
-            header?: never;
+            header?: {
+                "X-Silip-Authorization"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -533,7 +948,9 @@ export interface operations {
     get_transformer_api_v1_transformers__transformer_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Silip-Authorization"?: string | null;
+            };
             path: {
                 transformer_id: string;
             };
@@ -609,7 +1026,9 @@ export interface operations {
     get_outage_api_v1_outages__outage_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Silip-Authorization"?: string | null;
+            };
             path: {
                 outage_id: string;
             };
@@ -654,7 +1073,9 @@ export interface operations {
     my_usage_api_v1_me_usage_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Silip-Authorization"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -683,6 +1104,60 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_device_api_v1_me_device_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Silip-Authorization"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdDevice"];
+                };
+            };
+            /** @description Sign in required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Signed in, but not in the required group */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     list_clamps_api_v1_clamps_get: {
@@ -691,7 +1166,9 @@ export interface operations {
                 /** @description min_lon,min_lat,max_lon,max_lat */
                 bbox?: string | null;
             };
-            header?: never;
+            header?: {
+                "X-Silip-Authorization"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -715,6 +1192,276 @@ export interface operations {
             };
             /** @description Signed in, but not in the required group */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    devices_api_v1_devices_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Silip-Authorization"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Device"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_api_v1_devices_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Silip-Authorization"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceRegistration"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceSetup"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transformers_api_v1_devices_transformers_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Silip-Authorization"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransformerOption"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_transformer_api_v1_devices_transformers_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Silip-Authorization"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransformerRegistration"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransformerOption"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    telemetry_api_v1_devices_transformers__transformer_id__telemetry_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Silip-Authorization"?: string | null;
+            };
+            path: {
+                transformer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransformerTelemetry"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_api_v1_devices__clamp_id__installation_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Silip-Authorization"?: string | null;
+            };
+            path: {
+                clamp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Installation"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Device"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replace_key_api_v1_devices__clamp_id__key_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Silip-Authorization"?: string | null;
+            };
+            path: {
+                clamp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceKey"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    receive_reading_api_v1_devices__clamp_id__readings_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Device-Key"?: string | null;
+            };
+            path: {
+                clamp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceReading"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };

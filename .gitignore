@@ -40,7 +40,8 @@ coverage/
 *.tfvars
 !*.tfvars.example
 crash.log
-tfplan
+tfplan*
+*.tfplan
 backend.hcl
 
 # Firmware (PlatformIO)

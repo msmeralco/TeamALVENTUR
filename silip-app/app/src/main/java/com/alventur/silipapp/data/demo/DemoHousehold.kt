@@ -60,8 +60,14 @@ object DemoHousehold {
     const val CLAMP_ID = "demo-rosa-home"
     const val TRANSFORMER_ID = "Demo street transformer"
 
-    const val BACKGROUND_KW = 0.30
-    const val AIRCON_STEP_KW = 1.2
+    /**
+     * Pitch numbers: Rosa's burn rate is ₱4.50/h before the aircon and ₱12.00/h after, at the dated
+     * Meralco benchmark (₱15.0615/kWh). 4.50 / 15.0615 = 0.2988 kW; (12.00 − 4.50) / 15.0615 = 0.498 kW.
+     */
+    const val BACKGROUND_KW = 0.2988
+
+    /** [VERIFY] Typical average draw of a 1-HP inverter aircon once it reaches its set point. */
+    const val AIRCON_STEP_KW = 0.498
     const val AWAY_LOAD_KW = 1.1
     val AIRCON_ON: LocalTime = LocalTime.of(14, 10)
     val AWAY_START: LocalTime = LocalTime.of(15, 0)
@@ -69,6 +75,18 @@ object DemoHousehold {
 
     /** Suggested "now" for the demo story: just after the aircon step. */
     val STORY_NOW: LocalTime = LocalTime.of(14, 20)
+
+    /** Home's story beat: steady background just before the aircon step, in kW (₱4.50/h at the benchmark). */
+    val storyKwBefore: Double get() = BACKGROUND_KW
+
+    /** Home's story beat at [STORY_NOW]: background plus the aircon, in kW (₱12.00/h at the benchmark). */
+    val storyKwNow: Double get() = BACKGROUND_KW + AIRCON_STEP_KW
+
+    /** Estimated kWh Rosa used today up to [STORY_NOW]. */
+    fun kwhUntilStoryNow(): Double =
+        (0 until 96).map { LocalTime.of(it / 4, (it % 4) * 15) }
+            .filter { it.isBefore(STORY_NOW) }
+            .sumOf { kwAt(it) * 0.25 }
 
     /** Rosa's power at a time of day, in kW. Deterministic. */
     fun kwAt(time: LocalTime): Double {

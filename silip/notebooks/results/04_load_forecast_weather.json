@@ -1,13 +1,13 @@
 {
   "chosen": "lightgbm_weather",
   "params": {
-    "n_estimators": 400,
-    "learning_rate": 0.025027964389387022,
+    "n_estimators": 350,
+    "learning_rate": 0.05322702163224505,
     "num_leaves": 57,
-    "min_child_samples": 213,
-    "subsample": 0.6694185491035058,
-    "colsample_bytree": 0.6618863149265657,
-    "reg_lambda": 0.059167191267678214,
+    "min_child_samples": 239,
+    "subsample": 0.6141882836947681,
+    "colsample_bytree": 0.7638366702745608,
+    "reg_lambda": 1.6785950298441639,
     "subsample_freq": 1
   },
   "features": [
@@ -32,6 +32,6 @@
     "ridge (lags + hour)": 6.3312,
     "LightGBM, default": 3.8479,
     "LightGBM, tuned": 3.8793,
-    "LightGBM + weather, tuned": 4.0198
+    "LightGBM + weather, tuned": 3.1752
   }
 }

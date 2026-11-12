@@ -1,11 +1,11 @@
 {
   "chosen": "lightgbm_weather_ev",
-  "variant": "unweighted",
+  "variant": "unweighted, smaller trees",
   "params": {
     "n_estimators": 200,
     "learning_rate": 0.05,
-    "num_leaves": 15,
-    "min_child_samples": 20
+    "num_leaves": 7,
+    "min_child_samples": 40
   },
   "features": [
     "peak_load_pct",
@@ -22,39 +22,39 @@
   ],
   "forecaster": "lightgbm_weather",
   "thresholds": {
-    "critical": 0.05,
-    "watch": 0.03
+    "critical": 0.07,
+    "watch": 0.04
   },
-  "false_alarm_budget_per_tx_month": 6.974789915966387,
+  "false_alarm_budget_per_tx_month": 8.067226890756302,
   "first_training_day": "2026-04-15 00:00:00+08:00",
   "stations": 588,
   "gain_share": {
-    "peak_load_pct": 0.1624,
-    "mean_load_pct": 0.1049,
-    "hours_over_100": 0.3131,
-    "hours_over_110": 0.017,
-    "hours_over_90": 0.0279,
-    "coverage_pct": 0.0355,
-    "rated_kva": 0.022,
-    "heat_index_max_c": 0.19,
-    "ev_evening_step_kw": 0.0616,
-    "ev_stations_within": 0.0102,
-    "reporting_pct": 0.0555
+    "peak_load_pct": 0.0599,
+    "mean_load_pct": 0.0871,
+    "hours_over_100": 0.1407,
+    "hours_over_110": 0.2947,
+    "hours_over_90": 0.0936,
+    "coverage_pct": 0.061,
+    "rated_kva": 0.0199,
+    "heat_index_max_c": 0.1473,
+    "ev_evening_step_kw": 0.0389,
+    "ev_stations_within": 0.0178,
+    "reporting_pct": 0.0392
   },
   "validation": {
     "rules (lightgbm_weather forecasts)": {
+      "recall": 0.967,
+      "false_alarms_per_tx_month": 8.0672,
+      "trips": 91.0,
+      "windows": 357.0,
+      "recall at >= 12 h lead": 0.967
+    },
+    "lightgbm_weather_ev": {
       "recall": 0.9451,
-      "false_alarms_per_tx_month": 6.9748,
+      "false_alarms_per_tx_month": 8.0672,
       "trips": 91.0,
       "windows": 357.0,
       "recall at >= 12 h lead": 0.9451
-    },
-    "lightgbm_weather_ev": {
-      "recall": 0.9121,
-      "false_alarms_per_tx_month": 6.0504,
-      "trips": 91.0,
-      "windows": 357.0,
-      "recall at >= 12 h lead": 0.9121
     }
   }
 }

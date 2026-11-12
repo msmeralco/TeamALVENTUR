@@ -62,19 +62,19 @@
     {
       "question": "weather",
       "option": "chosen + day-ahead weather forecast (lightgbm_weather)",
-      "fold 1": 6.26,
-      "fold 2": 6.992,
-      "fold 3": 4.416,
-      "mean MAE (kW)": 5.889,
+      "fold 1": 5.102,
+      "fold 2": 5.958,
+      "fold 3": 3.414,
+      "mean MAE (kW)": 4.825,
       "usable at scoring time": "yes"
     },
     {
       "question": "weather",
       "option": "chosen + forecast heat index and rain only",
-      "fold 1": 5.565,
-      "fold 2": 6.594,
-      "fold 3": 3.782,
-      "mean MAE (kW)": 5.313,
+      "fold 1": 4.843,
+      "fold 2": 5.293,
+      "fold 3": 3.547,
+      "mean MAE (kW)": 4.561,
       "usable at scoring time": "yes"
     },
     {
@@ -147,16 +147,16 @@
     "rain_fcst_mm"
   ],
   "weather_gain_share": {
-    "lag_1d": 0.2148,
-    "lag_2d": 0.0258,
-    "lag_7d": 0.5824,
-    "hour": 0.0368,
-    "day_of_week": 0.0414,
+    "lag_1d": 0.2194,
+    "lag_2d": 0.0243,
+    "lag_7d": 0.5719,
+    "hour": 0.0268,
+    "day_of_week": 0.0318,
     "is_weekend": 0.0002,
-    "is_holiday": 0.026,
-    "hi_fcst_c": 0.0211,
-    "hi_fcst_minus_lag1d_c": 0.0507,
-    "rain_fcst_mm": 0.0007
+    "is_holiday": 0.0253,
+    "hi_fcst_c": 0.0338,
+    "hi_fcst_minus_lag1d_c": 0.0663,
+    "rain_fcst_mm": 0.0001
   },
   "feature_params": {
     "lag_days": [

@@ -172,3 +172,86 @@ GRANT UPDATE (last_seen_at) ON clamp TO silip_app;
 -- Dashboard-issued device keys are stored only as hashes.
 ALTER TABLE clamp ADD COLUMN IF NOT EXISTS device_key_hash text;
 GRANT UPDATE (device_key_hash) ON clamp TO silip_app;
+
+-- Decision dashboard (ADR 0006 weather, ADR 0007 EV exposure). Insert-only for the app role.
+-- Hourly weather per grid cell (silip_ml.weather.cell_id). A forecast is never rewritten: each
+-- fetch is a new issued_at, and readers take the latest issue at or before their scoring time.
+CREATE TABLE IF NOT EXISTS weather_hourly (
+    cell_id                text NOT NULL,
+    lat                    double precision NOT NULL,
+    lon                    double precision NOT NULL,
+    ts                     timestamptz NOT NULL,
+    issued_at              timestamptz NOT NULL,
+    kind                   text NOT NULL CHECK (kind IN ('forecast', 'archive')),
+    temperature_c          real,
+    relative_humidity_pct  real,
+    precipitation_mm       real,
+    heat_index_c           real,
+    source                 text NOT NULL DEFAULT 'open-meteo',
+    is_simulated           boolean NOT NULL,
+    PRIMARY KEY (cell_id, ts, kind, issued_at)
+);
+CREATE INDEX IF NOT EXISTS weather_hourly_issued ON weather_hourly (kind, issued_at);
+
+-- DOE EV charging stations (data/evcs_locations.csv). station_id is the first 16 hex of
+-- sha256(name|lat|lon); source_sha256 is the file the row came from.
+CREATE TABLE IF NOT EXISTS ev_charger (
+    station_id      text PRIMARY KEY,
+    name            text NOT NULL,
+    region          text,
+    province        text,
+    city            text,
+    barangay        text,
+    lat             double precision NOT NULL,
+    lon             double precision NOT NULL,
+    source          text NOT NULL,
+    source_sha256   text NOT NULL,
+    loaded_at       timestamptz NOT NULL,
+    is_simulated    boolean NOT NULL DEFAULT false
+);
+
+-- EV adoption statistics (data/ev_adoption.csv), one value per period, place, metric and class.
+CREATE TABLE IF NOT EXISTS ev_adoption (
+    period           text NOT NULL,
+    geography_level  text NOT NULL,
+    geography        text NOT NULL,
+    metric           text NOT NULL
+        CHECK (metric IN ('ev_sales', 'ev_registrations', 'ev_stock', 'ev_share_of_sales')),
+    vehicle_class    text NOT NULL,
+    value            numeric NOT NULL,
+    unit             text NOT NULL,
+    source_url       text,
+    retrieved_at     timestamptz,
+    is_simulated     boolean NOT NULL,
+    PRIMARY KEY (period, geography_level, geography, metric, vehicle_class)
+);
+
+-- DOE stations near each transformer, per station file version.
+CREATE TABLE IF NOT EXISTS transformer_ev_exposure (
+    transformer_id     text NOT NULL REFERENCES transformer,
+    radius_m           integer NOT NULL,
+    stations_within    integer NOT NULL,
+    nearest_station_m  real,  -- null when there are no stations
+    source_sha256      text NOT NULL,
+    computed_at        timestamptz NOT NULL,
+    is_simulated       boolean NOT NULL,
+    PRIMARY KEY (transformer_id, source_sha256)
+);
+
+-- Dashboard fields per score: when the peak is, the rules-table action, the per-feature drivers,
+-- and clamp health. Null on runs scored before these columns existed.
+ALTER TABLE transformer_score ADD COLUMN IF NOT EXISTS peak_ts timestamptz;
+ALTER TABLE transformer_score ADD COLUMN IF NOT EXISTS action text;
+ALTER TABLE transformer_score ADD COLUMN IF NOT EXISTS drivers jsonb;
+ALTER TABLE transformer_score ADD COLUMN IF NOT EXISTS heat_index_max_c real;
+ALTER TABLE transformer_score ADD COLUMN IF NOT EXISTS ev_evening_step_kw real;
+ALTER TABLE transformer_score ADD COLUMN IF NOT EXISTS homes_reporting integer;
+ALTER TABLE transformer_score ADD COLUMN IF NOT EXISTS clamps_installed integer;
+ALTER TABLE transformer_score ADD COLUMN IF NOT EXISTS clamps_online integer;
+-- Which weather issue the run used and how fresh it was (fresh, stale, missing).
+ALTER TABLE score_run ADD COLUMN IF NOT EXISTS weather_issued_at timestamptz;
+ALTER TABLE score_run ADD COLUMN IF NOT EXISTS weather_status text;
+
+-- The tables above were created after the bulk grant, so grant them explicitly (SELECT, INSERT).
+GRANT SELECT, INSERT ON weather_hourly, ev_charger, ev_adoption, transformer_ev_exposure
+    TO silip_app;

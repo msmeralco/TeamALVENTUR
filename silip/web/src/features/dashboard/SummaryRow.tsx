@@ -4,7 +4,8 @@ import { SimulatedLabel, cn } from "../../shared/ui";
 import { Badge } from "../../shared/ui/components/badge";
 import { Button } from "../../shared/ui/components/button";
 import { Skeleton } from "../../shared/ui/components/skeleton";
-import { useSummary } from "./queries";
+import { useOutlook, useSummary } from "./queries";
+import { HeatChip } from "./WeatherStrip";
 
 type WeatherStatus = Schemas["WeatherSummary"]["status"];
 
@@ -20,7 +21,10 @@ export function WeatherBadge({ status }: { status: WeatherStatus }) {
       variant={status === "fresh" ? "secondary" : undefined}
       className={cn("gap-1.5 px-2.5 font-semibold", status !== "fresh" && "bg-watch-soft text-watch")}
     >
-      <span aria-hidden="true" className={cn("size-2 rounded-full", status === "fresh" ? "bg-current" : "border border-current")} />
+      <span
+        aria-hidden="true"
+        className={cn("size-2 rounded-full", status === "fresh" ? "bg-current" : "border border-current")}
+      />
       Weather {status}
     </Badge>
   );
@@ -40,6 +44,7 @@ function Meta({ label, children }: { label: string; children: ReactNode }) {
 export function SummaryRow() {
   const query = useSummary();
   const summary = query.data;
+  const outlook = useOutlook();
   return (
     <header className="grid gap-2 border-b bg-card px-4 py-3 sm:px-6">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
@@ -53,6 +58,7 @@ export function SummaryRow() {
           <Meta label="Scored">{formatStamp(summary.scored_at)}</Meta>
           <span className="flex flex-wrap items-center gap-2 text-sm">
             <WeatherBadge status={summary.weather.status} />
+            <HeatChip outlook={outlook.data} />
             <span className="text-muted-foreground">
               {summary.weather.issued_at === null
                 ? "No forecast issued."

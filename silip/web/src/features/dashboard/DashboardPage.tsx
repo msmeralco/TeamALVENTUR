@@ -345,10 +345,11 @@ export function DashboardPage() {
   const coverage = useCoverage();
   const [overlay, setOverlay] = useState<Overlay>("risk");
   const [evOpened, setEvOpened] = useState(false);
-  const chargers = useChargers(evOpened);
   const wide = useMediaQuery(WIDE_SCREEN);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Also loaded once a transformer is selected, so its nearby-charger lines show on any overlay.
+  const chargers = useChargers(evOpened || selectedId !== null);
   const [focusId, setFocusId] = useState<string | null>(null);
   // Phones show one at a time, and the queue leads: it answers "what do I do first".
   const [phoneView, setPhoneView] = useState<"list" | "map">("list");
@@ -540,69 +541,73 @@ export function DashboardPage() {
             </div>
           )}
 
-          {/* The map mounts once data is in, so its first view fits every transformer. */}
-          <div
-            id="dashboard-map"
-            className={cn(
-              "relative scroll-mt-16 max-lg:h-[calc(100dvh-4rem)] max-sm:h-[calc(100dvh-8rem-env(safe-area-inset-bottom))]",
-              !mapShown && "hidden",
-            )}
-          >
-            {query.data === undefined ? (
-              <Skeleton className="h-full rounded-none" />
-            ) : (
-              <ErrorBoundary
-                fallback={
-                  <p className="grid h-full place-items-center bg-muted p-6 text-center text-sm text-muted-foreground">
-                    Map could not load. The queue has every transformer.
-                  </p>
-                }
-              >
-                <Suspense fallback={<Skeleton className="h-full rounded-none" />}>
-                  <TransformerMap
-                    items={items}
-                    shownIds={shownIds}
-                    clamps={clamps}
-                    clampCounts={counts}
-                    clampsAsOf={clampQuery.data?.as_of ?? null}
-                    clampsFailed={clampQuery.isError && clampQuery.data === undefined}
-                    onRetryClamps={() => void clampQuery.refetch()}
-                    activeId={selectedId ?? hoverId ?? focusId}
-                    selectedId={selectedId}
-                    focusId={focusId}
-                    leftInsetPx={0}
-                    onHover={setHoverId}
-                    onSelect={setSelectedId}
-                    onOpen={(id) => {
-                      rememberLastOpened(id);
-                      navigate(hrefFor(id));
-                    }}
-                    overlay={overlay}
-                    coverageBands={bands}
-                    chargers={stations}
-                    ringRadiusM={chargers.data?.radius_m ?? 0}
-                    legend={legend}
-                  />
-                </Suspense>
-              </ErrorBoundary>
-            )}
-            {query.data !== undefined && (
-              <div className="absolute top-2 left-2 z-10 flex max-w-[calc(100%-4rem)] flex-wrap items-center gap-2">
-                {panelHidden && (
-                  <Button
-                    variant="outline"
-                    className="min-h-11 rounded-full bg-card shadow-lg sm:min-h-9"
-                    aria-expanded="false"
-                    aria-controls="dashboard-panel"
-                    onClick={() => togglePanel(true)}
-                  >
-                    <PanelLeftOpen aria-hidden="true" />
-                    Show panel
-                  </Button>
-                )}
-                <OverlayControl value={overlay} onChange={chooseOverlay} />
-              </div>
-            )}
+          {/* Wide screens: the weather panel docks under the map, so it never sits below the fold. */}
+          <div className="lg:flex lg:min-h-0 lg:flex-col">
+            {/* The map mounts once data is in, so its first view fits every transformer. */}
+            <div
+              id="dashboard-map"
+              className={cn(
+                "relative scroll-mt-16 max-lg:h-[calc(100dvh-4rem)] max-sm:h-[calc(100dvh-8rem-env(safe-area-inset-bottom))] lg:min-h-0 lg:flex-1",
+                !mapShown && "hidden",
+              )}
+            >
+              {query.data === undefined ? (
+                <Skeleton className="h-full rounded-none" />
+              ) : (
+                <ErrorBoundary
+                  fallback={
+                    <p className="grid h-full place-items-center bg-muted p-6 text-center text-sm text-muted-foreground">
+                      Map could not load. The queue has every transformer.
+                    </p>
+                  }
+                >
+                  <Suspense fallback={<Skeleton className="h-full rounded-none" />}>
+                    <TransformerMap
+                      items={items}
+                      shownIds={shownIds}
+                      clamps={clamps}
+                      clampCounts={counts}
+                      clampsAsOf={clampQuery.data?.as_of ?? null}
+                      clampsFailed={clampQuery.isError && clampQuery.data === undefined}
+                      onRetryClamps={() => void clampQuery.refetch()}
+                      activeId={selectedId ?? hoverId ?? focusId}
+                      selectedId={selectedId}
+                      focusId={focusId}
+                      leftInsetPx={0}
+                      onHover={setHoverId}
+                      onSelect={setSelectedId}
+                      onOpen={(id) => {
+                        rememberLastOpened(id);
+                        navigate(hrefFor(id));
+                      }}
+                      overlay={overlay}
+                      coverageBands={bands}
+                      chargers={stations}
+                      ringRadiusM={chargers.data?.radius_m ?? 0}
+                      legend={legend}
+                    />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {query.data !== undefined && (
+                <div className="absolute top-2 left-2 z-10 flex max-w-[calc(100%-4rem)] flex-wrap items-center gap-2">
+                  {panelHidden && (
+                    <Button
+                      variant="outline"
+                      className="min-h-11 rounded-full bg-card shadow-lg sm:min-h-9"
+                      aria-expanded="false"
+                      aria-controls="dashboard-panel"
+                      onClick={() => togglePanel(true)}
+                    >
+                      <PanelLeftOpen aria-hidden="true" />
+                      Show panel
+                    </Button>
+                  )}
+                  <OverlayControl value={overlay} onChange={chooseOverlay} />
+                </div>
+              )}
+            </div>
+            {wide && <WeatherStrip items={items} docked />}
           </div>
 
           <Button
@@ -625,7 +630,7 @@ export function DashboardPage() {
           </Button>
         </div>
       </section>
-      <WeatherStrip items={items} />
+      {!wide && <WeatherStrip items={items} />}
     </div>
   );
 }

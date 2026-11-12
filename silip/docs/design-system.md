@@ -77,7 +77,7 @@ Every text pair below passes WCAG AA (4.5:1), measured with the WCAG 2.x formula
 | Body | Inter 400 or 500 | 16 / 1.5 | `text-base` |
 | Label, meta, table cell, badge | Inter 500 or 600 | 13 / 1.4 | `text-sm` (`text-xs` is the same size) |
 
-- Four sizes only. To emphasize, use weight or color, not a fifth size.
+- Four sizes only. To emphasize, use weight or color, not a fifth size. The landing hero headline is the one exception; see Landing motion.
 - Numbers in tables and readings use `tabular-nums` so columns line up.
 - Sentence case everywhere except the status words OK, Watch and Critical.
 
@@ -117,9 +117,11 @@ Interaction rules:
 The public landing page (`/`) is the one place with scroll motion and a dark section in the light theme. Everything else follows the rules above.
 
 - **Dark stage.** The hero and How it works sit on `--stage` in both themes, with the dark token set applied through `[data-stage]`. A curtain then opens onto the cream sections.
+- **Header over the stage.** While a stage section sits under the sticky header, the header takes `--stage` with no hairline, and its logo, links and account menu use the dark tokens (the logo mark on its cream tile). Once a cream section is under it, it returns to `bg-card` with its hairline. The phone tab bar never changes. Only `/` does this.
+- **Display size.** The hero headline alone uses `text-display`: Space Grotesk 700, `clamp(2.5rem, 4vw + 0.75rem, 4.5rem)`, line height 1.02, tracking -0.025em. Nothing else uses it; the lede stays at body size.
 - **Stage tokens.** `--stage` (`#1B1C1B` light, `#121312` dark), `--stage-foreground` (`#F2EFE3`), `--stage-grid` (dot grid: `#3D3E3B` / `#2F302E`) and `--wordmark` (the giant footer wordmark: `#C3D2C5` / `#33433A`). Text on the stage uses the dark tokens, which pass 4.5:1. Over the map still, text uses `--foreground`, not muted: it stays above 8:1 there, and muted text does not.
-- **Hero still.** A WebP rendered from the real `TransformerMap` (simulated data, centered on T-132), with "Simulated data" and the map credit beside it. Its HUD outlines are the map's own service areas, projected when the still was made. Re-render both together if the data changes.
-- **Beats.** The still drifts slowly (CSS). On scroll it desaturates, its edges dissolve in square blocks and a HUD draws: Critical T-132 pulses, OK areas outline, a label decodes. A bracketed progress bar sits on the right edge. How it works pins while a line drawing builds per step. The example card slides up and its chart draws in; privacy lines reveal one by one; the footer wordmark rises.
+- **Hero still.** A WebP rendered from the real `TransformerMap` (simulated data, centered on T-132), with "Simulated data" and the map credit beside it. At rest it is muted (`--hero-map-saturate` 0.35, `--hero-map-brightness` 0.8), so it reads as a calm city and the Critical area is not yet loud. Its HUD outlines are the map's own service areas, projected when the still was made. Re-render both together if the data changes.
+- **Beats.** The still drifts slowly (CSS). On scroll it loses the rest of its color, its edges dissolve in square blocks and a HUD draws: Critical T-132 pulses as the one orange thing, OK areas outline, a label decodes in under 400 ms. How it works rises into view as the HUD leaves, with no empty screen between them. A bracketed progress bar sits on the right edge. How it works pins while a line drawing builds per step. The example card slides up and its chart draws in; privacy lines reveal one by one; the footer wordmark rises.
 - **Rules.** Lenis smooths native scroll; keyboard, find-in-page and anchors keep working. Pins only from `lg` with a mouse; touch and narrow screens reveal in place. Only transform, opacity, clip-path and stroke offsets animate. GSAP and Lenis load in their own chunk, on `/` only, after the hero is usable.
 - **Reduced motion.** No Lenis, no pin, no scramble, no dissolve: the motion code never loads, and every section renders in its final state.
 

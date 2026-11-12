@@ -16,7 +16,7 @@ const STEPS = [
   { label: "Household clamp", text: "A clamp on an opted-in home's wiring reads its power use, after the meter." },
   { label: "Summed per transformer", text: "Readings are added up per transformer, matched by a hashed Service ID." },
   { label: "Load and risk", text: "SILIP estimates the load and forecasts the next 24 hours." },
-  { label: "Risk map", text: "Engineers see which transformers may overload, with coverage and confidence." },
+  { label: "Dashboard", text: "Engineers see which transformers may overload, with coverage and confidence." },
 ];
 
 /** Dark stage. Wide screens with a mouse pin it while the drawing builds step by step; others reveal in place. */
@@ -140,7 +140,7 @@ const DOORS: { title: string; text: string; to: string; open: string; group: Gro
     title: "For engineers",
     text: "See which transformers may overload in the next 24 hours, with coverage and confidence.",
     to: "/engineer",
-    open: "Open risk map",
+    open: "Open dashboard",
     group: "engineers",
   },
 ];
@@ -223,7 +223,7 @@ const MAP_CREDIT = [
   { label: "© OpenStreetMap contributors", href: "https://www.openstreetmap.org/copyright" },
 ];
 
-/** The hero's one primary action: Sign in when signed out, the risk map for engineers. */
+/** The hero's one primary action: Sign in when signed out, the dashboard for engineers. */
 function HeroAction() {
   const { user, signIn, hasGroup } = useAuth();
   if (user === null) {
@@ -236,7 +236,7 @@ function HeroAction() {
   if (!hasGroup("engineers")) return null;
   return (
     <Button asChild className="min-h-11 w-fit rounded-full px-6">
-      <Link to="/engineer">Open risk map</Link>
+      <Link to="/engineer">Open dashboard</Link>
     </Button>
   );
 }

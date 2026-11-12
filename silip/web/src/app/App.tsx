@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Cpu, House, Info, Map as MapIcon, type LucideIcon } from "lucide-react";
+import { Cpu, House, Info, LayoutDashboard, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { DemoPage } from "../features/demo/DemoPage";
 import { DevicesPage } from "../features/devices/DevicesPage";
-import { RiskMapPage } from "../features/risk-map/RiskMapPage";
+import { DashboardPage } from "../features/dashboard/DashboardPage";
 import { TransformerCardPage } from "../features/transformer-card/TransformerCardPage";
 import { shouldRetry } from "../shared/api/client";
 import { AuthProvider, RequireRole, takeReturnPath, useAuth, type AuthBackend, type Group } from "../shared/auth";
@@ -98,12 +98,12 @@ interface NotFoundLink {
   label: string;
 }
 
-/** Home for everyone; engineers also get the risk map, which then becomes the one primary button. */
+/** Home for everyone; engineers also get the dashboard, which then becomes the one primary button. */
 function NotFoundPage() {
   useDocumentTitle("Page not found");
   const { hasGroup } = useAuth();
   const links: NotFoundLink[] = [
-    ...(hasGroup("engineers") ? [{ to: "/engineer", label: "Risk map" }] : []),
+    ...(hasGroup("engineers") ? [{ to: "/engineer", label: "Dashboard" }] : []),
     { to: "/", label: "Home" },
   ];
   return (
@@ -142,7 +142,7 @@ const PUBLIC_NAV: NavItem[] = [
 
 // Signed in as an engineer: the engineer views. Anyone else gets the public nav.
 const MEMBER_NAV: NavItem[] = [
-  { to: "/engineer", label: "Risk map", short: "Map", icon: MapIcon, group: "engineers" },
+  { to: "/engineer", label: "Dashboard", icon: LayoutDashboard, group: "engineers" },
   { to: "/engineer/devices", label: "Devices", icon: Cpu, group: "engineers" },
 ];
 
@@ -202,7 +202,7 @@ function MainNav({ onStage }: { onStage: boolean }) {
   );
 }
 
-/** The outage and household views are gone; their old links go to the risk map for engineers, else home. */
+/** The outage and household views are gone; their old links go to the dashboard for engineers, else home. */
 function RetiredRoute() {
   const { status, hasGroup } = useAuth();
   if (status === "loading") return null;
@@ -212,7 +212,7 @@ function RetiredRoute() {
 function Shell() {
   const location = useLocation();
   const { hasGroup } = useAuth();
-  // The risk map and the landing page are full width; every other page sits in the centered column.
+  // The dashboard and the landing page are full width; every other page sits in the centered column.
   const fullBleed = (location.pathname === "/engineer" && hasGroup("engineers")) || location.pathname === "/";
   const header = useRef<HTMLElement>(null);
   const onStage = useHeaderOverStage(header, location.pathname === "/");
@@ -272,7 +272,7 @@ function Shell() {
               path="/engineer"
               element={
                 <RequireRole role="engineers">
-                  <RiskMapPage />
+                  <DashboardPage />
                 </RequireRole>
               }
             />

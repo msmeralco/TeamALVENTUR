@@ -93,7 +93,7 @@ export function OfflineBanner() {
   );
 }
 
-/** "T-106 · Risk map · SILIP". */
+/** "T-106 · Dashboard · SILIP". */
 export function useDocumentTitle(...parts: string[]) {
   const title = [...parts, "SILIP"].join(" · ");
   useEffect(() => {

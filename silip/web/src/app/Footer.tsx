@@ -51,7 +51,7 @@ export function Footer() {
             )}
             {hasGroup("engineers") && (
               <Link to="/engineer" className={LINK}>
-                Risk map
+                Dashboard
               </Link>
             )}
           </nav>

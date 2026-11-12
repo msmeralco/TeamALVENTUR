@@ -8,7 +8,7 @@ import { useAuth } from "./AuthProvider";
 
 const GROUP_LABEL: Record<Group, string> = { engineers: "an engineer account", households: "a household account" };
 const GROUP_PURPOSE: Record<Group, string> = {
-  engineers: "The risk map is for grid engineers.",
+  engineers: "The dashboard is for grid engineers.",
   households: "Usage is shown only to the household that owns the clamp.",
 };
 

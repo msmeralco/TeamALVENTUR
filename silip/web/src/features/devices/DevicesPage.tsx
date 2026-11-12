@@ -517,7 +517,7 @@ constexpr const char* DEVICE_KEY = ${JSON.stringify(setup.key)};
           <h2 className="text-xl">Add transformer</h2>
           <p className="text-sm text-muted-foreground">
             Add its ID, rated capacity, and coordinates. It will be available for device assignments right away. The
-            risk map needs at least seven days of readings before it can forecast the new transformer.
+            dashboard needs at least seven days of readings before it can forecast the new transformer.
           </p>
           <form
             className="grid gap-4 sm:grid-cols-2"

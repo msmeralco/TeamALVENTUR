@@ -7,19 +7,21 @@ import type {
   Map as MapLibreMap,
 } from "maplibre-gl";
 import { GeolocateControl } from "maplibre-gl";
-import type { FeatureCollection, Point } from "geojson";
+import type { FeatureCollection, Point, Polygon } from "geojson";
 import { Maximize2, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import type { Schemas } from "../../shared/api/client";
-import { byUrgency, reportAge, type ClampCount } from "../../shared/risk";
-import { SimulatedLabel, TierBadge, cn, formatPct } from "../../shared/ui";
+import { byQueue, reportAge, type ClampCount } from "../../shared/risk";
+import { ActionBadge, SimulatedLabel, TierBadge, cn, formatPct } from "../../shared/ui";
 import { Badge } from "../../shared/ui/components/badge";
 import { Button } from "../../shared/ui/components/button";
 import { Map, cssVar, fitOptions, isAlive } from "../../shared/ui/components/map";
+import { AREA_MIN_ZOOM, RING_MIN_ZOOM, coverageBand, type CoverageBands, type Overlay } from "./overlays";
 import { serviceAreas } from "./serviceAreas";
 
 type Item = Schemas["TransformerRisk"];
 type Clamp = Schemas["ClampPoint"];
+type Charger = Schemas["Charger"];
 
 /** Clamp devices of the shown transformers, as points. Status only; no household identity or usage. */
 function clampsGeoJson(clamps: Clamp[], shown: ReadonlySet<string>): FeatureCollection<Point> {
@@ -38,6 +40,8 @@ function clampsGeoJson(clamps: Clamp[], shown: ReadonlySet<string>): FeatureColl
 const PINS = "transformers";
 const CLAMPS = "clamps";
 const AREAS = "service-areas";
+const CHARGERS = "ev-chargers";
+const CHARGER_RINGS = "ev-charger-rings";
 const LAYER = {
   areaFill: "service-area-fill",
   areaVolume: "service-area-volume",
@@ -47,13 +51,26 @@ const LAYER = {
   pins: "transformer-pins",
   pinLabels: "transformer-pin-labels",
   clamps: "clamp-points",
+  coverageFill: "coverage-fill",
+  coverageOutline: "coverage-outline",
+  chargers: "ev-charger-points",
+  chargerRings: "ev-charger-rings",
 } as const;
+
+const OVERLAY_LAYERS: Record<Overlay, string[]> = {
+  risk: [LAYER.areaFill, LAYER.areaVolume, LAYER.areaOutline],
+  coverage: [LAYER.coverageFill, LAYER.coverageOutline],
+  ev: [LAYER.chargers, LAYER.chargerRings],
+};
+const RING_STEPS = 48;
+const METERS_PER_DEG_LAT = 111_320;
+// Sequential, neutral to sage: low coverage stays gray (a warning is never green), more homes reporting reads greener.
+const COVERAGE_FILL_OPACITY = { none: 0, low: 0.18, mid: 0.28, high: 0.55 } as const;
 
 // Estimated reach of one transformer's secondary lines. [VERIFY] with Meralco distribution standards.
 const SERVICE_RADIUS_M = 300;
 const CLUSTER_MAX_ZOOM = 12; // above this, areas and single pins take over
 const CLUSTER_RADIUS_PX = 48;
-const AREA_MIN_ZOOM = 12;
 const VOLUME_MIN_ZOOM = 14; // matches where 3D buildings appear
 const VOLUME_HEIGHT_M = 40; // visual tint over buildings only, not data
 const LABEL_MIN_ZOOM = 14;
@@ -120,13 +137,56 @@ function pinsGeoJson(items: Item[]): FeatureCollection<Point> {
   };
 }
 
-function areasGeoJson(items: Item[], shown: ReadonlySet<string>) {
+function areasGeoJson(items: Item[], shown: ReadonlySet<string>, bands: CoverageBands | null) {
   const all = serviceAreas(
     items.map((i) => ({ transformer_id: i.transformer_id, lon: i.lon, lat: i.lat, tier: i.risk.tier })),
     SERVICE_RADIUS_M,
   );
+  const band = new globalThis.Map(
+    items.map((i) => [i.transformer_id, coverageBand(i.clamp_health?.reporting_pct, bands)]),
+  );
   // Cells come from every transformer, so filtering never stretches a cell; only the shown ones are drawn.
-  return { ...all, features: all.features.filter((f) => shown.has(f.properties?.transformer_id)) };
+  return {
+    ...all,
+    features: all.features
+      .filter((f) => shown.has(f.properties?.transformer_id))
+      .map((f) => ({ ...f, properties: { ...f.properties, cov: band.get(f.properties?.transformer_id) ?? -1 } })),
+  };
+}
+
+function chargersGeoJson(chargers: Charger[]): FeatureCollection<Point> {
+  return {
+    type: "FeatureCollection",
+    features: chargers.map((c) => ({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [c.lon, c.lat] },
+      properties: { station_id: c.station_id },
+    })),
+  };
+}
+
+/** A circle of `radiusM` around each charger, as a polygon, so it scales with the map. */
+function ringsGeoJson(chargers: Charger[], radiusM: number): FeatureCollection<Polygon> {
+  return {
+    type: "FeatureCollection",
+    features: chargers.map((c) => {
+      const dLat = radiusM / METERS_PER_DEG_LAT;
+      const dLon = dLat / Math.cos((c.lat * Math.PI) / 180);
+      const ring = Array.from({ length: RING_STEPS + 1 }, (_, i) => {
+        const angle = (2 * Math.PI * (i % RING_STEPS)) / RING_STEPS;
+        return [c.lon + dLon * Math.cos(angle), c.lat + dLat * Math.sin(angle)];
+      });
+      return { type: "Feature", geometry: { type: "Polygon", coordinates: [ring] }, properties: {} };
+    }),
+  };
+}
+
+function applyOverlay(map: MapLibreMap, overlay: Overlay) {
+  for (const [name, layers] of Object.entries(OVERLAY_LAYERS)) {
+    for (const layer of layers) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", name === overlay ? "visible" : "none");
+    }
+  }
 }
 
 const shownPins = (items: Item[], shown: ReadonlySet<string>) =>
@@ -139,10 +199,18 @@ function boundsOf(items: Item[]): LngLatBoundsLike {
 }
 
 /** City zoom: clusters ringed in their worst tier. Street zoom: shaded service areas, pins and IDs. */
-function addLayers(map: MapLibreMap, items: Item[], shown: ReadonlySet<string>, clamps: Clamp[]) {
+function addLayers(
+  map: MapLibreMap,
+  items: Item[],
+  shown: ReadonlySet<string>,
+  clamps: Clamp[],
+  bands: CoverageBands | null,
+  chargers: Charger[],
+  ringRadiusM: number,
+) {
   // CSS variables are read here, not at import time, so each style load follows the current theme.
   const tier = tierColor(["get", "tier"]);
-  map.addSource(AREAS, { type: "geojson", data: areasGeoJson(items, shown), promoteId: "transformer_id" });
+  map.addSource(AREAS, { type: "geojson", data: areasGeoJson(items, shown, bands), promoteId: "transformer_id" });
   map.addSource(PINS, {
     type: "geojson",
     data: shownPins(items, shown),
@@ -173,6 +241,58 @@ function addLayers(map: MapLibreMap, items: Item[], shown: ReadonlySet<string>, 
     source: AREAS,
     minzoom: AREA_MIN_ZOOM,
     paint: { "line-color": tier, "line-width": ["case", isActive, 3.5, byTier(AREA_LINE_WIDTH)] },
+  });
+  map.addLayer({
+    id: LAYER.coverageFill,
+    type: "fill",
+    source: AREAS,
+    minzoom: AREA_MIN_ZOOM,
+    layout: { visibility: "none" },
+    paint: {
+      "fill-color": ["match", ["get", "cov"], 0, cssVar("--muted-foreground"), cssVar("--brand")],
+      "fill-opacity": [
+        "match",
+        ["get", "cov"],
+        0,
+        COVERAGE_FILL_OPACITY.low,
+        1,
+        COVERAGE_FILL_OPACITY.mid,
+        2,
+        COVERAGE_FILL_OPACITY.high,
+        COVERAGE_FILL_OPACITY.none,
+      ],
+    },
+  });
+  map.addLayer({
+    id: LAYER.coverageOutline,
+    type: "line",
+    source: AREAS,
+    minzoom: AREA_MIN_ZOOM,
+    layout: { visibility: "none" },
+    paint: { "line-color": cssVar("--muted-foreground"), "line-width": ["case", isActive, 3, 0.75] },
+  });
+  map.addSource(CHARGER_RINGS, { type: "geojson", data: ringsGeoJson(chargers, ringRadiusM) });
+  map.addSource(CHARGERS, { type: "geojson", data: chargersGeoJson(chargers) });
+  map.addLayer({
+    id: LAYER.chargerRings,
+    type: "line",
+    source: CHARGER_RINGS,
+    minzoom: RING_MIN_ZOOM,
+    layout: { visibility: "none" },
+    paint: { "line-color": cssVar("--foreground"), "line-opacity": 0.8, "line-width": 2, "line-dasharray": [3, 2] },
+  });
+  map.addLayer({
+    id: LAYER.chargers,
+    type: "circle",
+    source: CHARGERS,
+    layout: { visibility: "none" },
+    // Hollow and larger than a pin, so a charger never reads as a transformer.
+    paint: {
+      "circle-color": cssVar("--card"),
+      "circle-radius": 6,
+      "circle-stroke-color": cssVar("--foreground"),
+      "circle-stroke-width": 3,
+    },
   });
   map.addLayer({
     id: LAYER.clusters,
@@ -284,7 +404,7 @@ function pickAt(map: MapLibreMap, e: MapMouseEvent) {
   if (pin !== undefined) return { kind: "pin" as const, feature: pin.feature };
   const cluster = nearest(LAYER.clusters);
   if (cluster !== undefined) return { kind: "cluster" as const, feature: cluster.feature };
-  const area = map.queryRenderedFeatures(e.point, { layers: [LAYER.areaFill] })[0];
+  const area = map.queryRenderedFeatures(e.point, { layers: [LAYER.areaFill, LAYER.coverageFill] })[0];
   return area === undefined ? null : { kind: "pin" as const, feature: area };
 }
 
@@ -378,6 +498,7 @@ function PinPopover({
       <div className="flex items-center gap-2">
         <h2 className="text-xl">{item.transformer_id}</h2>
         <TierBadge tier={item.risk.tier} />
+        {item.action != null && <ActionBadge action={item.action} />}
         <Button
           variant="ghost"
           size="icon"
@@ -431,6 +552,14 @@ interface TransformerMapProps {
   onOpen: (id: string) => void;
   /** Width covered by the list panel on the left, in px. */
   leftInsetPx: number;
+  overlay: Overlay;
+  /** Null until the API's thresholds load; areas then draw unfilled. */
+  coverageBands: CoverageBands | null;
+  /** DOE public chargers, drawn on the EV overlay with a ring of `ringRadiusM`. */
+  chargers: Charger[];
+  ringRadiusM: number;
+  /** Legend for the active overlay, drawn over the map's lower right. */
+  legend: (zoom: number) => ReactNode;
 }
 
 /** Engineer map on an OSM basemap in 3D. The list beside it has the same transformers in words. */
@@ -449,13 +578,18 @@ export function TransformerMap({
   onSelect,
   onOpen,
   leftInsetPx,
+  overlay,
+  coverageBands,
+  chargers,
+  ringRadiusM,
+  legend,
 }: TransformerMapProps) {
   const mapRef = useRef<MapLibreMap | null>(null);
   const geolocateRef = useRef<GeolocateControl | null>(null);
   const bounds = useMemo(() => boundsOf(items), [items]);
   // Read once: the map is created once, and later data should not yank the camera.
   const [start] = useState(() => {
-    const first = [...items].sort(byUrgency)[0];
+    const first = [...items].sort(byQueue)[0];
     return first === undefined ? undefined : { center: [first.lon, first.lat] as [number, number], zoom: START_ZOOM };
   });
   const selected = items.find((i) => i.transformer_id === selectedId);
@@ -481,8 +615,48 @@ export function TransformerMap({
   useEffect(() => {
     if (selectedId !== null) setClampId(null);
   }, [selectedId]);
-  const latest = useRef({ items, shownIds, clamps, onHover, onSelect, setClampId, activeId, clampId, leftInsetPx });
-  latest.current = { items, shownIds, clamps, onHover, onSelect, setClampId, activeId, clampId, leftInsetPx };
+  const latest = useRef({
+    items,
+    shownIds,
+    clamps,
+    onHover,
+    onSelect,
+    setClampId,
+    activeId,
+    clampId,
+    leftInsetPx,
+    overlay,
+    coverageBands,
+    chargers,
+    ringRadiusM,
+  });
+  latest.current = {
+    items,
+    shownIds,
+    clamps,
+    onHover,
+    onSelect,
+    setClampId,
+    activeId,
+    clampId,
+    leftInsetPx,
+    overlay,
+    coverageBands,
+    chargers,
+    ringRadiusM,
+  };
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (isAlive(map)) applyOverlay(map, overlay);
+  }, [overlay]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!isAlive(map)) return;
+    map.getSource<GeoJSONSource>(CHARGERS)?.setData(chargersGeoJson(chargers));
+    map.getSource<GeoJSONSource>(CHARGER_RINGS)?.setData(ringsGeoJson(chargers, ringRadiusM));
+  }, [chargers, ringRadiusM]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -507,9 +681,9 @@ export function TransformerMap({
     const map = mapRef.current;
     if (!isAlive(map)) return;
     map.getSource<GeoJSONSource>(PINS)?.setData(shownPins(items, shownIds));
-    map.getSource<GeoJSONSource>(AREAS)?.setData(areasGeoJson(items, shownIds));
+    map.getSource<GeoJSONSource>(AREAS)?.setData(areasGeoJson(items, shownIds, coverageBands));
     map.getSource<GeoJSONSource>(CLAMPS)?.setData(clampsGeoJson(clamps, shownIds));
-  }, [items, shownIds, clamps]);
+  }, [items, shownIds, clamps, coverageBands]);
 
   return (
     <Map
@@ -580,7 +754,7 @@ export function TransformerMap({
           const id = feature.properties?.transformer_id;
           if (typeof id === "string") latest.current.onSelect(id);
         });
-        for (const layer of [LAYER.pins, LAYER.areaFill]) {
+        for (const layer of [LAYER.pins, LAYER.areaFill, LAYER.coverageFill]) {
           map.on("mousemove", layer, (e) => {
             map.getCanvas().style.cursor = "pointer";
             latest.current.onHover(idOf(e));
@@ -596,8 +770,10 @@ export function TransformerMap({
         }
       }}
       onStyle={(map) => {
-        addLayers(map, latest.current.items, latest.current.shownIds, latest.current.clamps);
-        setActive(map, latest.current.activeId, true);
+        const now = latest.current;
+        addLayers(map, now.items, now.shownIds, now.clamps, now.coverageBands, now.chargers, now.ringRadiusM);
+        applyOverlay(map, now.overlay);
+        setActive(map, now.activeId, true);
         const selectedClampId = latest.current.clampId;
         if (selectedClampId !== null) map.setFeatureState({ source: CLAMPS, id: selectedClampId }, { selected: true });
       }}
@@ -626,14 +802,7 @@ export function TransformerMap({
         </p>
       )}
       <div className="pointer-events-none absolute right-2 bottom-10 grid justify-items-end gap-1 max-lg:bottom-20">
-        <div className="flex gap-1 rounded-full bg-card/90 p-1">
-          <TierBadge tier="Critical" />
-          <TierBadge tier="Watch" />
-          <TierBadge tier="OK" />
-        </div>
-        <p className="rounded-full bg-card/90 px-2.5 py-0.5 text-xs text-muted-foreground">
-          Shaded: estimated service area
-        </p>
+        {legend(zoom)}
         {clampsFailed && (
           <p
             role="status"

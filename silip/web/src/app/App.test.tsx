@@ -280,7 +280,7 @@ describe("account", () => {
     await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
     const again = await screen.findByRole("alertdialog", { name: "Sign out?" });
     await user.click(within(again).getByRole("button", { name: "Sign out" }));
-    expect(await screen.findByRole("button", { name: "Sign in" })).toBeTruthy();
+    expect(await within(screen.getAllByRole("banner")[0]).findByRole("button", { name: "Sign in" })).toBeTruthy();
   });
 
   it("comes back to the protected page after the sign-in redirect", async () => {
@@ -296,7 +296,7 @@ describe("account", () => {
       signOut: async () => {},
     };
     const first = renderAt("/engineer", backend);
-    await userEvent.click(await screen.findByRole("button", { name: "Sign in" }));
+    await userEvent.click(await within(screen.getAllByRole("banner")[0]).findByRole("button", { name: "Sign in" }));
     expect(window.sessionStorage.getItem("silip.returnTo")).toBe("/engineer");
     expect(takeReturnPath()).toBe("/engineer");
     window.sessionStorage.setItem("silip.returnTo", "/engineer");
@@ -359,6 +359,38 @@ describe("navigation", () => {
     expect(document.documentElement.dataset.theme).toBe("dark");
     await user.click(within(header).getByRole("button", { name: "Theme: dark" }));
     expect(document.documentElement.dataset.theme).toBeUndefined();
+  });
+});
+
+describe("footer", () => {
+  it("renders the about line, the sources link and the simulated note once data is simulated", async () => {
+    mockApi({ "/api/v1/outages": [OUTAGE] });
+    renderAt("/outages", { ...createDevBackend(), load: async () => null });
+    const footer = screen.getByRole("contentinfo");
+    expect(within(footer).getByText("Built by Alventur Solutions for the Meralco Idol Hackathon 2026.")).toBeTruthy();
+    expect(within(footer).getByRole("link", { name: "Data sources" }).getAttribute("href")).toBe("/sources");
+    expect(await within(footer).findByText("Readings shown are simulated unless marked otherwise.")).toBeTruthy();
+    expect(await within(footer).findByRole("button", { name: "Sign in" })).toBeTruthy();
+    expect(within(footer).getByRole("button", { name: /^Theme: / })).toBeTruthy();
+  });
+
+  it("hides the simulated note and Sign in when nothing simulated loaded and the viewer is signed in", async () => {
+    mockApi({});
+    renderAt("/sources");
+    const footer = screen.getByRole("contentinfo");
+    await waitFor(() => expect(within(footer).queryByRole("button", { name: "Sign in" })).toBeNull());
+    expect(within(footer).queryByText(/simulated/)).toBeNull();
+  });
+});
+
+describe("data sources page", () => {
+  it("lists the sources from the spec", () => {
+    mockApi({});
+    renderAt("/sources");
+    expect(screen.getByRole("heading", { level: 1, name: "Data sources" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "powerphilippines.com/?p=23852" })).toBeTruthy();
+    expect(screen.getByText("Daily Tribune, 23 Sep 2026")).toBeTruthy();
+    expect(document.title).toBe("Data sources · SILIP");
   });
 });
 

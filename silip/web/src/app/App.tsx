@@ -16,6 +16,8 @@ import { Toaster } from "../shared/ui/components/sonner";
 import { TooltipProvider } from "../shared/ui/components/tooltip";
 import { OfflineBanner, RouteErrorBoundary, useDocumentTitle } from "../shared/ui/feedback";
 import { AccountMenu } from "./AccountMenu";
+import { Footer } from "./Footer";
+import { SourcesPage } from "./SourcesPage";
 
 // Cognito normally answers in a second or two; past this, assume the redirect broke. [VERIFY] on slow networks.
 const CALLBACK_TIMEOUT_MS = 15_000;
@@ -206,7 +208,7 @@ function Shell() {
         tabIndex={-1}
         className={cn(
           "outline-none",
-          fullBleed ? "w-full" : "mx-auto max-w-6xl px-4 pt-6 pb-28 sm:px-6 sm:pt-10 sm:pb-20",
+          fullBleed ? "w-full" : "mx-auto max-w-6xl px-4 pt-6 pb-10 sm:px-6 sm:pt-10 sm:pb-16",
         )}
       >
         <RouteErrorBoundary key={location.pathname}>
@@ -238,6 +240,7 @@ function Shell() {
               }
             />
             <Route path="/demo" element={<DemoPage />} />
+            <Route path="/sources" element={<SourcesPage />} />
             <Route
               path="/engineer/devices"
               element={
@@ -251,6 +254,7 @@ function Shell() {
           </Routes>
         </RouteErrorBoundary>
       </main>
+      <Footer />
       <Toaster position="bottom-center" offset={88} mobileOffset={{ bottom: 88 }} />
     </>
   );

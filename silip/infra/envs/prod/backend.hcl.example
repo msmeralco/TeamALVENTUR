@@ -1,0 +1,7 @@
+# Copy to backend.hcl (git-ignored) and fill in. The bucket is made once, outside Terraform,
+# with versioning, encryption and public access blocked (see infra/README.md).
+bucket       = "<state-bucket>"
+key          = "silip/prod/terraform.tfstate"
+region       = "ap-southeast-1"
+encrypt      = true
+use_lockfile = true

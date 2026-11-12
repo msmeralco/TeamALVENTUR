@@ -1,12 +1,13 @@
 terraform {
-  required_version = ">= 1.9"
+  required_version = ">= 1.10" # S3 native state locking (use_lockfile)
 
   required_providers {
     aws = { source = "hashicorp/aws", version = "~> 6.0" }
   }
 
-  # Local state until a shared backend exists. For a team, add an S3 backend with locking and keep
-  # its values in an untracked backend.hcl.
+  # Shared state in S3 with native locking. Bucket, key and region live in an untracked
+  # backend.hcl (copy backend.hcl.example): terraform init -backend-config=backend.hcl
+  backend "s3" {}
 }
 
 provider "aws" {

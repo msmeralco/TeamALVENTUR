@@ -17,7 +17,9 @@ web/src/
 Features import from `shared/` only, never from each other.
 
 ## Styling
-- Tokens from `unslop` as CSS variables on `:root` (light is the default); dark overrides under `[data-theme="dark"]`. No hardcoded colors in components.
+- Tailwind v4 + shadcn/ui ([ADR 0001](../../docs/adr/0001-web-shadcn-tailwind-maplibre.md)). Components in `src/shared/ui/components/`, added with `npx shadcn@latest add <name>`.
+- Tokens from `unslop` as CSS variables on `:root` under shadcn's names (`src/shared/styles/tokens.css`; light is the default); dark overrides under `[data-theme="dark"]`. No hardcoded colors in components.
+- Maps: MapLibre GL on OpenFreeMap tiles through `shared/ui/components/map.tsx`; lazy-load it and keep the attribution visible.
 - Mobile-first; works at 400px with no horizontal scroll.
 - No accent bars or colored edge lines on rows or cards; use hairlines and type size.
 - Status = color + word (OK, Watch, Critical). Show coverage and confidence beside risk.

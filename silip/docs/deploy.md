@@ -40,3 +40,13 @@
 - Smoke checks: `/api/health` 200, `/engineer/devices` 200, new JS bundle served as `application/javascript`; live `/api/*` allows POST.
 - Device POST check with the ESP32's `x-amz-content-sha256` header returned 401 `Device key required` because the smoke request intentionally omitted `X-Device-Key`; no reading was stored. The first manual curl omitted the hash header and was rejected by Lambda URL SigV4 validation. The ESP32 HTTP transport already computes and sends this header.
 - No database migration was run during this deployment.
+
+## dev, 2026-11-13 (design system + feature/web-polish)
+
+- Commit `c1e8521` on `dev`: the design system (`798b9eb`), the merge repair (`c6ca217`) and `feature/web-polish` merged in. Image `silip-dev:0.4.0` for the API and scoring Lambdas, `DATA_SOURCE=simulated`. It replaces `0.3.3`, which `alejandro` deployed from `feature/web-polish` at 23:44 and did not record here. Everything in `0.3.3` is in `0.4.0`.
+- `data/sim` regenerated with `make sim` from the merged notebook, so the dev-only T-Meralco fixture (`577c043`) is in the image: 51 transformers.
+- Apply: 0 added, 3 changed, 0 destroyed (both Lambda image tags; the CloudFront SPA function only changed line endings).
+- Web built in Cognito mode from the same commit, uploaded file by file with explicit content types. CloudFront `/*` invalidated.
+- Smoke test: `/api/health`, `/api/v1/outages` and `/api/v1/bench` 200; `/api/v1/transformers` and `/api/v1/devices` 401 without a token; SPA routes 200; JS served as `application/javascript`; new favicon and brand mark served. Sign-in in a browser was not checked.
+- Hygiene: `infra/envs/dev/tfplan-auth` was committed in `cdd1614` and pushed. It is untracked now (`9cafc62`) and `.gitignore` covers `tfplan*`, but it is still in history. The auth module has no client secret, so it likely holds IDs and config only.
+- Still open: Cognito managed login still shows the old logo (`docs/cognito-branding/`). `neon` is still missing from the `data_source` validation.

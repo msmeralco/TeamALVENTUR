@@ -88,3 +88,9 @@ def test_notebook_copy_agrees() -> None:
     assert nb.cell_id(14.5915, 121.0673) == cell_id(14.5915, 121.0673)
     heat = heat_index_c(temps, rh)
     np.testing.assert_allclose(nb.heat_index_c(nb.temperature_for(heat, rh), rh), heat, atol=1e-6)
+
+
+def test_matches_noaa_published_example() -> None:
+    # weather.gov/safety/heat-index: "air temperature of 96 F and relative humidity of 65%
+    # ... heat index ... 121 F". Coefficients and rules: wpc.ncep.noaa.gov/html/heatindex_equation.shtml
+    assert heat_index_c(_f_to_c(96), 65) == pytest.approx(_f_to_c(121), abs=0.3)

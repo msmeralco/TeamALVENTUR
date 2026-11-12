@@ -10,9 +10,10 @@ Opt-in clamps on household wiring (after the meter) → sum by SIN per transform
 ```
 ESP32 clamp node --MQTT--> broker --> ingestion --> TimescaleDB
 smart meters, check meters, SIN map, billing ------^
-DB --> sum by SIN --> models (+ weather, EVs, roofs) --> SHAP reasons --> FastAPI
-FastAPI --> engineer risk map | outage view | household usage view
+every 15 min: scoring job --> DB --> sum by SIN --> models (+ weather, EVs, roofs) --> SHAP reasons --> score tables
+FastAPI (reads the latest scoring run) --> engineer risk map | outage view | household usage view
 ```
+Scoring runs on a schedule, not on request: [ADR 0002](adr/0002-scheduled-batch-risk-scoring.md).
 
 ## Hardware
 SCT-013-000 (0 to 100 A, ±1%, 13 mm window, ≤660 V), 22 Ω burden + 10 kΩ/10 kΩ/10 µF bias, 9 V AC-AC voltage ref, ADS1115 or ATM90E32, ESP32, Li-ion for last gasp, labeled enclosure. Licensed electrician installs on the line wire after the meter.

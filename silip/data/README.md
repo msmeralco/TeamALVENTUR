@@ -4,7 +4,7 @@ Nothing here is committed except this file and `osm/`. Everything else can be re
 
 - `raw/`: real exports (smart meters, check meters, outages). Never committed, never read by agents. SINs only as `sin_hash`.
 - `osm/`: committed OpenStreetMap snapshot of real transformer sites and building centres (ODbL 1.0); see `osm/README.md`.
-- `sim/`: output of `make sim`, which executes `notebooks/00_generate_mock_data.ipynb` (dev scale, seed 7). Every row has `is_simulated=True`. `sim/large/` and `sim/xlarge/` are timing-only sets (`make sim SIM_SCALE=large`).
+- `sim/`: output of `make sim`, which executes `notebooks/00_generate_mock_data.ipynb` (dev scale, seed 7). Every row has `is_simulated=True`; dev also adds temporary simulated T-Meralco transformer totals and a simulated `silip-esp32-test` map point at the registered coordinates. They are fixture rows; live Neon registrations and readings remain separate. `sim/large/` and `sim/xlarge/` are timing-only sets (`make sim SIM_SCALE=large`).
 - `processed/`: aggregated tables built from `raw/` or `sim/` by `silip_ml.readings.aggregate`.
 
 ## Mock data scenarios
@@ -13,7 +13,7 @@ Nothing here is committed except this file and `osm/`. Everything else can be re
 
 | Scenario | Knob (`SCENARIOS[...]`) | Value | Source |
 |---|---|---|---|
-| Scale | `SIM_SCALE` env: `test`, `dev`, `large`, `xlarge` | 8×21 d, 50×56 d, 2,000×14 d, 4,000×14 d (transformers × days) | design choice |
+| Scale | `SIM_SCALE` env: `test`, `dev`, `large`, `xlarge` | 8×21 d, 50×56 d plus one dev-only T-Meralco anchor, 2,000×14 d, 4,000×14 d (transformers × days) | design choice |
 | Holidays, weekends | `calendar.holidays`, `home_daytime_extra_kw` | Holy Week, Araw ng Kagitingan, Labor Day, Independence Day 2026; +0.25 kW daytime at home | `[VERIFY]` 2026 proclamation; extra kW `[VERIFY]` |
 | Heat | `weather.daily_max_heat_index_c`, `day_night_swing_c` | mean 39 °C, spread 1.5, 7 °C day-night swing | `[VERIFY]` PAGASA |
 | Hot spells | `weather.hot_spells_per_30_days`, `hot_spell_days`, `hot_spell_extra_c` | 1.5 per 30 days, 3 to 5 days, +4 °C | `[VERIFY]` |

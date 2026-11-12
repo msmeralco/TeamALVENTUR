@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -8,6 +9,7 @@ import { dailyKwh } from "../features/household/UsagePage";
 
 // MapLibre needs WebGL, which jsdom lacks; the list beside the map carries the same data.
 vi.mock("../features/risk-map/TransformerMap", () => ({ TransformerMap: () => null }));
+vi.mock("../features/devices/InstallationMap", () => ({ InstallationMap: () => null }));
 
 const OUTAGE = {
   outage_id: "O-0001",
@@ -353,5 +355,149 @@ describe("dailyKwh", () => {
     expect(days.map((d) => d.kwh)).toEqual([1, 1]);
     expect(days[0].day.getDate()).toBe(10);
     expect(days.every((d) => !d.complete)).toBe(true);
+  });
+});
+
+describe("device management", () => {
+  it("offers registration when no devices are installed", async () => {
+    mockApi({ "/api/v1/devices": [], "/api/v1/devices/transformers": [] });
+    renderAt("/engineer/devices");
+    expect(await screen.findByText("No devices registered. Add your first household clamp.")).toBeTruthy();
+    expect(screen.queryByLabelText(/Salted household hash/)).toBeNull();
+    expect(screen.getByPlaceholderText("Generated automatically")).toBeTruthy();
+    expect(screen.getByLabelText(/Household has opted in/)).toBeTruthy();
+  });
+
+  it("opens installation details and shows the transformer's measured totals", async () => {
+    const device = {
+      clamp_id: "node-1",
+      transformer_id: "T-1",
+      lat: 14.5,
+      lon: 121,
+      ct_model: "SCT-013-000",
+      installed_at: "2026-11-12T00:00:00Z",
+      last_seen_at: null,
+      status: "awaiting data",
+      is_simulated: true,
+    };
+    mockApi({
+      "/api/v1/devices": [device],
+      "/api/v1/devices/transformers": [{ transformer_id: "T-1", lat: 14.5, lon: 121, is_simulated: true }],
+      "/api/v1/devices/transformers/T-1/telemetry": {
+        transformer_id: "T-1",
+        registered_homes: 2,
+        points: [
+          { ts: "2026-11-12T00:00:00Z", measured_kw: 3.5, energy_kwh: 0.875, homes_reporting: 2, is_simulated: true },
+        ],
+      },
+    });
+    renderAt("/engineer/devices");
+    await userEvent.click(await screen.findByRole("button", { name: /node-1/ }));
+    expect(screen.getByText("Awaiting first reading")).toBeTruthy();
+    expect(screen.getByLabelText("House latitude")).toHaveProperty("value", "14.5");
+    expect(await screen.findByText("3.50 kW")).toBeTruthy();
+    expect(screen.getByText("2 homes")).toBeTruthy();
+    expect(screen.getByText(/not a reading taken from the transformer itself/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save installation" })).toBeTruthy();
+  });
+
+  it("adds a transformer and selects it for installation", async () => {
+    const transformer = { transformer_id: "T-150", lat: 14.5, lon: 121, is_simulated: true };
+    const fetcher = vi.fn(async (request: Request) => {
+      const path = new URL(request.url).pathname;
+      const body =
+        path === "/api/v1/devices"
+          ? []
+          : path === "/api/v1/devices/transformers"
+            ? request.method === "POST"
+              ? transformer
+              : [transformer]
+            : { transformer_id: "T-150", registered_homes: 0, points: [] };
+      return new Response(JSON.stringify(body), {
+        status: request.method === "POST" ? 201 : 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetcher);
+    renderAt("/engineer/devices");
+    await screen.findByText("No devices registered. Add your first household clamp.");
+    await userEvent.click(screen.getByRole("button", { name: "Add transformer" }));
+    await userEvent.type(screen.getByLabelText("Transformer ID"), "T-150");
+    await userEvent.type(screen.getByLabelText("Rated capacity (kVA)"), "50");
+    await userEvent.type(screen.getByLabelText("Transformer latitude"), "14.5");
+    await userEvent.type(screen.getByLabelText("Transformer longitude"), "121");
+    await userEvent.click(screen.getAllByRole("button", { name: "Add transformer" })[1]);
+
+    await waitFor(() => expect(screen.getByLabelText("Serving transformer")).toHaveProperty("value", "T-150"));
+    const posted = fetcher.mock.calls.find(([request]) => request.method === "POST");
+    expect(posted).toBeTruthy();
+    expect(JSON.parse(await posted![0].clone().text())).toMatchObject({
+      transformer_id: "T-150",
+      rated_kva: 50,
+      lat: 14.5,
+      lon: 121,
+      is_simulated: false,
+    });
+  });
+});
+
+describe("dashboard device registration", () => {
+  it("registers without a household hash and gives the device setup directly", async () => {
+    const created = {
+      clamp_id: "silip-node-generated",
+      transformer_id: "T-1",
+      lat: 14.5,
+      lon: 121,
+      ct_model: "SCT-013-000",
+      installed_at: "2026-11-12T00:00:00Z",
+      last_seen_at: null,
+      status: "awaiting data",
+      is_simulated: false,
+      device_key_set: true,
+      device_key: "one-time-device-key",
+    };
+    const fetcher = vi.fn(async (request: Request) => {
+      const path = new URL(request.url).pathname;
+      const body =
+        path === "/api/v1/devices"
+          ? request.method === "POST"
+            ? created
+            : []
+          : path === "/api/v1/devices/transformers"
+            ? [{ transformer_id: "T-1", lat: 14.5, lon: 121, is_simulated: false }]
+            : { transformer_id: "T-1", registered_homes: 1, points: [] };
+      return new Response(JSON.stringify(body), {
+        status: request.method === "POST" ? 201 : 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetcher);
+    renderAt("/engineer/devices");
+    await screen.findByText("No devices registered. Add your first household clamp.");
+    await userEvent.selectOptions(screen.getByLabelText("Serving transformer"), "T-1");
+    await userEvent.type(screen.getByLabelText("House latitude"), "14.5");
+    await userEvent.type(screen.getByLabelText("House longitude"), "121");
+    await userEvent.type(
+      screen.getByLabelText("House address or location description (optional)"),
+      "24 Sampaguita St.",
+    );
+    await userEvent.click(screen.getByLabelText(/Household has opted in/));
+    await userEvent.click(screen.getAllByRole("button", { name: "Register device" })[1]);
+    expect(await screen.findByRole("heading", { name: "Device registered" })).toBeTruthy();
+    expect(screen.getByLabelText("Device key")).toHaveProperty("value", "one-time-device-key");
+    expect(screen.getByRole("button", { name: "Download device setup" })).toBeTruthy();
+    const posted = fetcher.mock.calls.find(([request]) => request.method === "POST");
+    expect(posted).toBeTruthy();
+    const rawBody = await posted![0].clone().text();
+    expect(posted![0].headers.get("x-amz-content-sha256")).toBe(createHash("sha256").update(rawBody).digest("hex"));
+    const body = JSON.parse(rawBody);
+    expect(body.location_label).toBe("24 Sampaguita St.");
+    const download = screen.getByRole("button", { name: "Download device setup" });
+    expect(download).toHaveProperty("disabled", true);
+    await userEvent.clear(screen.getByLabelText("Device server address"));
+    await userEvent.type(screen.getByLabelText("Device server address"), "https://silip.example");
+    expect(download).toHaveProperty("disabled", false);
+    expect(body.sin_hash).toBeUndefined();
+    expect(body.clamp_id).toBeUndefined();
   });
 });

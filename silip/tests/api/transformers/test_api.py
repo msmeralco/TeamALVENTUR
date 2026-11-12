@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 import pandas as pd
 import pytest
@@ -8,7 +9,8 @@ from silip.scoring.service import run_once
 from silip.shared.deps import get_data_source, get_score_store
 from silip.shared.readings.adapters import SimulatedSource
 from silip.transformers.api import SCORE_TTL, utc_now
-from silip.transformers.service import CARD_HISTORY
+from silip.transformers.domain import TransformerDataUnavailableError
+from silip.transformers.service import CARD_HISTORY, compute_risk, risk_map, transformer_card
 from silip_ml.core.registry import UnknownStrategyError
 from tests.api.helpers import FakeScoreStore, StepClock, auth
 
@@ -119,3 +121,26 @@ def test_simulated_mode_recomputes_after_the_ttl(client, overrides, sim_dir):
     get()
     assert source.computations == 2
     assert {item["scored_at"] for item in first} == {"2026-01-01T00:00:00Z"}
+
+
+def test_transformer_without_a_week_of_readings_is_omitted_until_forecastable(dataset):
+    transformers = dataset.transformers.copy()
+    added = transformers.iloc[0].copy()
+    added["transformer_id"] = "T-150"
+    transformers = pd.concat([transformers, added.to_frame().T], ignore_index=True)
+    one_reading = dataset.load.iloc[[0]].copy()
+    one_reading["transformer_id"] = "T-150"
+    one_reading["ts"] = dataset.load["ts"].max()
+    load = pd.concat([dataset.load, one_reading], ignore_index=True)
+    source = SimpleNamespace(
+        transformers=lambda: transformers,
+        load=lambda since=None: load if since is None else load[load["ts"] > since],
+        latest_load_ts=lambda: load["ts"].max(),
+    )
+
+    snapshot = compute_risk(source, "seasonal_naive", "rules", START)
+
+    assert "T-150" not in {item.transformer_id for item in risk_map(snapshot, None)}
+    assert len(risk_map(snapshot, None)) == len(dataset.transformers)
+    with pytest.raises(TransformerDataUnavailableError):
+        transformer_card(snapshot, source, "T-150")

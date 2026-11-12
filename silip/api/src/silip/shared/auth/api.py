@@ -11,7 +11,7 @@ import logging
 from functools import lru_cache
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
@@ -65,10 +65,20 @@ def _sign_in_required() -> HTTPException:
     )
 
 
-def require_user(credentials: Credentials, settings: Settings, decoder: Decoder) -> AuthUser:
+def require_user(
+    credentials: Credentials,
+    settings: Settings,
+    decoder: Decoder,
+    forwarded: Annotated[str | None, Header(alias="X-Silip-Authorization")] = None,
+) -> AuthUser:
     """Any signed-in user, or 401."""
     if decoder is None:  # AUTH_DISABLED=true, local dev only
         return DEV_USER
+    if forwarded is not None:
+        scheme, _, token = forwarded.partition(" ")
+        if scheme.lower() != "bearer" or not token:
+            raise _sign_in_required()
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
     if credentials is None:
         raise _sign_in_required()
     try:

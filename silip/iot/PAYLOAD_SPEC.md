@@ -1,16 +1,14 @@
 # IoT Reading Payload Specification
 
-This document explains the example message in [`payload.example.json`](payload.example.json), the project requirements each field serves, and the boundary between the implemented reading contract and proposed MPU6050 telemetry.
+This document explains the example message in [`payload.example.json`](payload.example.json), the project requirements each field serves, and the boundary between the implemented reading contract and optional MPU6050 telemetry.
 
 ## Purpose and data flow
 
 The ESP32 clamp node reports household electrical measurements so SILIP can resample readings into 15-minute intervals, aggregate opted-in household load by transformer, and support transformer risk estimates. The node measures only; it does not switch, divert, or interrupt power.
 
-The intended path is ESP32 → MQTT over TLS → AWS IoT Core topic rule → ingestion Lambda → database → API → website. The website does not receive the device message directly. The current MQTT topic format is:
+The path is ESP32 → HTTPS POST → API Lambda → database → API → website. Register the node in the dashboard to receive its device key and endpoint. See [device management](../docs/iot-management.md).
 
-```text
-silip/v1/{transformer_id}/{sin_hash}/reading
-```
+The device sends `X-Device-Key` to `/api/v1/devices/{device_id}/readings`. Household and transformer identifiers come from the registry. The table below includes internal stored-reading fields; `sin_hash` and `transformer_id` are optional on the HTTP wire and are always replaced by the server's current assignment.
 
 ## Field reference
 
@@ -26,9 +24,9 @@ silip/v1/{transformer_id}/{sin_hash}/reading
 | `energy_kwh_interval` | number, kilowatt-hours | Estimated energy over the reporting interval. Supports interval usage and consistency checks against power over time. | Supported; firmware currently publishes every 15 minutes. The example `0.61 kWh` is approximately `2.43 kW × 0.25 h`. |
 | `event` | `null` or `"last_gasp"` | Optional event marker for a final report when the node detects impending power loss. | Supported by the schema. `null` means no event. |
 | `is_simulated` | boolean | Identifies sample or generated data so it cannot be mistaken for a real measurement. | Optional in the schema, but include it in fixtures; this example is `true`. Real device reports should be `false`. |
-| `motion` | object (proposal) | Proposed MPU6050 accelerometer/gyroscope telemetry for detecting device movement or disturbance. | **Not supported by the current schema, firmware, ingestion/storage path, or website API.** The example includes this proposed object and therefore is not accepted by the current strict ingestion validator. |
+| `motion` | optional object | Proposed MPU6050 accelerometer/gyroscope telemetry for detecting device movement or disturbance. | Supported by schema, ingestion, JSONB storage, and the authenticated household device API. Firmware acquisition remains to be implemented and calibrated. |
 
-## Motion object proposal
+## Optional motion object
 
 The example's proposed `motion` object contains:
 
@@ -54,13 +52,19 @@ For the illustrative values, `219.8 V × 11.6 A ≈ 2,550 VA`; multiplying by `0
 
 ## Contract and integration requirements
 
-- The source of truth is `silip/ml/src/silip_ml/readings/domain.py`; `silip/schemas/reading.json` is generated from that model. The model currently forbids extra fields.
+- The source of truth is `silip/ml/src/silip_ml/readings/domain.py`; sender schema `silip/schemas/device-reading.json` and stored schema `silip/schemas/reading.json` are generated from that model. The model currently forbids extra fields.
 - Current firmware in `iot/src/main.cpp` emits only the electrical fields and `event`; it does not read an MPU6050 or temperature sensor.
-- The ingestion Lambda validates with the same strict `Reading` model. Unknown fields such as `motion` cause the current message to be rejected. The current database insert also has no motion columns, and the website API does not expose motion.
-- Before sending `motion` from a real node, define and implement it in the Pydantic model, regenerate the JSON Schema, design persistence/migration and ingestion behavior, then expose the needed data through the API/UI. Add calibrated firmware acquisition and explicit motion thresholds, units, sampling window, and false-alarm handling.
-- Keep raw SINs, Wi-Fi credentials, broker credentials, and certificates out of payloads and committed files. The node uses only the salted `sin_hash` for household association.
+- The ingestion Lambda validates with the same strict `Reading` model. Optional `motion` is accepted and stored. Unknown fields are rejected. The household can view its latest electrical and motion report through `/api/v1/me/device`.
+- Before sending `motion` from a real node, implement calibrated firmware acquisition and explicit motion thresholds, units, sampling window, and false-alarm handling. Backend support does not validate hardware detection accuracy.
+- Keep raw SINs, Wi-Fi credentials, and device keys out of payloads and committed files. The server associates readings with the registered household.
 - Treat movement as a tamper signal requiring review. It does not establish theft or identify who moved the device.
 
 ## Example status
 
-`payload.example.json` is a simulated design example that combines the existing electrical payload with the proposed motion object. Because `motion` is not part of the current v1 schema, the complete example is **not a valid current production ingestion message**. Use the electrical fields alone when exercising the current firmware/backend contract.
+The example now matches the optional-motion Reading schema. It remains simulated design data: the optional household and transformer fields are replaced by the server, and `ts` must reflect the measurement time (at most five minutes ahead of server time). Firmware currently emits only electrical fields and `event`.
+
+## Registration and authenticated ingestion
+
+Registration is done in the dashboard. Device keys authenticate HTTP reports; the database stores their SHA-256 hashes. The handler resolves household and transformer assignment inside the same transaction that inserts a reading and advances last-seen. Duplicate `(sin_hash, ts)` reports are ignored. The sender schema is `DeviceReading`, generated in `schemas/device-reading.json`; `Reading` represents the enriched stored record.
+
+The firmware sends electrical measurements over HTTP(S) and does not contain household or transformer identifiers. Unknown fields remain rejected. Optional motion is supported by the backend but still needs calibrated firmware acquisition. Raw SINs, Wi-Fi passwords, and device keys never belong in measurement payloads.

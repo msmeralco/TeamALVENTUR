@@ -12,5 +12,4 @@ constexpr float VOLTAGE_VOLTS_PER_VOLT = 1.0f;                      // set from 
 constexpr int SAMPLES_PER_READING = 400;
 constexpr unsigned long PUBLISH_INTERVAL_MS = 15UL * 60UL * 1000UL;  // matches the 15-min resample
 
-// Payload topic: silip/v1/{transformer_id}/{sin_hash}/reading (see schemas/reading.json).
-constexpr const char* TOPIC_FORMAT = "silip/v1/%s/%s/reading";
+// The dashboard setup supplies DEVICE_API_URL and DEVICE_KEY in secrets.h.

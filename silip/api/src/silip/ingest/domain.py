@@ -13,3 +13,7 @@ class InvalidReadingError(ValueError):
 
 class ReadingSink(Protocol):
     def write(self, reading: Reading) -> None: ...
+
+
+class DeviceAuthenticationError(ValueError):
+    """Missing or invalid device credential."""

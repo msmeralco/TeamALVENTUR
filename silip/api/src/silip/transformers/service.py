@@ -17,6 +17,7 @@ from silip.shared.scores.service import score_window
 from silip.transformers.domain import (
     LoadPoint,
     TransformerCard,
+    TransformerDataUnavailableError,
     TransformerNotFoundError,
     TransformerRisk,
 )
@@ -80,7 +81,8 @@ def risk_map(snapshot: RiskSnapshot, bbox: BoundingBox | None) -> list[Transform
     rows = [
         _risk_row(snapshot, row)
         for row in snapshot.transformers.to_dict("records")
-        if bbox is None or bbox.contains(row["lat"], row["lon"])
+        if row["transformer_id"] in snapshot.risk
+        and (bbox is None or bbox.contains(row["lat"], row["lon"]))
     ]
     return sorted(rows, key=lambda r: (order[r.risk.tier], -r.risk.peak_load_pct))
 
@@ -92,6 +94,8 @@ def transformer_card(
     match = snapshot.transformers[snapshot.transformers["transformer_id"] == transformer_id]
     if match.empty:
         raise TransformerNotFoundError(transformer_id)
+    if transformer_id not in snapshot.risk:
+        raise TransformerDataUnavailableError(transformer_id)
     row = match.to_dict("records")[0]
     recent = source.load(since=snapshot.as_of - CARD_HISTORY)
     history = recent[

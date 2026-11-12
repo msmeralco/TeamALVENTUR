@@ -8,7 +8,7 @@ Opt-in clamps on household wiring (after the meter) → sum by SIN per transform
 
 ## Architecture
 ```
-ESP32 clamp node --MQTT--> broker --> ingestion --> TimescaleDB
+ESP32 clamp node --HTTPS + device key--> API Lambda --> Neon PostgreSQL
 smart meters, check meters, SIN map, billing ------^
 every 15 min: scoring job --> DB --> sum by SIN --> models (+ weather, EVs, roofs) --> SHAP reasons --> score tables
 FastAPI (reads the latest scoring run) --> engineer risk map | outage view | household usage view
@@ -18,9 +18,9 @@ Scoring runs on a schedule, not on request: [ADR 0002](adr/0002-scheduled-batch-
 ## Hardware
 SCT-013-000 (0 to 100 A, ±1%, 13 mm window, ≤660 V), 22 Ω burden + 10 kΩ/10 kΩ/10 µF bias, 9 V AC-AC voltage ref, ADS1115 or ATM90E32, ESP32, Li-ion for last gasp, labeled enclosure. Licensed electrician installs on the line wire after the meter.
 
-Payload (topic `silip/v1/{transformer_id}/{sin_hash}/reading`):
+Payload (`POST /api/v1/devices/{device_id}/readings`, header `X-Device-Key` from dashboard registration):
 ```json
-{"sin_hash":"3f9a…","transformer_id":"T-104","ts":"2026-11-12T21:15:00+08:00","voltage_v":219.8,"current_a":11.6,"power_kw":2.43,"power_factor":0.95,"energy_kwh_interval":0.61,"event":null}
+{"ts":"2026-11-12T21:15:00+08:00","voltage_v":219.8,"current_a":11.6,"power_kw":2.43,"power_factor":0.95,"energy_kwh_interval":0.61,"event":null}
 ```
 
 ## Data

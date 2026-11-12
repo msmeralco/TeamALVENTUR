@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { DevicesPage } from "../features/devices/DevicesPage";
 import { UsagePage } from "../features/household/UsagePage";
 import { OutagesPage } from "../features/outages/OutagesPage";
 import { RiskMapPage } from "../features/risk-map/RiskMapPage";
@@ -93,6 +94,7 @@ function NotFoundPage() {
 const NAV: { to: string; label: string; end: boolean; group?: Group }[] = [
   { to: "/", label: "Outages", end: true },
   { to: "/engineer", label: "Risk map", end: false, group: "engineers" },
+  { to: "/engineer/devices", label: "Devices", end: true, group: "engineers" },
   { to: "/me/usage", label: "My usage", end: false, group: "households" },
 ];
 
@@ -185,6 +187,14 @@ function Shell() {
               element={
                 <RequireRole role="households">
                   <UsagePage />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/engineer/devices"
+              element={
+                <RequireRole role="engineers">
+                  <DevicesPage />
                 </RequireRole>
               }
             />

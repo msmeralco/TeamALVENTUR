@@ -25,12 +25,6 @@ module "api" {
   force_delete_images  = !var.protect_resources
 }
 
-module "ingest" {
-  source               = "../../modules/ingest"
-  name                 = local.name
-  ingest_function_arn  = module.api.ingest_function_arn
-  ingest_function_name = module.api.ingest_function_name
-}
 
 module "web" {
   source            = "../../modules/web"

@@ -18,16 +18,6 @@ output "database_secret_arn" {
   value       = aws_secretsmanager_secret.database_url.arn
 }
 
-output "ingest_function_name" {
-  description = "Ingest Lambda name, invoked by the IoT topic rule."
-  value       = aws_lambda_function.function["ingest"].function_name
-}
-
-output "ingest_function_arn" {
-  description = "Ingest Lambda ARN."
-  value       = aws_lambda_function.function["ingest"].arn
-}
-
 output "score_function_name" {
   description = "Scoring Lambda name, invoked on a schedule to write risk scores to Neon."
   value       = aws_lambda_function.function["score"].function_name

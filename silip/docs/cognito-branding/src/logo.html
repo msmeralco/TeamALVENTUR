@@ -1,9 +1,13 @@
 <!doctype html><html><head><meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&display=block" rel="stylesheet">
+<!-- Rendered at 760x256 (2x), downscaled to 380x128. #dark puts the mark on a cream tile. -->
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=block" rel="stylesheet">
 <style>html,body{margin:0;background:transparent}
-.w{display:flex;align-items:center;gap:22px;padding:16px 20px;width:max-content}
-.m{width:96px;height:96px;border-radius:24px;display:grid;place-items:center;font:700 56px/1 'Space Grotesk';}
-.t{font:600 76px/1 'Space Grotesk';letter-spacing:-2px;padding-bottom:6px}
-</style></head><body><div class="w"><div class="m" id="m">S</div><div class="t" id="t">silip</div></div>
-<script>const d=location.hash==='#dark';const m=document.getElementById('m'),t=document.getElementById('t');
-m.style.background=d?'#ececea':'#1c1e21';m.style.color=d?'#1c1e21':'#fafaf7';t.style.color=d?'#ececea':'#1c1e21';</script></body></html>
+.w{display:flex;align-items:center;gap:36px;height:256px;padding:0 32px;box-sizing:border-box;width:760px}
+.m{width:192px;height:192px;border-radius:44px;display:grid;place-items:center;flex:none}
+.m img{width:192px;height:192px;display:block}
+.dark .m{background:#F2EFE3}
+.dark .m img{width:156px;height:156px}
+.t{font:700 156px/1 'Space Grotesk';letter-spacing:-4px;color:#262626;padding-bottom:16px}
+.dark .t{color:#F2EFE3}
+</style></head><body><div class="w" id="w"><div class="m"><img src="silip-mark-512.png" alt=""></div><div class="t">silip</div></div>
+<script>if(location.hash==='#dark')document.getElementById('w').classList.add('dark');</script></body></html>

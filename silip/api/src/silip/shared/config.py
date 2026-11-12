@@ -22,8 +22,10 @@ class ConfigError(RuntimeError):
 class ApiSettings(MlSettings):
     """API settings. Strategy names (FORECASTER, RISK_SCORER, ...) come from MlSettings."""
 
-    # Run from silip/: the team's git-ignored Neon URLs live in ../env/env.dev. Missing files are skipped.
-    model_config = SettingsConfigDict(env_file=(".env", "../env/env.dev"), extra="ignore")
+    # Local overrides load last; shell variables take precedence. Missing files are skipped.
+    model_config = SettingsConfigDict(
+        env_file=(".env", "../env/env.dev", ".env.local"), extra="ignore"
+    )
 
     data_source: DataSourceName = "simulated"
     # Pooled URL for the app (many short Lambda connections); direct URL for schema changes.

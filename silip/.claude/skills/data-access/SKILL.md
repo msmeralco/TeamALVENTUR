@@ -9,7 +9,7 @@ description: Where SILIP data lives and how to read it - the data/ folders, simu
 | `data/raw/` | Real exports (never committed, never read by agents) | ignored |
 | `data/osm/` | OpenStreetMap transformer sites and nearby building centres (ODbL); `notebooks/00` places transformers and homes here | committed |
 | `data/sim/` | Output of `make sim` (`notebooks/00_generate_mock_data.ipynb`, dev scale); `data/sim/large`, `data/sim/xlarge` for timing | ignored, regenerate |
-| `tests/fixtures/sim/` | Same notebook at `SIM_SCALE=test` (8 transformers, 21 days, about 2.5 MB) | committed |
+| `tests/fixtures/sim/` | Same notebook at `SIM_SCALE=test` (8 transformers, 21 days, about 2.9 MB) | committed |
 | `models/` | Exported models, metadata and parity samples from `notebooks/06` | committed |
 | `data/processed/` | Aggregated tables from `silip_ml.readings.aggregate` | ignored, regenerate |
 
@@ -20,6 +20,7 @@ Simulated CSVs (all rows carry `is_simulated=True`; scenario knobs in `data/READ
 - `transformer_load_15m.csv`: `transformer_id, ts, transformer_kw, load_pct, heat_index_c`, plus `measured_kw, homes_reporting, late_readings, duplicate_readings, true_kw, check_meter_kw`. `transformer_kw` is what SILIP sees (clamped homes scaled up); `true_kw` includes jumper load (simulator only, used for trip labels); `check_meter_kw` is blank without a check meter. Intervals with no clamp reporting (outages) are absent.
 - `household_load_15m.csv`: per-home kW for a few detail transformers; `readings_raw.csv`: the last 2 days of one transformer as received (`received_at`, late and duplicate arrivals)
 - `weather_15m.csv`: `ts, heat_index_c, rain_mm_h, weather (clear|hot_spell|rain|typhoon), is_holiday`
+- `weather_forecast_hourly.csv`: `issued_at, ts, cell_id, temperature_c, relative_humidity_pct, precipitation_mm, heat_index_c, kind (archive|forecast)`; archive rows are the observed hour (`issued_at = ts`), forecast rows are issued daily at 00:00 for the next 72 h (truth + error, knob `weather.forecast_error_sd_c`). Cells from `silip_ml.weather.cell_id`; heat index from `silip_ml.weather.heat_index_c` (NOAA). Read only rows with `issued_at` ≤ the scoring time.
 - `outages.csv`: `outage_id, transformer_id, start_ts, cause, duration_min, lat, lon`
 - `outage_signals.csv`: `outage_id, kind (last_gasp|report), ts, lat, lon`
 

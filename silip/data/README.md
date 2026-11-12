@@ -17,6 +17,8 @@ Nothing here is committed except this file and `osm/`. Everything else can be re
 | Holidays, weekends | `calendar.holidays`, `home_daytime_extra_kw` | Holy Week, Araw ng Kagitingan, Labor Day, Independence Day 2026; +0.25 kW daytime at home | `[VERIFY]` 2026 proclamation; extra kW `[VERIFY]` |
 | Heat | `weather.daily_max_heat_index_c`, `day_night_swing_c` | mean 39 °C, spread 1.5, 7 °C day-night swing | `[VERIFY]` PAGASA |
 | Hot spells | `weather.hot_spells_per_30_days`, `hot_spell_days`, `hot_spell_extra_c` | 1.5 per 30 days, 3 to 5 days, +4 °C | `[VERIFY]` |
+| Humidity, hourly weather | `weather.humidity_pct`, `wet_humidity_extra_pct` | 85% at 2 AM to 60% at 2 PM, +10 points on rain and typhoon days, ±3 noise; temperature is solved so the NOAA heat index (`silip_ml.weather.heat_index_c`) matches the simulator's within 0.05 °C (humidity is lowered a little where NOAA's formula jumps near 27 °C) | `[VERIFY]` PAGASA |
+| Day-ahead forecast error | `weather.forecast_error_sd_c`, `forecast_error_growth_per_day`, `forecast_error_sd_rh_pct`, `forecast_rain_error_sigma` | temperature error sd 1.0 °C per issue and lead day, ×(1 + 0.5 × lead day), plus hourly jitter of sd/3; humidity sd 5 points per lead day; rain × lognormal(0, 0.5). Heat index MAE about 2.7 / 3.2 / 4.7 °C on lead days 0 / 1 / 2 (dev) | `[VERIFY]` against Open-Meteo forecast skill for Metro Manila |
 | Rain, typhoon | `weather.rain_day_share`, `typhoon_days_after_day_40`, cooling | 6% of days, 1 typhoon after day 40; −5 / −8 °C | `[VERIFY]` |
 | Aircon | `aircon.kw_per_home`, heat scale | 0.8 to 1.6 kW × clip((HI − 30)/10, 0, 1.5) | silip-domain skill |
 | EV adoption | `ev.site_share`, `home_share_by_end`, `charger_kw` | 20% of transformers; 15% of homes there by the end, 1% elsewhere; 3.3 to 7.4 kW from 8 PM | charger and 8 PM: silip-domain; EVs 24.7% of Jan to Aug 2026 sales (SPEC#sources) as context; shares `[VERIFY]` |
@@ -28,3 +30,7 @@ Nothing here is committed except this file and `osm/`. Everything else can be re
 | Outages | `outages.other_per_day`, `rain_multiplier`, `typhoon_multiplier`, `median_minutes` | 0.05 a day; ×3 rain, ×15 typhoon; medians 180 / 150 / 240 min | trip rule and medians: silip-domain; multipliers `[VERIFY]` |
 
 Kept from the old simulator: OSM transformer sites and building-placed households (read directly from `data/osm/*.csv`), `clamps.csv`, outages and their signals, and the same file names and columns (new columns are added at the end).
+
+## Hourly weather (`weather_forecast_hourly.csv`)
+
+Columns `issued_at, ts, cell_id, temperature_c, relative_humidity_pct, precipitation_mm, heat_index_c, kind, is_simulated`, hourly, Manila time, one block per weather cell (`silip_ml.weather.cell_id`, `WEATHER_CELL_DEG = 0.1` `[VERIFY]`) that holds a transformer. One file, two kinds: `kind='archive'` is the observed hour (`issued_at = ts`); `kind='forecast'` is issued daily at 00:00 for the next 72 h (cut at the end of the run). The simulator has one regional weather series, so every cell carries the same values. Features must read only rows with `issued_at` at or before the scoring time. It has its own random stream (`[SEED, 9001]`), so the other tables are byte-identical to runs without it. Dev: 7 cells, 37,128 rows; test: 2 cells, 3,888 rows.

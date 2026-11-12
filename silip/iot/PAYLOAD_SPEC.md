@@ -24,7 +24,7 @@ The device sends `X-Device-Key` to `/api/v1/devices/{device_id}/readings`. House
 | `energy_kwh_interval` | number, kilowatt-hours | Estimated energy over the reporting interval. Supports interval usage and consistency checks against power over time. | Supported; firmware currently publishes every 15 minutes. The example `0.61 kWh` is approximately `2.43 kW × 0.25 h`. |
 | `event` | `null` or `"last_gasp"` | Optional event marker for a final report when the node detects impending power loss. | Supported by the schema. `null` means no event. |
 | `is_simulated` | boolean | Identifies sample or generated data so it cannot be mistaken for a real measurement. | Optional in the schema, but include it in fixtures; this example is `true`. Real device reports should be `false`. |
-| `motion` | optional object | Proposed MPU6050 accelerometer/gyroscope telemetry for detecting device movement or disturbance. | Supported by schema, ingestion, JSONB storage, and the authenticated household device API. Firmware acquisition remains to be implemented and calibrated. |
+| `motion` | optional object | Proposed MPU6050 accelerometer/gyroscope telemetry for detecting device movement or disturbance. | Supported by schema, ingestion and JSONB storage. No API returns it (the household device API was removed, ADR 0005). Firmware acquisition remains to be implemented and calibrated. |
 
 ## Optional motion object
 
@@ -54,7 +54,7 @@ For the illustrative values, `219.8 V × 11.6 A ≈ 2,550 VA`; multiplying by `0
 
 - The source of truth is `silip/ml/src/silip_ml/readings/domain.py`; sender schema `silip/schemas/device-reading.json` and stored schema `silip/schemas/reading.json` are generated from that model. The model currently forbids extra fields.
 - Current firmware in `iot/src/main.cpp` emits only the electrical fields and `event`; it does not read an MPU6050 or temperature sensor.
-- The ingestion Lambda validates with the same strict `Reading` model. Optional `motion` is accepted and stored. Unknown fields are rejected. The household can view its latest electrical and motion report through `/api/v1/me/device`.
+- The ingestion Lambda validates with the same strict `Reading` model. Optional `motion` is accepted and stored. Unknown fields are rejected. Stored readings feed transformer totals only; no route returns one household's readings (ADR 0005).
 - Before sending `motion` from a real node, implement calibrated firmware acquisition and explicit motion thresholds, units, sampling window, and false-alarm handling. Backend support does not validate hardware detection accuracy.
 - Keep raw SINs, Wi-Fi credentials, and device keys out of payloads and committed files. The server associates readings with the registered household.
 - Treat movement as a tamper signal requiring review. It does not establish theft or identify who moved the device.

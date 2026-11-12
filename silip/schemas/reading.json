@@ -1,0 +1,81 @@
+{
+  "additionalProperties": false,
+  "description": "One clamp node message (topic `READING_TOPIC`). Matches docs/SPEC.md#hardware.",
+  "properties": {
+    "sin_hash": {
+      "description": "Salted SHA-256 of the SIN",
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Sin Hash",
+      "type": "string"
+    },
+    "transformer_id": {
+      "maxLength": 32,
+      "minLength": 1,
+      "title": "Transformer Id",
+      "type": "string"
+    },
+    "ts": {
+      "format": "date-time",
+      "title": "Ts",
+      "type": "string"
+    },
+    "voltage_v": {
+      "maximum": 300,
+      "minimum": 0,
+      "title": "Voltage V",
+      "type": "number"
+    },
+    "current_a": {
+      "description": "SCT-013-000 range is 0 to 100 A",
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Current A",
+      "type": "number"
+    },
+    "power_kw": {
+      "description": "Negative when rooftop solar exports",
+      "title": "Power Kw",
+      "type": "number"
+    },
+    "power_factor": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Power Factor",
+      "type": "number"
+    },
+    "energy_kwh_interval": {
+      "title": "Energy Kwh Interval",
+      "type": "number"
+    },
+    "event": {
+      "anyOf": [
+        {
+          "const": "last_gasp",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Event"
+    },
+    "is_simulated": {
+      "default": false,
+      "title": "Is Simulated",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "sin_hash",
+    "transformer_id",
+    "ts",
+    "voltage_v",
+    "current_a",
+    "power_kw",
+    "power_factor",
+    "energy_kwh_interval"
+  ],
+  "title": "Reading",
+  "type": "object"
+}

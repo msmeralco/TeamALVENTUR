@@ -22,3 +22,11 @@
 - **Cognito:** the domain is on managed login version 2. Cognito created the default style for the web client when the domain switched; that style is managed outside Terraform for now.
 - Checked: a browser signed in through the managed login page as `alventur-solutions`, and `/api/v1/transformers` and `/api/v1/clamps` returned 200.
 - The image's `data/sim` came from the working tree at deploy time, which the ML session had regenerated. The risk counts differ from earlier screenshots (28 Critical instead of 13).
+
+## dev, 2026-11-12 (feature/iot merged)
+
+- Commit `ed43b92` on `dev` (merge of `feature/iot`, plus managed login v2). Image `silip-dev:0.3.0`, `DATA_SOURCE=simulated`.
+- Full apply (no `-target`): 5 added, 2 changed, 7 destroyed. Removed the IoT Core path (ingest Lambda, role, policy, log group, topic rule, its permission, the `silip-dev-node` IoT policy); devices now post HTTPS through CloudFront to the API Lambda. Added the scoring Lambda (`silip-dev-score`) and its 15-minute EventBridge schedule, without reserved concurrency (account limit 10).
+- Neon: the owner ran the `feature/iot` columns (`household.location_label`, `reading.motion`, `clamp.device_key_hash`) and grants.
+- Checked: browser sign-in as `alventur-solutions`; `/api/v1/transformers` and `/api/v1/clamps` 200; `/api/health` 200.
+- Build tip: build the image from a context with only `pyproject.toml`, `uv.lock`, `ml/`, `api/` and `data/sim` (there is no `.dockerignore`, so a checkout with `.venv` and `node_modules` stalls the upload).

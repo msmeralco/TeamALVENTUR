@@ -86,6 +86,7 @@ import com.alventur.silipapp.education.LessonCatalog
 import com.alventur.silipapp.education.LessonQuizCatalog
 import com.alventur.silipapp.notifications.AwayMonitor
 import com.alventur.silipapp.ui.design.SilipMotion
+import com.alventur.silipapp.ui.usage.UsageDashboard
 import com.alventur.silipapp.ui.design.StreakFlame
 import com.alventur.silipapp.ui.design.orSnap
 import com.alventur.silipapp.ui.design.pressScale
@@ -422,14 +423,15 @@ private fun UsageScreen(
     onRefreshHousehold: () -> Unit
 ) {
     AdaptivePage(contentPadding) {
-        item { SectionHeading("Usage", "Understand when your energy adds up.") }
         if (householdState is HouseholdDashboardState.Loaded) {
-            item { UsageExplorer(householdState.device, onRefreshHousehold) }
+            item { UsageDashboard(householdState.device, onRefreshHousehold) }
+            item { SectionHeading("What's next") }
             item { ForecastAndInsights(householdState.device) }
             item { SectionHeading("Cost & calculation") }
             item { PriceEstimateCard(householdState.device) }
             item { ReadingDetails(householdState.device) }
         } else {
+            item { SectionHeading("Usage", "Understand when your energy adds up.") }
             item { HouseholdSnapshot(householdState, onRefreshHousehold) }
         }
         item { SectionHeading("Get to know your numbers") }

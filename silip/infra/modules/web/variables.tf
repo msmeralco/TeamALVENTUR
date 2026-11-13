@@ -13,6 +13,16 @@ variable "api_function_name" {
   description = "API Lambda name; CloudFront is granted permission to invoke it."
 }
 
+variable "mobile_function_url" {
+  type        = string
+  description = "IAM-protected Function URL for the mobile PoC Lambda."
+}
+
+variable "mobile_function_name" {
+  type        = string
+  description = "Name of the mobile PoC Lambda, for CloudFront OAC invoke permissions."
+}
+
 variable "price_class" {
   type        = string
   description = "CloudFront price class. PriceClass_200 includes Asia edge locations."

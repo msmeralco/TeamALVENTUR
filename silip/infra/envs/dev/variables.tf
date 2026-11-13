@@ -40,8 +40,8 @@ variable "weather_source" {
 
 variable "open_meteo_base_url" {
   type        = string
-  description = "Open-Meteo API base URL, without a trailing slash."
-  default     = "https://api.open-meteo.com/v1"
+  description = "Open-Meteo forecast endpoint, without a trailing slash."
+  default     = "https://api.open-meteo.com/v1/forecast"
 }
 
 variable "strategies" {

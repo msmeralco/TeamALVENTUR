@@ -9,7 +9,6 @@ plugins {
 val apiBaseUrl = providers.gradleProperty("silipApiBaseUrl")
     .orElse("https://d3kla6q1vf4py1.cloudfront.net")
     .get()
-
 android {
     namespace = "com.alventur.silipapp"
     compileSdk = 37
@@ -46,10 +45,17 @@ dependencies {
     implementation(composeBom)
 
     implementation("androidx.activity:activity-compose:1.13.0")
+    implementation("androidx.compose.animation:animation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+
+    implementation("androidx.work:work-runtime-ktx:2.12.0")
+    implementation("com.google.android.gms:play-services-location:21.4.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
+    testImplementation("junit:junit:4.13.2")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

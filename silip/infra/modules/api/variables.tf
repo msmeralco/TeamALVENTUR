@@ -46,6 +46,12 @@ variable "data_source" {
   }
 }
 
+variable "mobile_poc_device_ids" {
+  type        = set(string)
+  description = "Public mobile PoC IDs. Leave empty outside the demo environment."
+  default     = []
+}
+
 variable "weather_source" {
   type        = string
   description = "Weather strategy for scoring (ADR 0006). open_meteo needs no key, secret or IAM; Lambdas already have egress."
@@ -58,8 +64,8 @@ variable "weather_source" {
 
 variable "open_meteo_base_url" {
   type        = string
-  description = "Open-Meteo API base URL, without a trailing slash."
-  default     = "https://api.open-meteo.com/v1"
+  description = "Open-Meteo forecast endpoint, without a trailing slash."
+  default     = "https://api.open-meteo.com/v1/forecast"
   validation {
     condition     = can(regex("^https://[^/]+(/.*[^/])?$", var.open_meteo_base_url))
     error_message = "open_meteo_base_url must be an https URL without a trailing slash."

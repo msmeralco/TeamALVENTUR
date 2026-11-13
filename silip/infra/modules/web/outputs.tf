@@ -9,6 +9,6 @@ output "distribution_id" {
 }
 
 output "domain" {
-  description = "CloudFront domain. Set it as web_domain and apply again so Cognito accepts sign-in from it."
+  description = "CloudFront domain for the web app, API, and mobile PoC API."
   value       = aws_cloudfront_distribution.web.domain_name
 }

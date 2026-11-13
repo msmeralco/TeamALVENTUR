@@ -1,4 +1,4 @@
-"""Transactional Neon device registry and measured transformer totals."""
+"""Neon device registry, transformer totals, and the single-device PoC usage query."""
 
 from collections.abc import Callable
 from hashlib import sha256
@@ -13,6 +13,8 @@ from silip.devices.domain import (
     DeviceKey,
     DeviceRegistration,
     DeviceSetup,
+    DemoDeviceUsage,
+    DemoUsagePoint,
     Installation,
     RegistryError,
     TransformerOption,
@@ -37,6 +39,39 @@ class NeonDeviceRegistry:
         with self._connect() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute(DEVICE_SQL + " ORDER BY c.clamp_id")
             return [Device.model_validate(row) for row in cur.fetchall()]
+
+    def demo_usage(self, clamp_id: str) -> DemoDeviceUsage | None:
+        """Read seven days of aggregate usage for a registered PoC clamp, without its location."""
+        with self._connect() as conn, conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                "SELECT c.clamp_id, h.transformer_id, c.last_seen_at,"
+                " (c.is_simulated OR h.is_simulated) AS is_simulated, c.sin_hash"
+                " FROM clamp c JOIN household h USING (sin_hash) WHERE c.clamp_id = %s",
+                (clamp_id,),
+            )
+            device = cur.fetchone()
+            if device is None:
+                return None
+
+            cur.execute(
+                "SELECT date_bin('15 minutes', ts, TIMESTAMPTZ '2000-01-01') AS ts,"
+                " avg(power_kw)::float8 AS kw, bool_or(is_simulated) AS is_simulated"
+                " FROM reading WHERE sin_hash = %s"
+                " AND ts > (SELECT max(ts) FROM reading WHERE sin_hash = %s) - interval '7 days'"
+                " GROUP BY 1 ORDER BY 1",
+                (device["sin_hash"], device["sin_hash"]),
+            )
+            rows = cur.fetchall()
+            points = [DemoUsagePoint(ts=row["ts"], kw=row["kw"]) for row in rows]
+            return DemoDeviceUsage(
+                clamp_id=device["clamp_id"],
+                transformer_id=device["transformer_id"],
+                last_seen_at=device["last_seen_at"],
+                total_kwh=round(sum(row["kw"] * 0.25 for row in rows), 2),
+                is_simulated=bool(device["is_simulated"])
+                or any(bool(row["is_simulated"]) for row in rows),
+                points=points,
+            )
 
     def transformers(self) -> list[TransformerOption]:
         with self._connect() as conn, conn.cursor(row_factory=dict_row) as cur:

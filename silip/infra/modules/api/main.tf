@@ -1,14 +1,12 @@
-# API and scoring Lambdas from one container image, the database secret, and least-privilege roles.
-# The API Lambda also receives device HTTPS readings (no IoT Core ingest Lambda).
-# The function URL uses AWS_IAM auth; only CloudFront (OAC, web module) may call it.
-# Scoring is one more entry in local.functions, not a new module: it shares the image, secret, env
-# and per-function role/log-group pattern, so a module would only duplicate that wiring.
+# API, mobile-PoC and scoring Lambdas share one container image and database secret, with separate
+# execution roles and handlers. Function URLs use AWS_IAM; CloudFront OAC is the caller.
 
 data "aws_region" "current" {}
 
 locals {
   functions = {
-    api = { command = "silip.app.handler", memory = var.api_memory_mb, timeout = 30, reserved = null }
+    api    = { command = "silip.app.handler", memory = var.api_memory_mb, timeout = 30, reserved = null }
+    mobile = { command = "silip.mobile.handler", memory = 512, timeout = 15, reserved = null }
     # Writes risk scores to Neon on a schedule. No reserved concurrency: this account's Lambda limit is 10,
     # and AWS refuses any reservation that leaves fewer than 10 unreserved. Runs are idempotent per
     # 15-minute bucket (score_run), so a rare overlap repeats work but never double-writes.
@@ -89,7 +87,7 @@ resource "aws_lambda_function" "function" {
   memory_size   = each.value.memory
   timeout       = each.value.timeout
 
-  # null leaves api and ingest unreserved.
+  # null leaves the request handlers and scoring function unreserved.
   reserved_concurrent_executions = each.value.reserved
 
   image_config {
@@ -98,13 +96,14 @@ resource "aws_lambda_function" "function" {
 
   environment {
     variables = merge(var.strategies, {
-      DATA_SOURCE          = var.data_source
-      WEATHER_SOURCE       = var.weather_source
-      OPEN_METEO_BASE_URL  = var.open_meteo_base_url
-      DATABASE_SECRET_ARN  = aws_secretsmanager_secret.database_url.arn
-      COGNITO_REGION       = data.aws_region.current.region
-      COGNITO_USER_POOL_ID = var.cognito_user_pool_id
-      COGNITO_CLIENT_ID    = var.cognito_client_id
+      DATA_SOURCE           = var.data_source
+      WEATHER_SOURCE        = var.weather_source
+      OPEN_METEO_BASE_URL   = var.open_meteo_base_url
+      DATABASE_SECRET_ARN   = aws_secretsmanager_secret.database_url.arn
+      MOBILE_POC_DEVICE_IDS = join(",", var.mobile_poc_device_ids)
+      COGNITO_REGION        = data.aws_region.current.region
+      COGNITO_USER_POOL_ID  = var.cognito_user_pool_id
+      COGNITO_CLIENT_ID     = var.cognito_client_id
     })
   }
 
@@ -113,6 +112,11 @@ resource "aws_lambda_function" "function" {
 
 resource "aws_lambda_function_url" "api" {
   function_name      = aws_lambda_function.function["api"].function_name
+  authorization_type = "AWS_IAM"
+}
+
+resource "aws_lambda_function_url" "mobile" {
+  function_name      = aws_lambda_function.function["mobile"].function_name
   authorization_type = "AWS_IAM"
 }
 

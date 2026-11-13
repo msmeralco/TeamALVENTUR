@@ -37,6 +37,8 @@ SILIP is an engineer-only app behind a public landing page (ADR 0005). Every dat
 | `/api/v1/devices/...` (registry, install, keys) | `engineers` |
 | `POST /api/v1/devices/{id}/readings` | the clamp's own device key, not a Cognito token |
 
+The separate, read-only Android PoC route is `GET /mobile-api/v1/devices/{clamp_id}/usage`. It has no user sign-in; the handler returns data only for IDs in `MOBILE_POC_DEVICE_IDS` (`silip-esp32-test` in dev, none in prod). This is not part of the production household-auth contract.
+
 ## Web config (Vite env)
 `VITE_AUTH_MODE` = `cognito` | `dev` · `VITE_COGNITO_AUTHORITY` · `VITE_COGNITO_CLIENT_ID` · `VITE_COGNITO_DOMAIN`. `dev` gives a fake user in both groups; pair it with the API's `AUTH_DISABLED=true`.
 

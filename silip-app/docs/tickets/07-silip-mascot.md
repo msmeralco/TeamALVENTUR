@@ -25,4 +25,4 @@ See `docs/mascot-guide.md` for color semantics, pose mapping, and asset use.
 
 ## Notes
 
-The assets are in `app/src/main/res/drawable-nodpi/`, mapped by `AliPose` and displayed by `AliSectionHeader` and answer-feedback cards.
+The assets are in `app/src/main/res/drawable-nodpi/`, mapped by `AliPose` and displayed by `PageHeader` and answer-feedback cards.

@@ -11,23 +11,30 @@ data class Lesson(
 object LessonCatalog {
     val starterLessons = listOf(
         Lesson(
+            id = "phantom-loads",
+            title = "Find standby power",
+            description = "Spot what stays on.",
+            estimatedMinutes = 2,
+            points = 15
+        ),
+        Lesson(
             id = "cooling-wisely",
-            title = "Cool your home wisely",
-            description = "Small air-conditioner habits that can lower energy use.",
+            title = "Cool your home",
+            description = "Use your aircon wisely.",
             estimatedMinutes = 3,
             points = 20
         ),
         Lesson(
-            id = "standby-power",
-            title = "What can stay plugged in?",
-            description = "Know what to switch off and what should keep running.",
+            id = "bill-basics",
+            title = "Understand your bill",
+            description = "See how use affects cost.",
             estimatedMinutes = 2,
             points = 15
         ),
         Lesson(
             id = "leaving-home",
-            title = "Before you leave home",
-            description = "A quick safety check for lights and non-essential appliances.",
+            title = "Leaving home",
+            description = "Switch off what you can.",
             estimatedMinutes = 1,
             points = 10
         )

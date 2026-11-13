@@ -14,24 +14,27 @@ module "auth" {
 }
 
 module "api" {
-  source               = "../../modules/api"
-  name                 = local.name
-  image_tag            = var.image_tag
-  data_source          = var.data_source
-  weather_source       = var.weather_source
-  open_meteo_base_url  = var.open_meteo_base_url
-  strategies           = var.strategies
-  cognito_user_pool_id = module.auth.user_pool_id
-  cognito_client_id    = module.auth.client_id
-  log_retention_days   = var.log_retention_days
-  force_delete_images  = !var.protect_resources
+  source                = "../../modules/api"
+  name                  = local.name
+  image_tag             = var.image_tag
+  data_source           = var.data_source
+  weather_source        = var.weather_source
+  open_meteo_base_url   = var.open_meteo_base_url
+  mobile_poc_device_ids = []
+  strategies            = var.strategies
+  cognito_user_pool_id  = module.auth.user_pool_id
+  cognito_client_id     = module.auth.client_id
+  log_retention_days    = var.log_retention_days
+  force_delete_images   = !var.protect_resources
 }
 
 
 module "web" {
-  source            = "../../modules/web"
-  name              = local.name
-  api_function_url  = module.api.api_function_url
-  api_function_name = module.api.api_function_name
-  force_destroy     = !var.protect_resources
+  source               = "../../modules/web"
+  name                 = local.name
+  api_function_url     = module.api.api_function_url
+  api_function_name    = module.api.api_function_name
+  mobile_function_url  = module.api.mobile_function_url
+  mobile_function_name = module.api.mobile_function_name
+  force_destroy        = !var.protect_resources
 }

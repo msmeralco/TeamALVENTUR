@@ -1,4 +1,4 @@
-# API and ingest Lambdas share this image; Terraform sets the handler per function.
+# API, mobile PoC, and scoring Lambdas share this image; Terraform sets each handler.
 # Build from the silip/ root:  docker build --platform linux/amd64 -f api/Dockerfile.lambda -t silip-api .
 FROM public.ecr.aws/lambda/python:3.12
 

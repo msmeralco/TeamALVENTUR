@@ -1,6 +1,6 @@
 # Connect Cognito and the household API
 
-Status: open  
+Status: deferred for the single-device PoC
 Type: task  
 Priority: high  
 Blocked by: 01-household-onboarding
@@ -11,22 +11,20 @@ Connect the Android app to Cognito and display the authenticated household's liv
 
 ## Motivation
 
-The My home screen currently shows a truthful not-connected state. Household readings require internet access and an authenticated household account linked by SILIP.
+The current PoC uses a public endpoint restricted to one demo device. Before connecting real households, add Cognito sign-in and resolve device access server-side.
 
 ## Acceptance criteria
 
-- [ ] Use Cognito authorization-code sign-in with PKCE and the public native app client; embed no client secret or AWS credential.
-- [ ] Call `GET /api/v1/me/usage` and `GET /api/v1/me/device` through the CloudFront origin.
-- [ ] Send `X-Silip-Authorization: Bearer <access-token>` through CloudFront as specified by [`silip/docs/auth-contract.md`](../../../silip/docs/auth-contract.md).
-- [ ] Map JSON responses to the current household domain without exposing `sin_hash`.
-- [ ] Show loading, connected, no-household-link (404), unauthorized (401), forbidden (403), offline, stale, and server-error states distinctly.
-- [ ] Display simulated-data status whenever the API marks readings as simulated.
-- [ ] Allow refreshing after recoverable failures without losing the user's current destination.
+- [ ] Use Cognito authorization-code sign-in with PKCE and the public app client.
+- [ ] Call household-scoped `/api/v1/me/usage` and `/api/v1/me/device` through CloudFront.
+- [ ] Resolve device access server-side; never accept a household identifier as authorization.
+- [ ] Show loading, linked, unlinked, forbidden, offline, stale, and server-error states distinctly.
+- [ ] Add authorization before enabling the app for real households or exposing more device IDs.
 
 ## Dependencies
 
-Blocked by 01-household-onboarding for the agreed user-facing states.
+For the current PoC implementation, see the mobile Lambda in `silip/api/src/silip/mobile.py` and the device-ID entry on the Home screen. That endpoint is public and allowlisted to the demo device only.
 
 ## Notes
 
-The existing interface and route declarations are in `app/src/main/java/com/alventur/silipapp/data/remote/HouseholdApi.kt`. Use CloudFront, not the AWS-IAM-protected Lambda Function URL.
+Use this ticket before expanding beyond the PoC device or connecting real household accounts.

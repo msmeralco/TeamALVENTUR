@@ -13,6 +13,16 @@ output "api_function_url" {
   value       = aws_lambda_function_url.api.function_url
 }
 
+output "mobile_function_name" {
+  description = "Read-only mobile PoC Lambda name (invoked through CloudFront)."
+  value       = aws_lambda_function.function["mobile"].function_name
+}
+
+output "mobile_function_url" {
+  description = "Mobile PoC Lambda URL (IAM-protected; CloudFront OAC is the caller)."
+  value       = aws_lambda_function_url.mobile.function_url
+}
+
 output "database_secret_arn" {
   description = "Secrets Manager secret the Lambdas read DATABASE_URL from."
   value       = aws_secretsmanager_secret.database_url.arn

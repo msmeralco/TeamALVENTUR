@@ -1,8 +1,9 @@
-# Private S3 bucket + CloudFront. /api/* goes to the API Lambda URL, so the web app and API share
-# one origin. Both origins are reached only through CloudFront origin access control (OAC).
+# Private S3 bucket + CloudFront. /api/* and /mobile-api/* route to separate Lambda URLs; both are
+# reached through CloudFront origin access control (OAC).
 
 locals {
-  api_domain = trimsuffix(trimprefix(var.api_function_url, "https://"), "/")
+  api_domain        = trimsuffix(trimprefix(var.api_function_url, "https://"), "/")
+  mobile_api_domain = trimsuffix(trimprefix(var.mobile_function_url, "https://"), "/")
 }
 
 resource "aws_s3_bucket" "web" {
@@ -61,7 +62,7 @@ data "aws_cloudfront_origin_request_policy" "all_but_host" { name = "Managed-All
 
 resource "aws_cloudfront_distribution" "web" {
   enabled             = true
-  comment             = "${var.name}: web app and /api"
+  comment             = "${var.name}: web app, API and mobile PoC API"
   default_root_object = "index.html"
   price_class         = var.price_class
 
@@ -83,6 +84,18 @@ resource "aws_cloudfront_distribution" "web" {
     }
   }
 
+  origin {
+    origin_id                = "mobile-api"
+    domain_name              = local.mobile_api_domain
+    origin_access_control_id = aws_cloudfront_origin_access_control.api.id
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
   default_cache_behavior {
     target_origin_id       = "web"
     viewer_protocol_policy = "redirect-to-https"
@@ -94,6 +107,16 @@ resource "aws_cloudfront_distribution" "web" {
       event_type   = "viewer-request"
       function_arn = aws_cloudfront_function.spa.arn
     }
+  }
+
+  ordered_cache_behavior {
+    path_pattern             = "/mobile-api/*"
+    target_origin_id         = "mobile-api"
+    viewer_protocol_policy   = "https-only"
+    allowed_methods          = ["GET", "HEAD"]
+    cached_methods           = ["GET", "HEAD"]
+    cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_but_host.id
   }
 
   ordered_cache_behavior {
@@ -152,6 +175,23 @@ resource "aws_lambda_permission" "cloudfront_invoke" {
   statement_id  = "AllowCloudFrontInvokeFunction"
   action        = "lambda:InvokeFunction"
   function_name = var.api_function_name
+  principal     = "cloudfront.amazonaws.com"
+  source_arn    = aws_cloudfront_distribution.web.arn
+}
+
+resource "aws_lambda_permission" "cloudfront_mobile_url" {
+  statement_id           = "AllowCloudFrontInvokeMobileFunctionUrl"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = var.mobile_function_name
+  principal              = "cloudfront.amazonaws.com"
+  source_arn             = aws_cloudfront_distribution.web.arn
+  function_url_auth_type = "AWS_IAM"
+}
+
+resource "aws_lambda_permission" "cloudfront_mobile_invoke" {
+  statement_id  = "AllowCloudFrontInvokeMobileFunction"
+  action        = "lambda:InvokeFunction"
+  function_name = var.mobile_function_name
   principal     = "cloudfront.amazonaws.com"
   source_arn    = aws_cloudfront_distribution.web.arn
 }

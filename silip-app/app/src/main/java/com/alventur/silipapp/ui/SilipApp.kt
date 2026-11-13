@@ -1,571 +1,735 @@
 package com.alventur.silipapp.ui
 
+import android.content.Context
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.CardGiftcard
+import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.PowerSettingsNew
-import androidx.compose.material.icons.outlined.Quiz
+import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.alventur.silipapp.R
+import com.alventur.silipapp.data.demo.DemoHousehold
+import com.alventur.silipapp.data.local.ProgressStore
+import com.alventur.silipapp.data.local.manilaToday
+import com.alventur.silipapp.data.remote.HouseholdApi
+import com.alventur.silipapp.data.remote.HouseholdApiException
+import com.alventur.silipapp.data.remote.HouseholdDashboardState
+import com.alventur.silipapp.education.ChallengeAnswer
 import com.alventur.silipapp.education.Lesson
 import com.alventur.silipapp.education.LessonCatalog
+import com.alventur.silipapp.education.LessonQuizCatalog
+import com.alventur.silipapp.notifications.AwayMonitor
+import com.alventur.silipapp.ui.design.SilipMotion
+import com.alventur.silipapp.ui.usage.UsageDashboard
+import com.alventur.silipapp.ui.design.StreakFlame
+import com.alventur.silipapp.ui.design.orSnap
+import com.alventur.silipapp.ui.design.pressScale
+import com.alventur.silipapp.ui.design.rememberHaptics
+import com.alventur.silipapp.ui.design.rememberReduceMotion
+import com.alventur.silipapp.ui.grid.GridEventScreen
+import com.alventur.silipapp.ui.home.HomeScreen
+import com.alventur.silipapp.ui.learn.DailyQuizScreen
+import com.alventur.silipapp.ui.learn.LeaderboardScreen
+import com.alventur.silipapp.ui.onboarding.OnboardingFlow
+import com.alventur.silipapp.ui.theme.SilipTheme
+import java.io.IOException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
+/**
+ * App destinations. The first four are the bottom bar; the rest are sub-screens whose
+ * bottom-bar owner is [parent]. Settings opens from the top bar.
+ */
 private enum class Destination(
     val label: String,
-    val icon: ImageVector
+    val icon: ImageVector,
+    val selectedIcon: ImageVector = icon,
+    val parent: Destination? = null
 ) {
-    Home("Home", Icons.Outlined.Home),
-    Learn("Learn", Icons.AutoMirrored.Outlined.MenuBook),
-    Practice("Practice", Icons.Outlined.Quiz),
-    Household("My home", Icons.Outlined.PowerSettingsNew)
+    Home("Home", Icons.Outlined.Home, Icons.Filled.Home),
+    Usage("Usage", Icons.Outlined.Bolt, Icons.Filled.Bolt),
+    Learn("Learn", Icons.AutoMirrored.Outlined.MenuBook, Icons.AutoMirrored.Filled.MenuBook),
+    Rewards("Grid events", Icons.Outlined.CardGiftcard, Icons.Filled.CardGiftcard),
+    Settings("Settings", Icons.Outlined.Settings),
+    Solar("Solar", Icons.Outlined.Lightbulb, parent = Home),
+    DailyChallenge("Lesson", Icons.Outlined.Lightbulb, parent = Learn),
+    DailyQuiz("Today's quiz", Icons.Outlined.Lightbulb, parent = Learn),
+    Leaderboard("Leaderboard", Icons.Outlined.EmojiEvents, parent = Learn)
 }
 
-private data class PracticeAnswer(
-    val id: String,
-    val text: String,
-    val isCorrect: Boolean
-)
-
-private val leaveHomeAnswers = listOf(
-    PracticeAnswer(
-        id = "switch-off-nonessential",
-        text = "Switch off non-essential appliances and keep essential items, such as the refrigerator, powered.",
-        isCorrect = true
-    ),
-    PracticeAnswer(
-        id = "unplug-everything",
-        text = "Unplug every appliance before leaving, including the refrigerator.",
-        isCorrect = false
-    ),
-    PracticeAnswer(
-        id = "leave-standby",
-        text = "Leave appliances on standby so they are ready when you return.",
-        isCorrect = false
-    )
-)
+private val BottomDestinations = listOf(Destination.Home, Destination.Usage, Destination.Learn, Destination.Rewards)
 
 @Composable
-fun SilipApp() {
-    var selectedName by rememberSaveable { mutableStateOf(Destination.Home.name) }
-    val selected = Destination.valueOf(selectedName)
-    val scheme = MaterialTheme.colorScheme
+fun SilipApp(
+    householdApi: HouseholdApi
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val store = remember(context) { ProgressStore.get(context) }
+    val progress by store.progress.collectAsState()
+    val demoEvents = remember { DemoEventBus() }
+    val settingsPreferences = remember(context) {
+        context.getSharedPreferences("silip_demo_device", Context.MODE_PRIVATE)
+    }
+    var showOnboarding by rememberSaveable { mutableStateOf(!store.progress.value.onboarded) }
+    var deviceId by rememberSaveable { mutableStateOf(store.deviceId()) }
+    var connectedDeviceId by rememberSaveable { mutableStateOf(deviceId) }
+    var userName by rememberSaveable {
+        mutableStateOf(settingsPreferences.getString("user_name", "") ?: "")
+    }
+    var themeMode by rememberSaveable {
+        mutableStateOf(settingsPreferences.getString("theme_mode", "system") ?: "system")
+    }
+    var householdState by remember {
+        mutableStateOf<HouseholdDashboardState>(HouseholdDashboardState.Loading)
+    }
+    var refreshCount by rememberSaveable { mutableIntStateOf(0) }
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar(
-                containerColor = scheme.primary,
-                tonalElevation = 0.dp
-            ) {
-                Destination.entries.forEach { destination ->
-                    NavigationBarItem(
-                        selected = selected == destination,
-                        onClick = { selectedName = destination.name },
-                        icon = {
-                            androidx.compose.material3.Icon(
-                                imageVector = destination.icon,
-                                contentDescription = null
-                            )
+    LaunchedEffect(connectedDeviceId, refreshCount, progress.usingDemoHome) {
+        householdState = HouseholdDashboardState.Loading
+        if (progress.usingDemoHome) {
+            // Rosa's demo home: simulated readings, labeled "Simulated" by every existing card.
+            householdState = HouseholdDashboardState.Loaded(DemoHousehold.deviceUsage())
+            return@LaunchedEffect
+        }
+        householdState = try {
+            HouseholdDashboardState.Loaded(householdApi.getDeviceUsage(connectedDeviceId))
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: HouseholdApiException) {
+            if (error.statusCode == 404) {
+                HouseholdDashboardState.NotFound(connectedDeviceId)
+            } else {
+                HouseholdDashboardState.Error("SILIP could not load this device's readings.")
+            }
+        } catch (_: IOException) {
+            HouseholdDashboardState.Error("Could not reach SILIP. Check your internet and try again.")
+        } catch (_: Exception) {
+            HouseholdDashboardState.Error("SILIP could not load this device's readings.")
+        }
+    }
+    var selectedName by rememberSaveable { mutableStateOf(Destination.Home.name) }
+    var beforeSettings by rememberSaveable { mutableStateOf(Destination.Home.name) }
+    var selectedLessonId by rememberSaveable {
+        mutableStateOf(LessonCatalog.starterLessons.first().id)
+    }
+    val selected = Destination.valueOf(selectedName)
+    val topLevel = selected.parent ?: selected
+    val completedLessons = progress.completedLessons.coerceIn(0, LessonCatalog.starterLessons.size)
+
+    BackHandler(enabled = !showOnboarding && (selected.parent != null || selected == Destination.Settings)) {
+        selectedName = if (selected == Destination.Settings) beforeSettings else topLevel.name
+    }
+
+    val darkTheme = when (themeMode) {
+        "light" -> false
+        "dark" -> true
+        else -> isSystemInDarkTheme()
+    }
+    val reduceMotion = rememberReduceMotion()
+
+    SilipTheme(
+        darkTheme = darkTheme,
+        originalPalette = !showOnboarding && topLevel == Destination.Learn
+    ) {
+        AnimatedContent(
+            targetState = showOnboarding,
+            transitionSpec = {
+                if (reduceMotion) fadeIn(SilipMotion.short()) togetherWith fadeOut(SilipMotion.short())
+                else fadeIn(SilipMotion.enter()) togetherWith fadeOut(SilipMotion.standard())
+            },
+            label = "onboarding-or-app"
+        ) { onboarding ->
+            if (onboarding) {
+                OnboardingFlow(onFinished = {
+                    // Onboarding may have saved a device ID or switched to the demo home.
+                    deviceId = store.deviceId()
+                    connectedDeviceId = deviceId
+                    refreshCount += 1
+                    selectedName = Destination.Home.name
+                    showOnboarding = false
+                })
+                return@AnimatedContent
+            }
+            val scheme = MaterialTheme.colorScheme
+            Scaffold(
+                containerColor = scheme.background,
+                topBar = {
+                    Surface(color = scheme.background) {
+                        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 20.dp, end = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Text("silip", style = MaterialTheme.typography.titleLarge,
+                                color = scheme.primary, modifier = Modifier.weight(1f))
+                            IconButton(onClick = {
+                                if (selected != Destination.Settings) beforeSettings = selectedName
+                                selectedName = if (selected == Destination.Settings) beforeSettings else Destination.Settings.name
+                            }) {
+                                Icon(Icons.Outlined.Settings, contentDescription = if (selected == Destination.Settings) "Return to previous screen" else "Open settings")
+                            }
+                        }
+                    }
+                },
+                bottomBar = {
+                    SilipBottomBar(
+                        current = topLevel,
+                        onSelect = { selectedName = it.name }
+                    )
+                }
+            ) { contentPadding ->
+                when (selected) {
+                    Destination.Home -> HomeScreen(
+                        contentPadding = contentPadding,
+                        householdState = householdState,
+                        progress = progress,
+                        userName = userName,
+                        nextLesson = LessonCatalog.starterLessons[completedLessons.coerceAtMost(LessonCatalog.starterLessons.lastIndex)],
+                        demoEvents = demoEvents,
+                        onOpenUsage = { selectedName = Destination.Usage.name },
+                        onOpenSolar = { selectedName = Destination.Solar.name },
+                        onOpenLesson = {
+                            val nextIndex = completedLessons.coerceAtMost(LessonCatalog.starterLessons.lastIndex)
+                            selectedLessonId = LessonCatalog.starterLessons[nextIndex].id
+                            selectedName = Destination.DailyChallenge.name
                         },
-                        label = { Text(destination.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = scheme.onSecondaryContainer,
-                            selectedTextColor = scheme.onPrimary,
-                            indicatorColor = scheme.secondaryContainer,
-                            unselectedIconColor = scheme.onPrimary.copy(alpha = 0.88f),
-                            unselectedTextColor = scheme.onPrimary.copy(alpha = 0.88f)
-                        )
+                        onOpenQuiz = { selectedName = Destination.DailyQuiz.name },
+                        onOpenGridEvent = { selectedName = Destination.Rewards.name },
+                        onRefreshHousehold = { refreshCount += 1 }
+                    )
+                    Destination.Usage -> UsageScreen(
+                        contentPadding = contentPadding,
+                        householdState = householdState,
+                        onRefreshHousehold = { refreshCount += 1 }
+                    )
+                    Destination.Learn -> LearnScreen(
+                        contentPadding = contentPadding,
+                        streakDays = progress.streak.displayCount(manilaToday()),
+                        streakLitToday = progress.streak.isLitToday(manilaToday()),
+                        quizDoneToday = progress.quizDoneToday(),
+                        learningXp = progress.xp,
+                        completedLessons = completedLessons,
+                        onStartLesson = { lesson ->
+                            selectedLessonId = lesson.id
+                            selectedName = Destination.DailyChallenge.name
+                        },
+                        onOpenQuiz = { selectedName = Destination.DailyQuiz.name },
+                        onOpenLeaderboard = { selectedName = Destination.Leaderboard.name }
+                    )
+                    Destination.Solar -> SolarScreen(contentPadding, householdState, onBack = { selectedName = Destination.Home.name })
+                    Destination.Rewards -> GridEventScreen(contentPadding, demoEvents)
+                    Destination.DailyQuiz -> DailyQuizScreen(contentPadding, onBack = { selectedName = Destination.Learn.name })
+                    Destination.Leaderboard -> LeaderboardScreen(contentPadding, onBack = { selectedName = Destination.Learn.name })
+                    Destination.Settings -> SettingsScreen(
+                        contentPadding = contentPadding,
+                        userName = userName,
+                        onUserNameChange = { userName = it },
+                        deviceId = deviceId,
+                        onDeviceIdChange = { deviceId = it },
+                        connectedDeviceId = connectedDeviceId,
+                        connectionState = householdState,
+                        themeMode = themeMode,
+                        onThemeModeChange = { newThemeMode ->
+                            themeMode = newThemeMode
+                            settingsPreferences.edit().putString("theme_mode", newThemeMode).apply()
+                        },
+                        onSaveAndConnect = {
+                            val normalizedId = deviceId.trim()
+                            if (normalizedId.isNotEmpty()) {
+                                val normalizedName = userName.trim()
+                                userName = normalizedName
+                                if (normalizedId != connectedDeviceId) {
+                                    AwayMonitor.prefs(context).edit().putBoolean("auto", false).remove("lat").remove("lon").apply()
+                                    AwayMonitor.setAway(context, false)
+                                    scope.launch { AwayMonitor.disable(context) }
+                                }
+                                deviceId = normalizedId
+                                connectedDeviceId = normalizedId
+                                settingsPreferences.edit()
+                                    .putString("clamp_id", normalizedId)
+                                    .putString("user_name", normalizedName)
+                                    .apply()
+                                store.setUsingDemoHome(false)
+                                refreshCount += 1
+                            }
+                        },
+                        usingDemoHome = progress.usingDemoHome,
+                        onUseDemoHome = {
+                            store.setUsingDemoHome(true)
+                            refreshCount += 1
+                        },
+                        onReplayIntro = {
+                            store.replayOnboarding()
+                            showOnboarding = true
+                        },
+                        onShowSampleAlert = {
+                            store.clearAlert(DemoHousehold.safetyAlert.id)
+                            demoEvents.send(DemoEvent.ShowSafetyAlert)
+                            selectedName = Destination.Home.name
+                        }
+                    )
+                    Destination.DailyChallenge -> DailyChallengeScreen(
+                        contentPadding = contentPadding,
+                        lesson = LessonCatalog.starterLessons.firstOrNull { it.id == selectedLessonId }
+                            ?: LessonCatalog.starterLessons.first(),
+                        onBack = { selectedName = Destination.Learn.name },
+                        onLessonCompleted = { lesson ->
+                            val lessonIndex = LessonCatalog.starterLessons.indexOfFirst { it.id == lesson.id }
+                            if (lessonIndex >= 0) store.completeLesson(lessonIndex, lesson.points)
+                        }
                     )
                 }
             }
         }
-    ) { innerPadding ->
-        when (selected) {
-            Destination.Home -> HomeScreen(
-                contentPadding = innerPadding,
-                onOpenLearn = { selectedName = Destination.Learn.name },
-                onOpenPractice = { selectedName = Destination.Practice.name },
-                onOpenHousehold = { selectedName = Destination.Household.name }
-            )
+    }
+}
 
-            Destination.Learn -> LearnScreen(contentPadding = innerPadding)
-            Destination.Practice -> PracticeScreen(contentPadding = innerPadding)
-            Destination.Household -> HouseholdScreen(contentPadding = innerPadding)
+/** Bottom bar: the selected icon fills and springs up; the label turns bold. */
+@Composable
+private fun SilipBottomBar(current: Destination, onSelect: (Destination) -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    val haptics = rememberHaptics()
+    val reduceMotion = rememberReduceMotion()
+    NavigationBar(
+        containerColor = scheme.surface,
+        tonalElevation = 0.dp
+    ) {
+        BottomDestinations.forEach { destination ->
+            val isSelected = current == destination
+            val scale by animateFloatAsState(
+                targetValue = if (isSelected) 1.12f else 1f,
+                animationSpec = SilipMotion.playful<Float>().orSnap(reduceMotion),
+                label = "nav-icon-scale"
+            )
+            NavigationBarItem(
+                selected = isSelected,
+                onClick = {
+                    if (!isSelected) haptics.select()
+                    onSelect(destination)
+                },
+                icon = {
+                    Crossfade(
+                        targetState = isSelected,
+                        animationSpec = SilipMotion.short(),
+                        label = "nav-icon-fill",
+                        modifier = Modifier.graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                        }
+                    ) { filled ->
+                        Icon(
+                            imageVector = if (filled) destination.selectedIcon else destination.icon,
+                            contentDescription = null
+                        )
+                    }
+                },
+                label = {
+                    Text(
+                        destination.label,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                    )
+                },
+                alwaysShowLabel = true,
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = scheme.onPrimaryContainer,
+                    selectedTextColor = scheme.primary,
+                    indicatorColor = scheme.primaryContainer,
+                    unselectedIconColor = scheme.onSurfaceVariant,
+                    unselectedTextColor = scheme.onSurfaceVariant
+                )
+            )
         }
     }
 }
 
 @Composable
-private fun HomeScreen(
-    contentPadding: PaddingValues,
-    onOpenLearn: () -> Unit,
-    onOpenPractice: () -> Unit,
-    onOpenHousehold: () -> Unit
-) {
-    val scheme = MaterialTheme.colorScheme
-    val actions = listOf(
-        HomeAction(
-            title = "Learn",
-            supportingText = "Build safer energy habits, one short lesson at a time.",
-            icon = Icons.AutoMirrored.Outlined.MenuBook,
-            containerColor = scheme.primaryContainer,
-            contentColor = scheme.onPrimaryContainer,
-            onClick = onOpenLearn
-        ),
-        HomeAction(
-            title = "Practice",
-            supportingText = "Try a quick home-safety check.",
-            icon = Icons.Outlined.Quiz,
-            containerColor = scheme.secondaryContainer,
-            contentColor = scheme.onSecondaryContainer,
-            onClick = onOpenPractice
-        ),
-        HomeAction(
-            title = "My home",
-            supportingText = "See how household readings will appear.",
-            icon = Icons.Outlined.Home,
-            containerColor = scheme.tertiaryContainer,
-            contentColor = scheme.onTertiaryContainer,
-            onClick = onOpenHousehold
-        ),
-        HomeAction(
-            title = "Leaving-home check",
-            supportingText = "Practice a quick safety check before you head out.",
-            icon = Icons.Outlined.PowerSettingsNew,
-            containerColor = scheme.surfaceVariant,
-            contentColor = scheme.onSurfaceVariant,
-            onClick = onOpenPractice
-        )
-    )
+private fun SolarScreen(contentPadding: PaddingValues, householdState: HouseholdDashboardState, onBack: () -> Unit) {
+    AdaptivePage(contentPadding) {
+        item { SolarIntroduction(onBack) }
+        item { SolarDaytimeCard(householdState) }
+        item { SolarHowItWorks() }
+        item { SolarPreparationCard() }
+    }
+}
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = screenPadding(contentPadding),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+@Composable
+private fun UsageScreen(
+    contentPadding: PaddingValues,
+    householdState: HouseholdDashboardState,
+    onRefreshHousehold: () -> Unit
+) {
+    AdaptivePage(contentPadding) {
+        if (householdState is HouseholdDashboardState.Loaded) {
+            item { UsageDashboard(householdState.device, onRefreshHousehold) }
+            item { SectionHeading("What's next") }
+            item { ForecastAndInsights(householdState.device) }
+            item { SectionHeading("Cost & calculation") }
+            item { PriceEstimateCard(householdState.device) }
+            item { ReadingDetails(householdState.device) }
+        } else {
+            item { SectionHeading("Usage", "Understand when your energy adds up.") }
+            item { HouseholdSnapshot(householdState, onRefreshHousehold) }
+        }
+        item { SectionHeading("Get to know your numbers") }
+        item { UsageMeaningCard() }
+    }
+}
+
+@Composable
+private fun SettingsScreen(
+    contentPadding: PaddingValues,
+    userName: String,
+    onUserNameChange: (String) -> Unit,
+    deviceId: String,
+    onDeviceIdChange: (String) -> Unit,
+    connectedDeviceId: String,
+    connectionState: HouseholdDashboardState,
+    themeMode: String,
+    onThemeModeChange: (String) -> Unit,
+    onSaveAndConnect: () -> Unit,
+    usingDemoHome: Boolean,
+    onUseDemoHome: () -> Unit,
+    onReplayIntro: () -> Unit,
+    onShowSampleAlert: () -> Unit
+) {
+    AdaptivePage(contentPadding) {
         item {
-            AliSectionHeader(
-                eyebrow = "SILIP HOME GUIDE",
-                title = "Your home, in sight.",
-                message = "I’ll help you understand your household energy and build safer everyday habits.",
+            PageHeader(
+                eyebrow = "SETTINGS",
+                title = "Make it yours.",
+                subtitle = "Set your name and connect your home device.",
                 pose = AliPose.Welcome
             )
         }
         item {
-            HouseholdStatusCard(onOpenHousehold = onOpenHousehold)
-        }
-        item {
-            SectionHeading(
-                title = "A small step for today",
-                subtitle = "Start with a short lesson on everyday electricity."
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            LearningPathCard(
-                title = "Home energy basics",
-                completedLessons = 0,
-                totalLessons = LessonCatalog.starterLessons.size,
-                onClick = onOpenLearn
+            HouseholdSettingsCard(
+                userName = userName,
+                onUserNameChange = onUserNameChange,
+                deviceId = deviceId,
+                onDeviceIdChange = onDeviceIdChange,
+                connectedDeviceId = if (usingDemoHome) DemoHousehold.HOUSEHOLD_NAME else connectedDeviceId,
+                connectionState = connectionState,
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange,
+                onSaveAndConnect = onSaveAndConnect
             )
         }
         item {
-            SectionHeading(
-                title = "Explore SILIP",
-                subtitle = "Learn, practice, and check in on your home."
+            DemoToolsCard(
+                usingDemoHome = usingDemoHome,
+                onUseDemoHome = onUseDemoHome,
+                onReplayIntro = onReplayIntro,
+                onShowSampleAlert = onShowSampleAlert
             )
         }
-        items(actions.chunked(2), key = { row -> row.first().title }) { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                row.forEach { action ->
-                    HomeActionTile(
-                        action = action,
-                        modifier = Modifier.weight(1f)
-                    )
+    }
+}
+
+/** Demo and intro controls. The sample alert opens on Home. */
+@Composable
+private fun DemoToolsCard(
+    usingDemoHome: Boolean,
+    onUseDemoHome: () -> Unit,
+    onReplayIntro: () -> Unit,
+    onShowSampleAlert: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Intro and demo", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                if (usingDemoHome) "You're exploring Rosa's demo home. Its readings are simulated."
+                else "Try Rosa's demo home to see every feature with simulated readings.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (!usingDemoHome) {
+                OutlinedButton(onClick = onUseDemoHome, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text("Explore the demo home (Rosa's)")
                 }
-                if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
+            }
+            OutlinedButton(onClick = onShowSampleAlert, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Text("Show a sample safety alert")
+            }
+            OutlinedButton(onClick = onReplayIntro, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Text("Replay intro")
             }
         }
     }
 }
 
-private data class HomeAction(
-    val title: String,
-    val supportingText: String,
-    val icon: ImageVector,
-    val containerColor: androidx.compose.ui.graphics.Color,
-    val contentColor: androidx.compose.ui.graphics.Color,
-    val onClick: () -> Unit
-)
-
 @Composable
-private fun HomeActionTile(
-    action: HomeAction,
-    modifier: Modifier = Modifier
+private fun LearnScreen(
+    contentPadding: PaddingValues,
+    streakDays: Int,
+    streakLitToday: Boolean,
+    quizDoneToday: Boolean,
+    learningXp: Int,
+    completedLessons: Int,
+    onStartLesson: (Lesson) -> Unit,
+    onOpenQuiz: () -> Unit,
+    onOpenLeaderboard: () -> Unit
 ) {
-    ActionTile(
-        title = action.title,
-        supportingText = action.supportingText,
-        icon = action.icon,
-        containerColor = action.containerColor,
-        contentColor = action.contentColor,
-        onClick = action.onClick,
-        modifier = modifier
-    )
-}
-
-@Composable
-private fun LearnScreen(contentPadding: PaddingValues) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = screenPadding(contentPadding),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    AdaptivePage(contentPadding, backgroundRes = R.drawable.learn_map_background) {
+        item { LearningStatsRow(streak = streakDays, xp = learningXp) }
         item {
-            AliSectionHeader(
-                eyebrow = "YOUR LEARNING PATH",
-                title = "Small lessons. Safer habits.",
-                message = "Let’s learn one practical electricity habit at a time.",
-                pose = AliPose.Learning
-            )
+            // WAVE 2: Learn/engagement owner restyles this entry row (quiz card, leaderboard, badges shelf).
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = CardDefaults.outlinedCardBorder()
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        StreakFlame(days = streakDays, litToday = streakLitToday)
+                        Column(Modifier.weight(1f)) {
+                            Text("Today's quiz", style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.semantics { heading() })
+                            Text(
+                                if (quizDoneToday) "Done for today." else "15 seconds keeps your streak going.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                    if (!quizDoneToday) {
+                        Button(onClick = onOpenQuiz, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).pressScale()) {
+                            Text("Take today's quiz")
+                        }
+                    }
+                    OutlinedButton(onClick = onOpenLeaderboard, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                        Text("Leaderboard and badges", Modifier.weight(1f))
+                        Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = null)
+                    }
+                }
+            }
         }
+        item { LearningUnitBanner(completed = completedLessons, total = LessonCatalog.starterLessons.size) }
         item {
-            LearningPathCard(
-                title = "Home energy basics",
-                completedLessons = 0,
-                totalLessons = LessonCatalog.starterLessons.size
-            )
-        }
-        item {
-            SectionHeading(
-                title = "Unit 1 · Everyday electricity",
-                subtitle = "Start here and learn at your own pace."
-            )
-        }
-        items(LessonCatalog.starterLessons, key = Lesson::id) { lesson ->
-            EnergyLessonCard(lesson)
-        }
-        item {
-            InformationCard(
-                title = "Learn at your own pace",
-                description = "Learning content is available on this device. Live household readings need an internet connection and a linked SILIP account.",
-                icon = Icons.Outlined.Bolt,
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            LearningMap(
+                lessons = LessonCatalog.starterLessons,
+                completedLessons = completedLessons,
+                onStart = onStartLesson
             )
         }
     }
 }
 
 @Composable
-private fun PracticeScreen(contentPadding: PaddingValues) {
-    var selectedAnswerId by rememberSaveable { mutableStateOf<String?>(null) }
-    var isSubmitted by rememberSaveable { mutableStateOf(false) }
-    val selectedAnswer = leaveHomeAnswers.firstOrNull { it.id == selectedAnswerId }
+private fun DailyChallengeScreen(
+    contentPadding: PaddingValues,
+    lesson: Lesson,
+    onBack: () -> Unit,
+    onLessonCompleted: (Lesson) -> Unit
+) {
+    val questions = LessonQuizCatalog.questionsFor(lesson.id)
+    var questionIndex by rememberSaveable(lesson.id) { mutableIntStateOf(0) }
+    var selectedId by rememberSaveable(lesson.id) { mutableStateOf<String?>(null) }
+    var submitted by rememberSaveable(lesson.id) { mutableStateOf(false) }
+    val question = questions[questionIndex.coerceIn(questions.indices)]
+    val answer = question.answers.firstOrNull { it.id == selectedId }
+    val lessonNumber = LessonCatalog.starterLessons.indexOfFirst { it.id == lesson.id } + 1
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = screenPadding(contentPadding),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    AdaptivePage(contentPadding) {
         item {
-            AliSectionHeader(
-                eyebrow = "PRACTICE",
-                title = "Ready for a quick check?",
-                message = "Take a moment and choose what you think is safest.",
-                pose = AliPose.Practice
-            )
+            if (submitted && answer != null) {
+                ChallengeFeedbackCard(
+                    isCorrect = answer.correct,
+                    explanation = question.explanation
+                )
+            } else {
+                PageHeader(
+                    eyebrow = "UNIT $lessonNumber · QUICK PRACTICE",
+                    title = lesson.title,
+                    subtitle = "${questions.size} questions · +${lesson.points} XP",
+                    pose = AliPose.Practice
+                )
+            }
         }
         item {
-            StepProgressCard(
-                label = "Home safety quick check",
-                step = 1,
-                total = 1
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "QUESTION ${questionIndex + 1} OF ${questions.size}",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = question.prompt,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.semantics { heading() }
+                )
+            }
+        }
+        items(question.answers, key = ChallengeAnswer::id) { option ->
+            ChallengeAnswerCard(
+                text = option.text,
+                selected = selectedId == option.id,
+                enabled = !submitted,
+                onClick = { selectedId = option.id }
             )
         }
-        item {
-            Text(
-                text = "You are heading out for the day. What is the safer energy habit?",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.semantics { heading() }
-            )
-        }
-        items(leaveHomeAnswers, key = PracticeAnswer::id) { answer ->
-            AnswerOptionCard(
-                text = answer.text,
-                selected = selectedAnswerId == answer.id,
-                enabled = !isSubmitted,
-                onClick = { selectedAnswerId = answer.id }
-            )
-        }
-        item {
+        if (!submitted) item {
             Button(
-                onClick = { isSubmitted = true },
-                enabled = selectedAnswerId != null && !isSubmitted,
+                onClick = { submitted = true },
+                enabled = selectedId != null && !submitted,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (isSubmitted) "Answer checked" else "Check answer")
+                Text("Check answer")
             }
         }
-        if (isSubmitted && selectedAnswer != null) {
+        if (submitted && answer != null) {
             item {
-                AnswerFeedbackCard(isCorrect = selectedAnswer.isCorrect)
-            }
-            item {
-                androidx.compose.material3.TextButton(
-                    onClick = {
-                        selectedAnswerId = null
-                        isSubmitted = false
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Try again")
+                if (answer.correct) {
+                    Button(
+                        onClick = {
+                            if (questionIndex == questions.lastIndex) {
+                                onLessonCompleted(lesson)
+                                questionIndex = 0
+                                selectedId = null
+                                submitted = false
+                                onBack()
+                            } else {
+                                questionIndex += 1
+                                selectedId = null
+                                submitted = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (questionIndex == questions.lastIndex) "Finish lesson" else "Next")
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = {
+                            selectedId = null
+                            submitted = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Try again")
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun HouseholdScreen(contentPadding: PaddingValues) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = screenPadding(contentPadding),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
         item {
-            AliSectionHeader(
-                eyebrow = "MY HOME",
-                title = "Your household at a glance.",
-                message = "I can’t read your home status yet. Link your account to see household readings.",
-                pose = AliPose.Caution
-            )
-        }
-        item {
-            HouseholdStatusCard()
-        }
-        item {
-            InformationCard(
-                title = "What the sensor can tell us",
-                description = "The current sensor measures total household electrical demand. It cannot identify which individual appliance is on.",
-                icon = Icons.Outlined.Bolt,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-        item {
-            InformationCard(
-                title = "A reminder when you leave",
-                description = "An optional home-exit reminder can open a checklist for non-essential appliances. It is a prompt to check, not a sensor-based appliance alert.",
-                icon = Icons.Outlined.PowerSettingsNew,
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-            )
-        }
-        item {
-            Text(
-                text = "An internet connection is needed to refresh household readings. Learning content can remain available on this device.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 4.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun HouseholdStatusCard(onOpenHousehold: (() -> Unit)? = null) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        androidx.compose.foundation.layout.Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            OutlinedButton(
+                onClick = {
+                    questionIndex = 0
+                    selectedId = null
+                    submitted = false
+                    onBack()
+                },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    text = "Household status",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-                StatusPill(
-                    label = "Not connected",
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-                )
-            }
-            Text(
-                text = "Sign in and link your home to load its latest readings.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (onOpenHousehold != null) {
-                Button(onClick = onOpenHousehold) {
-                    Text("View my home")
-                }
+                Text("Back to lessons")
             }
         }
     }
 }
 
+/**
+ * Standard page: a centered LazyColumn (max 720 dp) with 20 dp phone gutters (32 dp on tablets),
+ * padding for the top and bottom bars, and 16 dp between items. Use it for every tab and sub-screen.
+ */
 @Composable
-private fun LearningPathCard(
-    title: String,
-    completedLessons: Int,
-    totalLessons: Int,
-    onClick: (() -> Unit)? = null
+internal fun AdaptivePage(
+    contentPadding: PaddingValues,
+    backgroundRes: Int? = null,
+    content: LazyListScope.() -> Unit
 ) {
-    val progress = if (totalLessons == 0) 0f else completedLessons.toFloat() / totalLessons
-    val cardModifier = Modifier.fillMaxWidth()
-
-    val contents: @Composable () -> Unit = {
-        androidx.compose.foundation.layout.Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                androidx.compose.foundation.layout.Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Everyday electricity",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Text(
-                    text = "$completedLessons of $totalLessons",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-            if (onClick != null) {
-                Text(
-                    text = "View learning path",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-    }
-
-    if (onClick == null) {
-        Card(
-            modifier = cardModifier,
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(22.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-        ) { contents() }
-    } else {
-        Card(
-            onClick = onClick,
-            modifier = cardModifier,
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(22.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-        ) { contents() }
-    }
-}
-
-@Composable
-private fun EnergyLessonCard(lesson: Lesson) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        androidx.compose.foundation.layout.Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = lesson.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    text = "+${lesson.points} XP",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            Text(
-                text = lesson.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "${lesson.estimatedMinutes} min lesson",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val horizontalGutter = if (maxWidth >= 600.dp) 32.dp else 20.dp
+        if (backgroundRes != null && MaterialTheme.colorScheme.background.luminance() > 0.5f) {
+            Image(
+                painter = painterResource(backgroundRes),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
             )
         }
+        LazyColumn(
+            modifier = Modifier
+                .widthIn(max = 720.dp)
+                .fillMaxSize()
+                .align(Alignment.TopCenter),
+            contentPadding = PaddingValues(
+                start = horizontalGutter,
+                top = contentPadding.calculateTopPadding() + 20.dp,
+                end = horizontalGutter,
+                bottom = contentPadding.calculateBottomPadding() + 24.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            content = content
+        )
     }
 }
-
-private fun screenPadding(insetPadding: PaddingValues) = PaddingValues(
-    start = 20.dp,
-    top = insetPadding.calculateTopPadding() + 16.dp,
-    end = 20.dp,
-    bottom = insetPadding.calculateBottomPadding() + 24.dp
-)
